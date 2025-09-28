@@ -157,46 +157,89 @@ MAIN_TEMPLATE = """
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pocket Journal — Mood Movie Recommender</title>
+  <title>📓 Pocket Journal — Mood-Based Recommendations API</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+    h1, h2 { color: #2c3e50; }
+    code { background: #f4f4f4; padding: 3px 6px; border-radius: 4px; }
+    ul { margin: 10px 0 20px 20px; }
+    li { margin-bottom: 6px; }
+    .section { margin-bottom: 30px; }
+  </style>
 </head>
 <body>
-  <h1>🎬 Pocket Journal — Mood Movie Recommender</h1>
-  <p>Use the API endpoints:</p>
-  <ul>
-    <li>Get movies by mood: <code>/api/recommend?mood=happy</code></li>
-    <li>Search movies: <code>/api/search?movie=Incepton</code></li>
-  </ul>
-  <p>Use the API endpoints:</p>
-  <li><h1>Get songs by mood: </h1>
-    <code>/api/songs?mood=happy&language=both&limit=5</code>
-    <br>
-    <small>Parameters:</small>
-    <ul>
-        <li><strong>mood</strong>: Mood of the songs (happy, sad, chill, energetic, romantic)</li>
-        <li><strong>language</strong>: Song language (english, hindi, both). Default is both.</li>
-        <li><strong>limit</strong>: Number of songs to return. Default is 10.</li>
-    </ul>
-</li>
-<li><h1>Search songs or artists:</h1> 
-  <code>/api/search_song?q=arjit sngh&type=artist&limit=10</code><br>
-  <small>Parameters:</small>
-  <ul>
-    <li><strong>q</strong>: Song or artist name (supports typos)</li>
-    <li><strong>type</strong>: "track" or "artist". Default is "artist".</li>
-    <li><strong>limit</strong>: Number of results (default 10)</li>
-  </ul>
-</li>
- <h1>📚 Emotion-Based Book Recommendation API</h1>
-            <p>Use the following endpoints to get book recommendations:</p>
-            <ul>
-                <li>Get books by emotion: <code>/api/books?emotion=happy&limit=5</code></li>
-                <li>Example emotions: <b>happy, sad, angry, romantic, stressed, bored</b></li>
-                 <li>Search books (typo-tolerant): <code>/api/search_books?query=harry poter&type=both&limit=5</code></li>
-            </ul>
-            <p>🔗 Try it now: <a href="/api/books?emotion=happy&limit=5" target="_blank">Books for Happy Mood</a></p>
-        </div>
-    </body>
+  <h1>📓 Pocket Journal — Mood-Based Recommendations API</h1>
+  <p>Welcome! Use the following endpoints to analyze journal entries and get personalized recommendations for movies, songs, and books.</p>
 
+  <div class="section">
+    <h2>📝 Journal Entry Processing</h2>
+    <p><code>POST /process_entry</code></p>
+    <p><b>Request JSON:</b></p>
+    <pre>{
+  "user_id": 1,
+  "entry_text": "Your journal text here..."
+}</pre>
+    <p><b>Response:</b> Summary + mood probabilities + entry_id</p>
+  </div>
+
+  <div class="section">
+    <h2>🎬 Movies</h2>
+    <ul>
+      <li>Get movies by mood: <code>/api/recommend?mood=happy</code></li>
+      <li>Search movies (typo-tolerant): <code>/api/search?movie=Incepton</code></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>🎵 Songs</h2>
+    <ul>
+      <li>
+        Get songs by mood:  
+        <code>/api/songs?mood=happy&language=both&limit=5</code><br>
+        <small>Parameters:</small>
+        <ul>
+          <li><b>mood</b>: Mood of the songs (happy, sad, chill, energetic, romantic)</li>
+          <li><b>language</b>: Song language (english, hindi, both). Default = both</li>
+          <li><b>limit</b>: Number of songs (default = 10)</li>
+        </ul>
+      </li>
+      <li>
+        Search songs or artists:  
+        <code>/api/search_song?q=arjit sngh&type=artist&limit=10</code><br>
+        <small>Parameters:</small>
+        <ul>
+          <li><b>q</b>: Song or artist name (typo-tolerant)</li>
+          <li><b>type</b>: "track" or "artist" (default = track)</li>
+          <li><b>limit</b>: Number of results (default = 10)</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>📚 Books</h2>
+    <ul>
+      <li>
+        Get books by emotion:  
+        <code>/api/books?emotion=happy&limit=5</code><br>
+        <small>Example emotions: <b>happy, sad, angry, romantic, stressed, bored</b></small>
+      </li>
+      <li>
+        Search books (typo-tolerant):  
+        <code>/api/search_books?query=harry poter&type=both&limit=5</code><br>
+        <small>Parameters:</small>
+        <ul>
+          <li><b>query</b>: Book title or author</li>
+          <li><b>type</b>: "title", "author", or "both" (default = both)</li>
+          <li><b>limit</b>: Number of results (default = 10)</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <footer>
+    <p>🚀 Pocket Journal API is running. Use Postman, Curl, or your browser to test the endpoints.</p>
+  </footer>
 </body>
 </html>
 """
