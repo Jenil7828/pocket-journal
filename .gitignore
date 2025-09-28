@@ -1,0 +1,42 @@
+# --- Python Virtual Environment ---
+# Ignore the virtual environment folder
+venv/
+.venv/
+env/
+.env/
+
+# --- Python Cache & Compiled Files ---
+# Ignore compiled Python files and cache folders
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# --- IDE & Editor Folders ---
+# Ignore settings from popular editors
+.vscode/
+.idea/
+
+# --- Secrets / Environment Variables ---
+# CRITICAL: Never commit your secrets!
+.env
+*.env
+
+# --- Database Files ---
+# Ignore your local SQLite database file
+*.db
+*.sqlite
+*.sqlite3
+data
+# Ignore the large Roberta model folder
+Backend/Mood_Detection/outputs/
+
+# --- Operating System Files ---
+# Ignore OS-specific metadata files
+.DS_Store
+Thumbs.db
+
+# --- Temporary Build/Install Files ---
+dist/
+build/
+*.egg-info/
