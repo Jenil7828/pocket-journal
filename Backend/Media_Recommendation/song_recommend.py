@@ -5,10 +5,8 @@ import random
 import os
 # 1️⃣ Authentication
 
-# client_id = "api_key"
-# client_secret = "api_key"
-client_id = "8c0864bcc62e43468358ac958a51c54e"
-client_secret = "e1334c779e5b4a8694e6cd5761f6bf2f"
+client_id = "api_key"
+client_secret = "api_key"
 
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
