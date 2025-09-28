@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 class DBManager:
-    def __init__(self, host="localhost", user="root", password="Jenil_7828", database="journal_app"):
+    def __init__(self, host="localhost", user="root", password="Your_Database_Password", database="journal_app"):
         try:
             self.conn = mysql.connector.connect(
                 host=host, user=user, password=password, database=database
