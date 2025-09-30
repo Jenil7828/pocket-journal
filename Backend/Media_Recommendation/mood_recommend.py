@@ -1,9 +1,7 @@
 import requests, time
 import os
-from dotenv import load_dotenv
-load_dotenv()
 
-API_KEY = os.getenv("TMDB_APIKEY")
+API_KEY = os.getenv("TMDB_API_KEY")
 BASE_IMG_URL = "https://image.tmdb.org/t/p/w500"
 
 MOOD_GENRE_MAP = {

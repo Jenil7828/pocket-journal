@@ -1,10 +1,11 @@
 import mysql.connector
 from mysql.connector import Error
 from datetime import datetime
-import json
-
+import json, os
+from dotenv import load_dotenv
+load_dotenv()
 class DBManager:
-    def __init__(self, host="localhost", user="root", password="Your_Database_Password", database="journal_app"):
+    def __init__(self, host="localhost", user="root", password=os.getenv("DATABASE_PASSWORD"), database="journal_app"):
         try:
             self.conn = mysql.connector.connect(
                 host=host, user=user, password=password, database=database
