@@ -46,10 +46,10 @@ def process_entry():
     entry_id = db.insert_entry(user_id, text)
 
     # Summarize
-    summary = summarizer.summarize(text) if summarizer else "[Summary not available]"
+    summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
 
     # Predict mood
-    mood_probs = predictor.predict(text)
+    mood_probs = predictor.predict(summary)
 
     # Save analysis
     db.insert_analysis(entry_id, summary, mood_probs)
