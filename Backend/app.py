@@ -9,7 +9,6 @@ from Media_Recommendation.search_books import search_books_robust
 from Mood_Detection.database.db_manager import DBManager
 from Mood_Detection.mood_detection_sentence.predictor_sentence_level import SentencePredictor
 from Mood_Detection.summarization.summarizer import Summarizer
-from Mood_Detection.embeddings.embedder import Embedder
 from Mood_Detection.mood_detection_sentence.config_sentence import Config
 import os
 app = Flask(__name__)
@@ -23,12 +22,6 @@ try:
 except Exception as e:
     print("⚠️ Summarizer not available, skipping. Error:", e)
     summarizer = None
-
-try:
-    embedder = Embedder()
-except Exception as e:
-    print("⚠️ Embedder not available, skipping. Error:", e)
-    embedder = None
 
 
 # -------------------- API Routes --------------------
@@ -58,11 +51,8 @@ def process_entry():
     # Predict mood
     mood_probs = predictor.predict(text)
 
-    # Generate embedding
-    embedding = embedder.get_embedding(text).tolist() if embedder else None
-
     # Save analysis
-    db.insert_analysis(entry_id, summary, mood_probs, embedding)
+    db.insert_analysis(entry_id, summary, mood_probs)
 
     # Return result
     response = {

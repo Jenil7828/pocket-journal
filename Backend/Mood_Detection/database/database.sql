@@ -16,7 +16,6 @@ CREATE TABLE entry_analysis (
     entry_id INT NOT NULL,
     summary TEXT,
     mood JSON, -- store full probabilities (e.g. {"happy": 0.7, "sad": 0.2})
-    embedding JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (entry_id) REFERENCES journal_entries(id)
 );

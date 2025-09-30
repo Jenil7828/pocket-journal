@@ -31,17 +31,17 @@ class DBManager:
         self.cursor.execute(query, tuple(params))
         return self.cursor.fetchall()
 
-    def insert_analysis(self, entry_id, summary, mood_dict, embedding, created_at=None):
+    def insert_analysis(self, entry_id, summary, mood_dict, created_at=None):
         if not created_at:
             created_at = datetime.now()
 
         # mood_dict is a dictionary like {"happy":0.7,"sad":0.2,...}
         mood_json = json.dumps(mood_dict)
-        embedding_json = json.dumps(embedding) if embedding else None
+
 
         query = """
-            INSERT INTO entry_analysis (entry_id, summary, mood, embedding, created_at)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO entry_analysis (entry_id, summary, mood, created_at)
+            VALUES (%s, %s, %s, %s)
         """
-        self.cursor.execute(query, (entry_id, summary, mood_json, embedding_json, created_at))
+        self.cursor.execute(query, (entry_id, summary, mood_json, created_at))
         self.conn.commit()
