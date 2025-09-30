@@ -1,1 +1,1 @@
-# pocket-journal
+# Pocket Journal
