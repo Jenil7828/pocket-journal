@@ -24,7 +24,7 @@ A personal journaling application with mood detection and summarization features
 ## Setup Instructions
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/Jenil7828/pocket-journal.git
    ```
 2. Navigate to the project directory:
    ```bash
