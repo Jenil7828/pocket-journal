@@ -20,6 +20,48 @@ A personal journaling application with mood detection and summarization features
 - Torch (Deep learning)
 - Spotipy 
 - Langchain
+## Project Structure
+```
+pocket-journal/
+├── Backend/
+│   ├── app.py
+│   ├── Media_Recommendation
+│   │   ├──books_recommendation.py
+│   │   ├──mood_recommend.py
+│   │   ├──movie_search.py
+│   │   ├──song_recommend.py
+│   │   ├──song_search.py
+│   │   └──search_books.py
+│   ├── Mood_Detection
+│   │   ├── analysis
+│   │   │   └── insight_generation.py
+│   │   ├── database
+│   │   │   ├── db_manager.py
+│   │   │   └── database.sql
+│   │   ├── mood_detection_sentence
+│   │   │   ├── config_sentence.py
+│   │   │   ├── dataset_loader.py
+│   │   │   ├── evaluator_sentence_level.py
+│   │   │   ├── predictor_sentence_level.py
+│   │   │   ├── trainer_sentence.py
+│   │   │   └── visualizer.py
+│   │   ├── outputs
+│   │   │   └── (model checkpoints and logs)
+│   │   ├── summarization
+│   │   │   ├── config.py
+│   │   │   ├── dataset_loader.py
+│   │   │   ├── summarizer.py
+│   │   │   ├── trainer.py
+|   |   |──train_moood_sentence.py
+│   ├── requirements.txt
+│   └── .env
+├── Frontend/
+│   ├── lib/
+│   │   ├── main.dart
+│   │   ├── screens/
+│   │   ├── widgets/
+│   │   └── services/
+
 
 ## Setup Instructions
 1. Clone the repository:
