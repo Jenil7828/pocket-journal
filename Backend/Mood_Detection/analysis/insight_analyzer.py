@@ -1,7 +1,7 @@
 # insight_analyzer.py
 import re
 import json
-from database.db_manager import DBManager
+from Mood_Detection.database.db_manager import DBManager
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 class InsightsGenerator:

@@ -10,6 +10,7 @@ from Mood_Detection.database.db_manager import DBManager
 from Mood_Detection.mood_detection_sentence.predictor_sentence_level import SentencePredictor
 from Mood_Detection.summarization.summarizer import Summarizer
 from Mood_Detection.mood_detection_sentence.config_sentence import Config
+from Mood_Detection.analysis.insight_analyzer import InsightsGenerator
 import os
 app = Flask(__name__)
 out_dir = os.path.join(os.path.dirname(__file__), "Mood_Detection", Config.OUTPUT_DIR)
@@ -63,7 +64,29 @@ def process_entry():
 
     return jsonify(response), 200
 
+#Gemini-based insights generation
+@app.route("/generate_insights", methods=["POST"])
+def generate_insights():
+    """
+    Expects JSON payload:
+    {
+        "user_id": 1,
+        "start_date": "2025-09-01",
+        "end_date": "2025-09-30"
+    }
+    """
+    data = request.get_json()
+    if not data or "user_id" not in data:
+        return jsonify({"error": "Missing user_id"}), 400
 
+    user_id = data["user_id"]
+    start_date = data.get("start_date")
+    end_date = data.get("end_date")
+
+    generator = InsightsGenerator(db)
+    insights = generator.generate_insights(user_id, start_date, end_date)
+
+    return jsonify(insights), 200
 # Mood-based movie recommendation
 @app.route("/api/recommend", methods=["GET"])
 def api_recommend():
@@ -170,6 +193,17 @@ MAIN_TEMPLATE = """
   "entry_text": "Your journal text here..."
 }</pre>
     <p><b>Response:</b> Summary + mood probabilities + entry_id</p>
+  </div>
+  <div class="section">
+    <h2>🔍 Generate Insights</h2>
+    <p><code>POST /generate_insights</code></p>
+    <p><b>Request JSON:</b></p>
+    <pre>{
+  "user_id": 1,
+  "start_date": "2025-09-01",  // optional 
+  "end_date": "2025-09-30"     // optional
+}</pre>
+    <p><b>Response:</b> Extracted insights (goals, progress, challenges, etc.)</p>
   </div>
 
   <div class="section">
