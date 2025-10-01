@@ -40,3 +40,7 @@ Thumbs.db
 dist/
 build/
 *.egg-info/
+
+# --- Gemini Files ---
+# Ignore Gemini API client files
+gen-lang-client-0920522291-a80064ac014b.json
