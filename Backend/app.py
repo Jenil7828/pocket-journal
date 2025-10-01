@@ -35,6 +35,15 @@ def process_entry():
         "user_id": 1,
         "entry_text": "Your journal text here..."
     }
+    Args:
+        user_id: int
+        entry_text: str
+    Returns:
+        {
+            "entry_id": 123,
+            "summary": "Summarized text...",
+            "mood_probs": {"happy": 0.7, "sad": 0.1, ...}
+        }
     """
     data = request.get_json()
     if not data or "user_id" not in data or "entry_text" not in data:
@@ -74,6 +83,17 @@ def generate_insights():
         "start_date": "2025-09-01",
         "end_date": "2025-09-30"
     }
+    Args:
+        user_id: int
+        start_date: str (optional)
+        end_date: str (optional)
+    Returns:
+        {
+            "goals": [...],
+            "progress": [...],
+            "challenges": [...],
+            ...
+        }
     """
     data = request.get_json()
     if not data or "user_id" not in data:
@@ -90,6 +110,19 @@ def generate_insights():
 # Mood-based movie recommendation
 @app.route("/api/recommend", methods=["GET"])
 def api_recommend():
+    """
+    Query param: mood (e.g. ?mood=happy)
+    Args:
+        mood: str
+    Returns:
+        {
+            "mood": "happy",
+            "recommendations": [
+                {"title": "Movie 1", "overview": "...", "release_date": "...", ...},
+                ...
+            ]
+        }
+    """
     mood = (request.args.get("mood") or "").strip().lower()
     if not mood:
         return jsonify({"error": "Provide mood parameter like ?mood=excited"}), 400
@@ -105,6 +138,16 @@ def api_recommend():
 # Movie search (typos OK)
 @app.route("/api/search", methods=["GET"])
 def api_search():
+    """
+    Query param: movie (e.g. ?movie=Inception)
+    Args:
+        q: str
+    Returns:
+        {
+            "searched": "Inception",
+            "results": [...]
+        }
+    """
     q = (request.args.get("movie") or "").strip()
     if not q:
         return jsonify({"error": "Provide movie parameter like ?movie=Incepton"}), 400
@@ -117,7 +160,21 @@ def api_search():
 
 @app.route("/api/songs", methods=["GET"])
 def get_songs():
-    # Get query parameters
+    """
+    Query parameters:
+        mood: str (default: happy)
+        language: str (default: both)
+        limit: int (default: 10)
+      Args:
+        mood: str
+        language: str
+        limit: int
+      Returns:
+        [
+            {"title": "Song 1", "artist": "Artist 1", "language": "English", ...},
+            ...
+        ] 
+    """
     mood = request.args.get("mood", "happy").lower()
     language = request.args.get("language", "both").lower()  # english, hindi, both
     limit = int(request.args.get("limit", 10))
@@ -131,6 +188,22 @@ def get_songs():
 
 @app.route("/api/search_song", methods=["GET"])
 def api_search_song():
+    """
+    Query parameters:
+        q: str
+        type: str (default: track)
+        limit: int (default: 10)
+    Args:
+        q: str
+        type: str
+        limit: int
+    Returns:
+        {
+            "query": "arjit sngh",
+            "type": "artist",
+            "results": [...]
+        }
+    """
     query = (request.args.get("q") or "").strip()
     search_type = (request.args.get("type") or "track").lower()  # track / artist
     limit = int(request.args.get("limit", 10))
@@ -145,6 +218,22 @@ def api_search_song():
 
 @app.route("/api/books", methods=["GET"])
 def get_books_by_emotion():
+    """
+    Query parameters:
+        emotion: str (default: happy)
+        limit: int (default: 5)
+    Args:
+        emotion: str
+        limit: int
+    Returns:
+        {
+            "emotion": "happy",
+            "results": [
+                {"title": "Book 1", "author": "Author 1", ...},
+                ...
+            ]
+        }
+    """
     emotion = request.args.get("emotion", "happy").lower()
     limit = int(request.args.get("limit", 5))
     books = recommend_books_by_emotion(emotion, limit)
@@ -155,6 +244,22 @@ def get_books_by_emotion():
 
 @app.route("/api/search_books", methods=["GET"])
 def api_search_books():
+    """
+    Query parameters:
+        query: str
+        type: str (default: both)
+        limit: int (default: 10)
+    Args:
+        query: str  # book title or author
+        type: str   # title, author, both     
+        limit: int  # number of results
+    Returns:
+        {
+            "query": "harry poter",
+            "type": "both",
+            "results": [...]
+        }
+    """
     query = (request.args.get("query") or "").strip()
     search_type = (request.args.get("type") or "both").lower()  # title, author, both
     max_results = int(request.args.get("limit", 10))
@@ -270,8 +375,15 @@ MAIN_TEMPLATE = """
 
 @app.route("/", methods=["GET"])
 def home():
+    """
+    Simple homepage with API info"""
     return render_template_string(MAIN_TEMPLATE)
 
 # -------------------- Run App --------------------
 if __name__ == "__main__":
+    """
+    Run the Flask app
+    Accessible at http://127.0.0.1:5000 (on laptop)
+    Running on http://192.168.1.33:5000 (on local network such as phone)
+    """
     app.run(host="0.0.0.0", port=5000, debug=True)
