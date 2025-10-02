@@ -3,6 +3,8 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
 
+CURRENT_TIME = datetime.now()
+
 class DBManager:
     def __init__(self, firebase_json_path=None):
         # Use provided path or env var
@@ -18,7 +20,7 @@ class DBManager:
         data = {
             "uid": uid,
             "entry_text": entry_text,
-            "created_at": datetime.utcnow()
+            "created_at": CURRENT_TIME
         }
         doc_ref.set(data)
         return doc_ref.id
@@ -56,7 +58,7 @@ class DBManager:
             "entry_id": entry_id,
             "summary": summary,
             "mood": mood,
-            "created_at": datetime.utcnow()
+            "created_at": CURRENT_TIME
         }
         doc_ref.set(data)
 
@@ -76,7 +78,7 @@ class DBManager:
             "appreciation": appreciation,
             "conflicts": conflicts,
             "raw_response": raw_response,
-            "created_at": datetime.utcnow()
+            "created_at": CURRENT_TIME
         }
         doc_ref.set(data)
 
