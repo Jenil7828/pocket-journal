@@ -152,7 +152,7 @@ pocket-journal/
 - `TMDB_API_KEY`: API key for The Movie Database (TMDb).
 - `GOOGLE_APPLICATION_CREDENTIALS`: Path to the Google Cloud service account JSON file for book recommendations.
 
-## License
+## Licensew
 This project is licensed under the MIT License. See the LICENSE file for details.
 
 ## Acknowledgements
