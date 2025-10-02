@@ -163,10 +163,137 @@ def api_search_books():
     results = search_books_robust(query=query, max_results=max_results, search_type=search_type)
     return jsonify(results)
 
+MAIN_PAGE_HTML = """
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>📓 Pocket Journal — Mood-Based Recommendations API</title>
+  <style>
+    body { 
+      font-family: Arial, sans-serif; 
+      margin: 20px; 
+      line-height: 1.6; 
+      background: #fafafa;
+      color: #2c3e50;
+    }
+    h1 { color: #34495e; }
+    h2 { color: #16a085; margin-top: 30px; }
+    code { 
+      background: #f4f4f4; 
+      padding: 3px 6px; 
+      border-radius: 4px; 
+      font-size: 0.95em; 
+    }
+    pre {
+      background: #f8f8f8;
+      padding: 10px;
+      border-left: 4px solid #16a085;
+      border-radius: 4px;
+      overflow-x: auto;
+    }
+    ul { margin: 10px 0 20px 20px; }
+    li { margin-bottom: 6px; }
+    footer {
+      margin-top: 40px;
+      font-size: 0.9em;
+      color: #7f8c8d;
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
+    }
+    .section { margin-bottom: 30px; }
+  </style>
+</head>
+<body>
+  <h1>📓 Pocket Journal — Mood-Based Recommendations API</h1>
+  <p>
+    Welcome! Use the following endpoints to analyze journal entries 
+    and get personalized recommendations for <b>movies</b>, <b>songs</b>, and <b>books</b>.
+  </p>
+
+  <div class="section">
+    <h2>📝 Journal Entry Processing</h2>
+    <p><code>POST /process_entry</code></p>
+    <p><b>Request JSON:</b></p>
+    <pre>{
+  "entry_text": "Your journal text here..."
+}</pre>
+    <p><b>Response:</b> <i>entry_id</i>, <i>summary</i>, <i>mood probabilities</i></p>
+  </div>
+
+  <div class="section">
+    <h2>🔍 Generate Insights</h2>
+    <p><code>POST /generate_insights</code></p>
+    <p><b>Request JSON:</b></p>
+    <pre>{
+  "start_date": "2025-09-01",  // optional 
+  "end_date": "2025-09-30"     // optional
+}</pre>
+    <p><b>Response:</b> Extracted insights (goals, progress, challenges, etc.)</p>
+  </div>
+
+  <div class="section">
+    <h2>🎬 Movies</h2>
+    <ul>
+      <li>Get movies by mood: <code>/api/recommend?mood=happy</code></li>
+      <li>Search movies (typo-tolerant): <code>/api/search?movie=Incepton</code></li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>🎵 Songs</h2>
+    <ul>
+      <li>
+        Get songs by mood:  
+        <code>/api/songs?mood=happy&language=both&limit=5</code>
+        <br><small>
+          - mood: happy, sad, chill, energetic, romantic<br>
+          - language: english, hindi, both (default = both)<br>
+          - limit: number of songs (default = 10)
+        </small>
+      </li>
+      <li>
+        Search songs or artists:  
+        <code>/api/search_song?q=arjit sngh&type=artist&limit=10</code>
+        <br><small>
+          - q: Song or artist name (typo-tolerant)<br>
+          - type: track or artist (default = track)<br>
+          - limit: number of results (default = 10)
+        </small>
+      </li>
+    </ul>
+  </div>
+
+  <div class="section">
+    <h2>📚 Books</h2>
+    <ul>
+      <li>
+        Get books by emotion:  
+        <code>/api/books?emotion=happy&limit=5</code><br>
+        <small>Emotions: happy, sad, angry, romantic, stressed, bored</small>
+      </li>
+      <li>
+        Search books:  
+        <code>/api/search_books?query=harry poter&type=both&limit=5</code>
+        <br><small>
+          - query: book title or author<br>
+          - type: title, author, or both (default = both)<br>
+          - limit: number of results (default = 10)
+        </small>
+      </li>
+    </ul>
+  </div>
+
+  <footer>
+    🚀 Pocket Journal API is running. Test with Postman, Curl, or your frontend app.
+  </footer>
+</body>
+</html>
+"""
 # -------------------- Home Page --------------------
 @app.route("/", methods=["GET"])
 def home():
-    return render_template_string("<h1>📓 Pocket Journal API is running.</h1>")
+    return render_template_string(MAIN_PAGE_HTML)
 
 # -------------------- Run App --------------------
 if __name__ == "__main__":
