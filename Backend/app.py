@@ -1,5 +1,16 @@
+# app.py
 from flask import Flask, request, jsonify, render_template_string
+from functools import wraps
+import os
 from rapidfuzz import process
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+import firebase_admin
+from firebase_admin import credentials, auth
+
 from Media_Recommendation.mood_recommend import get_movies_by_genre, MOOD_GENRE_MAP
 from Media_Recommendation.movie_search import search_movie_robust
 from Media_Recommendation.song_recommend import get_mood_songs
@@ -11,11 +22,34 @@ from Mood_Detection.mood_detection_sentence.predictor_sentence_level import Sent
 from Mood_Detection.summarization.summarizer import Summarizer
 from Mood_Detection.mood_detection_sentence.config_sentence import Config
 from Mood_Detection.analysis.insight_analyzer import InsightsGenerator
-import os
+
 app = Flask(__name__)
 out_dir = os.path.join(os.path.dirname(__file__), "Mood_Detection", Config.OUTPUT_DIR)
-# Initialize DB and models
-db = DBManager()
+print("Model output dir:", out_dir)
+# -------------------- Firebase Initialization --------------------
+FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+if not firebase_admin._apps:
+    cred = credentials.Certificate(FIREBASE_JSON)
+    firebase_admin.initialize_app(cred)
+
+# -------------------- Auth Decorator --------------------
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        header = request.headers.get("Authorization")
+        if not header or not header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid token"}), 401
+        id_token = header.split(" ")[1]
+        try:
+            decoded_token = auth.verify_id_token(id_token)
+            request.user = decoded_token
+        except Exception as e:
+            return jsonify({"error": "Invalid token", "details": str(e)}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+# -------------------- Initialize DB and models --------------------
+db = DBManager(firebase_json_path=FIREBASE_JSON)
 predictor = SentencePredictor(out_dir)
 
 try:
@@ -24,109 +58,53 @@ except Exception as e:
     print("⚠️ Summarizer not available, skipping. Error:", e)
     summarizer = None
 
-
-# -------------------- API Routes --------------------
-# Mood entry processing and storing
+# -------------------- Routes --------------------
 @app.route("/process_entry", methods=["POST"])
+@login_required
 def process_entry():
-    """
-    Expects JSON payload:
-    {
-        "user_id": 1,
-        "entry_text": "Your journal text here..."
-    }
-    Args:
-        user_id: int
-        entry_text: str
-    Returns:
-        {
-            "entry_id": 123,
-            "summary": "Summarized text...",
-            "mood_probs": {"happy": 0.7, "sad": 0.1, ...}
-        }
-    """
     data = request.get_json()
-    if not data or "user_id" not in data or "entry_text" not in data:
-        return jsonify({"error": "Missing user_id or entry_text"}), 400
+    if not data or "entry_text" not in data:
+        return jsonify({"error": "Missing entry_text"}), 400
 
-    user_id = data["user_id"]
+    uid = request.user["uid"]
     text = data["entry_text"]
 
-    # Insert journal entry into DB
-    entry_id = db.insert_entry(user_id, text)
-
-    # Summarize
+    entry_id = db.insert_entry(uid, text)
     summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
-
-    # Predict mood
     mood_probs = predictor.predict(summary)
-
-    # Save analysis
     db.insert_analysis(entry_id, summary, mood_probs)
 
-    # Return result
-    response = {
+    return jsonify({
         "entry_id": entry_id,
         "summary": summary,
         "mood_probs": mood_probs
-    }
+    }), 200
 
-    return jsonify(response), 200
-
-#Gemini-based insights generation
 @app.route("/generate_insights", methods=["POST"])
+@login_required
 def generate_insights():
-    """
-    Expects JSON payload:
-    {
-        "user_id": 1,
-        "start_date": "2025-09-01",
-        "end_date": "2025-09-30"
-    }
-    Args:
-        user_id: int
-        start_date: str (optional)
-        end_date: str (optional)
-    Returns:
-        {
-            "goals": [...],
-            "progress": [...],
-            "challenges": [...],
-            ...
-        }
-    """
-    data = request.get_json()
-    if not data or "user_id" not in data:
-        return jsonify({"error": "Missing user_id"}), 400
-
-    user_id = data["user_id"]
+    data = request.get_json() or {}
+    uid = request.user["uid"]
     start_date = data.get("start_date")
     end_date = data.get("end_date")
 
-    generator = InsightsGenerator(db)
-    insights = generator.generate_insights(user_id, start_date, end_date)
+    # Set Gemini credentials before initializing InsightsGenerator
+    GEMINI_JSON = os.getenv("GEMINI_CREDENTIALS_PATH")
+    if GEMINI_JSON:
+        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GEMINI_JSON
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+    generator = InsightsGenerator(db)
+    insights= generator.generate_insights(uid, start_date, end_date)
     return jsonify(insights), 200
-# Mood-based movie recommendation
+
+# -------------------- Movies, Songs, Books APIs --------------------
 @app.route("/api/recommend", methods=["GET"])
+@login_required
 def api_recommend():
-    """
-    Query param: mood (e.g. ?mood=happy)
-    Args:
-        mood: str
-    Returns:
-        {
-            "mood": "happy",
-            "recommendations": [
-                {"title": "Movie 1", "overview": "...", "release_date": "...", ...},
-                ...
-            ]
-        }
-    """
     mood = (request.args.get("mood") or "").strip().lower()
     if not mood:
-        return jsonify({"error": "Provide mood parameter like ?mood=excited"}), 400
-    # fuzzy match mood
+        return jsonify({"error": "Provide mood parameter like ?mood=happy"}), 400
     if mood not in MOOD_GENRE_MAP:
         closest_mood, score, _ = process.extractOne(mood, MOOD_GENRE_MAP.keys())
         genre_ids = MOOD_GENRE_MAP[closest_mood]
@@ -135,255 +113,61 @@ def api_recommend():
     movies = get_movies_by_genre(genre_ids, max_results=12)
     return jsonify({"mood": mood, "recommendations": movies})
 
-# Movie search (typos OK)
 @app.route("/api/search", methods=["GET"])
+@login_required
 def api_search():
-    """
-    Query param: movie (e.g. ?movie=Inception)
-    Args:
-        q: str
-    Returns:
-        {
-            "searched": "Inception",
-            "results": [...]
-        }
-    """
     q = (request.args.get("movie") or "").strip()
     if not q:
-        return jsonify({"error": "Provide movie parameter like ?movie=Incepton"}), 400
+        return jsonify({"error": "Provide movie parameter like ?movie=Inception"}), 400
     res = search_movie_robust(q, max_candidates=300, top_k=6)
     if res.get("error"):
         return jsonify({"error": res["error"], "results": []}), 404
     return jsonify({"searched": q, "results": res["results"]})
 
-
-
 @app.route("/api/songs", methods=["GET"])
+@login_required
 def get_songs():
-    """
-    Query parameters:
-        mood: str (default: happy)
-        language: str (default: both)
-        limit: int (default: 10)
-      Args:
-        mood: str
-        language: str
-        limit: int
-      Returns:
-        [
-            {"title": "Song 1", "artist": "Artist 1", "language": "English", ...},
-            ...
-        ] 
-    """
     mood = request.args.get("mood", "happy").lower()
-    language = request.args.get("language", "both").lower()  # english, hindi, both
+    language = request.args.get("language", "both").lower()
     limit = int(request.args.get("limit", 10))
-    
-    # Call the updated function
     songs = get_mood_songs(user_mood=mood, limit=limit, language=language)
-    
     return jsonify(songs)
 
-
-
 @app.route("/api/search_song", methods=["GET"])
+@login_required
 def api_search_song():
-    """
-    Query parameters:
-        q: str
-        type: str (default: track)
-        limit: int (default: 10)
-    Args:
-        q: str
-        type: str
-        limit: int
-    Returns:
-        {
-            "query": "arjit sngh",
-            "type": "artist",
-            "results": [...]
-        }
-    """
     query = (request.args.get("q") or "").strip()
-    search_type = (request.args.get("type") or "track").lower()  # track / artist
+    search_type = (request.args.get("type") or "track").lower()
     limit = int(request.args.get("limit", 10))
-
     if not query:
         return jsonify({"error": "Provide query parameter like ?q=Arjit Sngh&type=artist"}), 400
-
     res = search_songs_or_artist(query, search_type=search_type, limit=limit)
-
     return jsonify(res)
 
-
 @app.route("/api/books", methods=["GET"])
+@login_required
 def get_books_by_emotion():
-    """
-    Query parameters:
-        emotion: str (default: happy)
-        limit: int (default: 5)
-    Args:
-        emotion: str
-        limit: int
-    Returns:
-        {
-            "emotion": "happy",
-            "results": [
-                {"title": "Book 1", "author": "Author 1", ...},
-                ...
-            ]
-        }
-    """
     emotion = request.args.get("emotion", "happy").lower()
     limit = int(request.args.get("limit", 5))
     books = recommend_books_by_emotion(emotion, limit)
-    return jsonify({
-        "emotion": emotion,
-        "results": books
-    })
+    return jsonify({"emotion": emotion, "results": books})
 
 @app.route("/api/search_books", methods=["GET"])
+@login_required
 def api_search_books():
-    """
-    Query parameters:
-        query: str
-        type: str (default: both)
-        limit: int (default: 10)
-    Args:
-        query: str  # book title or author
-        type: str   # title, author, both     
-        limit: int  # number of results
-    Returns:
-        {
-            "query": "harry poter",
-            "type": "both",
-            "results": [...]
-        }
-    """
     query = (request.args.get("query") or "").strip()
-    search_type = (request.args.get("type") or "both").lower()  # title, author, both
+    search_type = (request.args.get("type") or "both").lower()
     max_results = int(request.args.get("limit", 10))
-    
     if not query:
         return jsonify({"error": "Provide query parameter like ?query=Harry Potter"}), 400
-
     results = search_books_robust(query=query, max_results=max_results, search_type=search_type)
     return jsonify(results)
 
-MAIN_TEMPLATE = """
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>📓 Pocket Journal — Mood-Based Recommendations API</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-    h1, h2 { color: #2c3e50; }
-    code { background: #f4f4f4; padding: 3px 6px; border-radius: 4px; }
-    ul { margin: 10px 0 20px 20px; }
-    li { margin-bottom: 6px; }
-    .section { margin-bottom: 30px; }
-  </style>
-</head>
-<body>
-  <h1>📓 Pocket Journal — Mood-Based Recommendations API</h1>
-  <p>Welcome! Use the following endpoints to analyze journal entries and get personalized recommendations for movies, songs, and books.</p>
-
-  <div class="section">
-    <h2>📝 Journal Entry Processing</h2>
-    <p><code>POST /process_entry</code></p>
-    <p><b>Request JSON:</b></p>
-    <pre>{
-  "user_id": 1,
-  "entry_text": "Your journal text here..."
-}</pre>
-    <p><b>Response:</b> Summary + mood probabilities + entry_id</p>
-  </div>
-  <div class="section">
-    <h2>🔍 Generate Insights</h2>
-    <p><code>POST /generate_insights</code></p>
-    <p><b>Request JSON:</b></p>
-    <pre>{
-  "user_id": 1,
-  "start_date": "2025-09-01",  // optional 
-  "end_date": "2025-09-30"     // optional
-}</pre>
-    <p><b>Response:</b> Extracted insights (goals, progress, challenges, etc.)</p>
-  </div>
-
-  <div class="section">
-    <h2>🎬 Movies</h2>
-    <ul>
-      <li>Get movies by mood: <code>/api/recommend?mood=happy</code></li>
-      <li>Search movies (typo-tolerant): <code>/api/search?movie=Incepton</code></li>
-    </ul>
-  </div>
-
-  <div class="section">
-    <h2>🎵 Songs</h2>
-    <ul>
-      <li>
-        Get songs by mood:  
-        <code>/api/songs?mood=happy&language=both&limit=5</code><br>
-        <small>Parameters:</small>
-        <ul>
-          <li><b>mood</b>: Mood of the songs (happy, sad, chill, energetic, romantic)</li>
-          <li><b>language</b>: Song language (english, hindi, both). Default = both</li>
-          <li><b>limit</b>: Number of songs (default = 10)</li>
-        </ul>
-      </li>
-      <li>
-        Search songs or artists:  
-        <code>/api/search_song?q=arjit sngh&type=artist&limit=10</code><br>
-        <small>Parameters:</small>
-        <ul>
-          <li><b>q</b>: Song or artist name (typo-tolerant)</li>
-          <li><b>type</b>: "track" or "artist" (default = track)</li>
-          <li><b>limit</b>: Number of results (default = 10)</li>
-        </ul>
-      </li>
-    </ul>
-  </div>
-
-  <div class="section">
-    <h2>📚 Books</h2>
-    <ul>
-      <li>
-        Get books by emotion:  
-        <code>/api/books?emotion=happy&limit=5</code><br>
-        <small>Example emotions: <b>happy, sad, angry, romantic, stressed, bored</b></small>
-      </li>
-      <li>
-        Search books (typo-tolerant):  
-        <code>/api/search_books?query=harry poter&type=both&limit=5</code><br>
-        <small>Parameters:</small>
-        <ul>
-          <li><b>query</b>: Book title or author</li>
-          <li><b>type</b>: "title", "author", or "both" (default = both)</li>
-          <li><b>limit</b>: Number of results (default = 10)</li>
-        </ul>
-      </li>
-    </ul>
-  </div>
-
-  <footer>
-    <p>🚀 Pocket Journal API is running. Use Postman, Curl, or your browser to test the endpoints.</p>
-  </footer>
-</body>
-</html>
-"""
-
+# -------------------- Home Page --------------------
 @app.route("/", methods=["GET"])
 def home():
-    """
-    Simple homepage with API info"""
-    return render_template_string(MAIN_TEMPLATE)
+    return render_template_string("<h1>📓 Pocket Journal API is running.</h1>")
 
 # -------------------- Run App --------------------
 if __name__ == "__main__":
-    """
-    Run the Flask app
-    Accessible at http://127.0.0.1:5000 (on laptop)
-    Running on http://192.168.1.33:5000 (on local network such as phone)
-    """
     app.run(host="0.0.0.0", port=5000, debug=True)

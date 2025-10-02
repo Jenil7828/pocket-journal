@@ -1,112 +1,89 @@
-# db_manager.py
-import mysql.connector
-from mysql.connector import Error
+import os
 from datetime import datetime
-import json, os
-from dotenv import load_dotenv
-
-load_dotenv()
+import firebase_admin
+from firebase_admin import credentials, firestore
 
 class DBManager:
-    def __init__(self, host="localhost", user="root",
-                 password=None, database="journal_app"):
-        if password is None:
-            password = os.getenv("DATABASE_PASSWORD", "")
-        try:
-            self.conn = mysql.connector.connect(
-                host=host, user=user, password=password, database=database
-            )
-            self.cursor = self.conn.cursor(dictionary=True)
-            print("✅ Connected to database.")
-        except Error as e:
-            print(f"❌ DB connection failed: {e}")
+    def __init__(self, firebase_json_path=None):
+        # Use provided path or env var
+        cred_path = firebase_json_path or os.getenv("FIREBASE_CREDENTIALS_PATH")
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(cred_path)
+            firebase_admin.initialize_app(cred)
+        self.db = firestore.client()
 
-    # Insert a journal entry
-    def insert_entry(self, user_id, text, created_at=None):
-        if not created_at:
-            created_at = datetime.now()
-        query = """
-            INSERT INTO journal_entries (user_id, entry_text, created_at)
-            VALUES (%s, %s, %s)
-        """
-        self.cursor.execute(query, (user_id, text, created_at))
-        self.conn.commit()
-        return self.cursor.lastrowid
+    # -------------------- Journal Entries --------------------
+    def insert_entry(self, uid: str, entry_text: str) -> str:
+        doc_ref = self.db.collection("journal_entries").document()
+        data = {
+            "uid": uid,
+            "entry_text": entry_text,
+            "created_at": datetime.utcnow()
+        }
+        doc_ref.set(data)
+        return doc_ref.id
 
-    # Fetch entries (with analysis if exists)
-    def fetch_entries_with_analysis(self, user_id, start_date=None, end_date=None):
-        query = """
-            SELECT je.id, je.entry_text, je.created_at, ea.summary, ea.mood
-            FROM journal_entries je
-            LEFT JOIN entry_analysis ea ON je.id = ea.entry_id
-            WHERE je.user_id = %s
-        """
-        params = [user_id]
-        if start_date and end_date:
-            query += " AND je.created_at BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        query += " ORDER BY je.created_at ASC"
+    def fetch_entries_with_analysis(self, uid: str, start_date: str = None, end_date: str = None):
+        collection = self.db.collection("journal_entries")
+        query = collection.where("user_id", "==", uid)
+        if start_date:
+            query = query.where("created_at", ">=", datetime.fromisoformat(start_date))
+        if end_date:
+            query = query.where("created_at", "<=", datetime.fromisoformat(end_date))
 
-        self.cursor.execute(query, tuple(params))
-        return self.cursor.fetchall()
+        query = query.order_by("created_at")  # ensures range queries are indexed
+        docs = query.stream()
+        result = []
 
-    # Insert insights
-    def insert_insights(self, user_id, start_date, end_date,
-                        goals=None, progress=None, negative_behaviors=None,
-                        remedies=None, appreciation=None, conflicts=None,
-                        raw_response=None):
-        query = """
-            INSERT INTO insights
-            (user_id, start_date, end_date, goals, progress, negative_behaviors,
-             remedies, appreciation, conflicts, raw_response)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-        """
-        self.cursor.execute(query, (
-            user_id,
-            start_date,
-            end_date,
-            json.dumps(goals) if goals else None,
-            json.dumps(progress) if progress else None,
-            json.dumps(negative_behaviors) if negative_behaviors else None,
-            json.dumps(remedies) if remedies else None,
-            json.dumps(appreciation) if appreciation else None,
-            json.dumps(conflicts) if conflicts else None,
-            raw_response
-        ))
-        self.conn.commit()
-        return self.cursor.lastrowid
+        for doc in docs:
+            data = doc.to_dict()
+            data["id"] = doc.id
 
-    def fetch_entries(self, user_id, start_date=None, end_date=None):
-        query = """
-            SELECT id, entry_text, created_at
-            FROM journal_entries
-            WHERE user_id = %s
-        """
-        params = [user_id]
-        if start_date and end_date:
-            query += " AND created_at BETWEEN %s AND %s"
-            params.extend([start_date, end_date])
-        query += " ORDER BY created_at ASC"
+            # Fetch entry_analysis where entry_id matches journal entry ID
+            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", doc.id).limit(1).get()
+            if analysis_query:
+                data["analysis"] = analysis_query[0].to_dict()
+            else:
+                data["analysis"] = {}
 
-        self.cursor.execute(query, tuple(params))
-        return self.cursor.fetchall()
+            result.append(data)
 
-    def insert_analysis(self, entry_id, summary, mood_probs):
-        query = """
-            INSERT INTO entry_analysis (entry_id, summary, mood)
-            VALUES (%s, %s, %s)
-            ON DUPLICATE KEY UPDATE summary=%s, mood=%s
-        """
-        mood_json = json.dumps(mood_probs)
-        self.cursor.execute(query, (entry_id, summary, mood_json, summary, mood_json))
-        self.conn.commit()
-        return self.cursor.lastrowid
+        return result
 
-    def insert_insight_mapping(self, insight_id, entry_id, relation_type="analyzed"):
-        query = """
-            INSERT INTO insight_entry_mapping (insight_id, entry_id, relation_type)
-            VALUES (%s, %s, %s)
-        """
-        self.cursor.execute(query, (insight_id, entry_id, relation_type))
-        self.conn.commit()
-        return self.cursor.lastrowid
+    def insert_analysis(self, entry_id: str, summary: str, mood: dict):
+        doc_ref = self.db.collection("entry_analysis").document()
+        data = {
+            "entry_id": entry_id,
+            "summary": summary,
+            "mood": mood,
+            "created_at": datetime.utcnow()
+        }
+        doc_ref.set(data)
+
+    def insert_insights(self, uid: str, start_date: str, end_date: str, goals: list,
+                        progress: str, negative_behaviors: str, remedies: str,
+                        appreciation: str, conflicts: str, raw_response: str,
+                        entry_ids: list = None):
+        doc_ref = self.db.collection("insights").document()
+        data = {
+            "uid": uid,
+            "start_date": start_date,
+            "end_date": end_date,
+            "goals": goals,
+            "progress": progress,
+            "negative_behaviors": negative_behaviors,
+            "remedies": remedies,
+            "appreciation": appreciation,
+            "conflicts": conflicts,
+            "raw_response": raw_response,
+            "created_at": datetime.utcnow()
+        }
+        doc_ref.set(data)
+
+        # Map entries to insights if provided
+        if entry_ids:
+            for entry_id in entry_ids:
+                self.db.collection("insight_entry_mapping").add({
+                    "insight_id": doc_ref.id,
+                    "entry_id": entry_id
+                })
