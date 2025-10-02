@@ -95,6 +95,6 @@ class InsightsGenerator:
             raw_response=json.dumps(combined, ensure_ascii=False),
             entry_ids=entry_ids_for_insight
         )
-        combined['entry'] = entries[:4]
+        # combined['entry'] = entries[:4]
         return combined
 

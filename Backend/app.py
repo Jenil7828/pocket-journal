@@ -86,7 +86,9 @@ def generate_insights():
     data = request.get_json() or {}
     uid = request.user["uid"]
     start_date = data.get("start_date")
+    print(start_date)
     end_date = data.get("end_date")
+    print(end_date)
 
     # Set Gemini credentials before initializing InsightsGenerator
     GEMINI_JSON = os.getenv("GEMINI_CREDENTIALS_PATH")
@@ -96,6 +98,7 @@ def generate_insights():
 
     generator = InsightsGenerator(db)
     insights= generator.generate_insights(uid, start_date, end_date)
+    print(insights)
     return jsonify(insights), 200
 
 # -------------------- Movies, Songs, Books APIs --------------------
@@ -112,6 +115,43 @@ def api_recommend():
         genre_ids = MOOD_GENRE_MAP[mood]
     movies = get_movies_by_genre(genre_ids, max_results=12)
     return jsonify({"mood": mood, "recommendations": movies})
+
+@app.route("/movie/recommend", methods=["GET"])
+@login_required
+def movie_recommend():
+    uid = request.user["uid"]
+    mood = db.fetch_today_entries_with_mood_summary(uid)
+    if not mood.get("dominant_mood"):
+        return jsonify({"error": "No mood data available for today"}), 404
+    genre_ids = MOOD_GENRE_MAP.get(mood["dominant_mood"], [])
+    if not genre_ids:
+        return jsonify({"error": f"No genre mapping for mood {mood['dominant_mood']}"}), 404
+    movies = get_movies_by_genre(genre_ids, max_results=12)
+    return jsonify({"mood": mood["dominant_mood"], "recommendations": movies})
+
+@app.route("/song/recommend", methods=["GET"])
+@login_required
+def song_recommend():
+    uid = request.user["uid"]
+    limit = int(request.args.get("limit", 10))
+    language = request.args.get("language", "both")
+    mood = db.fetch_today_entries_with_mood_summary(uid)
+    if not mood.get("dominant_mood"):
+        return jsonify({"error": "No mood data available for today"}), 404
+    songs = get_mood_songs(user_mood=mood["dominant_mood"], limit=limit, language=language)
+    return jsonify({"mood": mood["dominant_mood"], "recommendations": songs})
+
+@app.route("/book/recommend", methods=["GET"])
+@login_required
+def book_recommend():
+    uid = request.user["uid"]
+    mood = db.fetch_today_entries_with_mood_summary(uid)
+    if not mood.get("dominant_mood"):
+        return jsonify({"error": "No mood data available for today"}), 404
+    books = recommend_books_by_emotion(mood["dominant_mood"], limit=5)
+    return jsonify({"mood": mood["dominant_mood"], "recommendations": books})
+
+
 
 @app.route("/api/search", methods=["GET"])
 @login_required
