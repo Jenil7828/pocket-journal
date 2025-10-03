@@ -4,7 +4,8 @@ from functools import wraps
 import os
 from rapidfuzz import process
 from dotenv import load_dotenv
-
+from datetime import datetime, time
+import pytz
 # Load environment variables
 load_dotenv()
 
@@ -100,6 +101,38 @@ def generate_insights():
     insights= generator.generate_insights(uid, start_date, end_date)
     print(insights)
     return jsonify(insights), 200
+
+
+@app.route("/entries", methods=["GET"])
+@login_required  # your authentication decorator
+def get_entries():
+    """
+    Query journal entries with analysis.
+    Accepts query params:
+      - start_date: ISO string in IST, e.g., 2025-10-01
+      - end_date: ISO string in IST, e.g., 2025-10-02
+    """
+    IST = pytz.timezone("Asia/Kolkata")
+    uid = request.user["uid"]  # assuming your login_required sets request.user
+    start_date = request.args.get("start_date") 
+    end_date = request.args.get("end_date")      
+    if start_date:
+        try:
+            start_date = IST.localize(datetime.strptime(start_date, "%Y-%m-%d"))
+        except ValueError:
+            return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
+
+    if end_date:
+        try:
+            end_date = IST.localize(datetime.strptime(end_date, "%Y-%m-%d"))
+        except ValueError:
+            return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
+
+    try:
+        entries = db.fetch_entries_with_analysis(uid, start_date=start_date, end_date=end_date)
+        return jsonify({"entries": entries, "count": len(entries)}), 200
+    except Exception as e:
+        return jsonify({"error": "Failed to fetch entries", "details": str(e)}), 500
 
 # -------------------- Movies, Songs, Books APIs --------------------
 @app.route("/api/recommend", methods=["GET"])
