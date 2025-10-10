@@ -1,6 +1,7 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
+import pytz
 
 # -----------------------------
 # CONFIG: Replace with your Firebase Auth UID
@@ -238,25 +239,32 @@ entry_analysis_data = [
 # -----------------------------
 # MIGRATION SCRIPT
 # -----------------------------
+IST = pytz.timezone("Asia/Kolkata")
 entry_ids = []
 
 # Upload Journal Entries
 for entry in journal_entries_data:
     doc_ref = db.collection("journal_entries").document()
+    # Convert to IST timezone
+    created_at_naive = datetime.fromisoformat(entry["created_at"])
+    created_at = IST.localize(created_at_naive)
     doc_ref.set({
         "user_id": USER_UID,
         "entry_text": entry["entry_text"],
-        "created_at": datetime.fromisoformat(entry["created_at"])
+        "created_at": created_at
     })
     entry_ids.append(doc_ref.id)
 
 # Upload Entry Analysis
 for idx, analysis in enumerate(entry_analysis_data):
+    # Convert to IST timezone
+    analysis_created_at_naive = datetime.fromisoformat(analysis["created_at"])
+    analysis_created_at = IST.localize(analysis_created_at_naive)
     db.collection("entry_analysis").document().set({
         "entry_id": entry_ids[idx],
         "summary": analysis["summary"],
         "mood": analysis["mood"],
-        "created_at": datetime.fromisoformat(analysis["created_at"])
+        "created_at": analysis_created_at
     })
 
 print("✅ Migration completed: all 30 entries + analyses uploaded.")

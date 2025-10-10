@@ -19,10 +19,12 @@ class DBManager:
     def insert_entry(self, uid: str, entry_text: str) -> str:
         doc_ref = self.db.collection("journal_entries").document()
         IST = pytz.timezone("Asia/Kolkata")
+        now = datetime.now(IST)
         data = {
             "uid": uid,
             "entry_text": entry_text,
-            "created_at": datetime.now(IST)  # store in IST
+            "created_at": now,  # store in IST
+            "updated_at": now   # initialize updated_at for new entries
         }
         doc_ref.set(data)
         return doc_ref.id
@@ -71,13 +73,15 @@ class DBManager:
         collection = self.db.collection("journal_entries")
         query = collection.where("uid", "==", uid)
 
-        # Convert ISO date strings to IST datetime
+        # Convert date strings to IST datetime
         if start_date:
-            start_dt = self.tz.localize(datetime.fromisoformat(start_date)).replace(
+            start_dt_naive = datetime.strptime(str(start_date), "%Y-%m-%d")
+            start_dt = self.tz.localize(start_dt_naive).replace(
                 hour=0, minute=0, second=0, microsecond=0)
             query = query.where("created_at", ">=", start_dt)
         if end_date:
-            end_dt = self.tz.localize(datetime.fromisoformat(end_date)).replace(
+            end_dt_naive = datetime.strptime(str(end_date), "%Y-%m-%d")
+            end_dt = self.tz.localize(end_dt_naive).replace(
                 hour=23, minute=59, second=59, microsecond=999999)
             query = query.where("created_at", "<=", end_dt)
 
@@ -150,4 +154,181 @@ class DBManager:
         print("===== FETCH TODAY ENTRIES END =====\n")
 
         return {"dominant_mood": dominant_mood, "entries": entries}
+
+    # -------------------- Delete Entries --------------------
+    def delete_entry(self, entry_id: str, uid: str) -> dict:
+        """
+        Delete a journal entry and its associated analysis.
+        Returns success status and details of what was deleted.
+        """
+        try:
+            # First, verify the entry belongs to the user
+            entry_doc = self.db.collection("journal_entries").document(entry_id).get()
+            if not entry_doc.exists:
+                return {"success": False, "error": "Entry not found"}
+            
+            entry_data = entry_doc.to_dict()
+            if entry_data.get("uid") != uid:
+                return {"success": False, "error": "Unauthorized: Entry does not belong to user"}
+            
+            # Delete the journal entry
+            self.db.collection("journal_entries").document(entry_id).delete()
+            
+            # Find and delete associated analysis
+            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", entry_id).get()
+            analysis_deleted = 0
+            analysis_ids = []
+            
+            for analysis_doc in analysis_query:
+                analysis_doc.reference.delete()
+                analysis_deleted += 1
+                analysis_ids.append(analysis_doc.id)
+            
+            # Also delete any insight mappings that reference this entry
+            insight_mapping_query = self.db.collection("insight_entry_mapping").where("entry_id", "==", entry_id).get()
+            insight_mappings_deleted = 0
+            
+            for mapping_doc in insight_mapping_query:
+                mapping_doc.reference.delete()
+                insight_mappings_deleted += 1
+            
+            return {
+                "success": True,
+                "deleted": {
+                    "entry_id": entry_id,
+                    "analysis_count": analysis_deleted,
+                    "analysis_ids": analysis_ids,
+                    "insight_mappings_deleted": insight_mappings_deleted
+                }
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to delete entry: {str(e)}"}
+
+    def delete_entries_batch(self, entry_ids: list, uid: str) -> dict:
+        """
+        Delete multiple journal entries and their associated analysis.
+        Returns success status and details of what was deleted.
+        """
+        try:
+            deleted_entries = []
+            failed_entries = []
+            
+            for entry_id in entry_ids:
+                result = self.delete_entry(entry_id, uid)
+                if result["success"]:
+                    deleted_entries.append(result["deleted"])
+                else:
+                    failed_entries.append({"entry_id": entry_id, "error": result["error"]})
+            
+            return {
+                "success": len(failed_entries) == 0,
+                "deleted_count": len(deleted_entries),
+                "failed_count": len(failed_entries),
+                "deleted_entries": deleted_entries,
+                "failed_entries": failed_entries
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to delete entries: {str(e)}"}
+
+    # -------------------- Update Entries --------------------
+    def update_entry(self, entry_id: str, uid: str, new_entry_text: str) -> dict:
+        """
+        Update a journal entry and regenerate its analysis.
+        Returns success status and details of what was updated.
+        """
+        try:
+            # First, verify the entry belongs to the user
+            entry_doc = self.db.collection("journal_entries").document(entry_id).get()
+            if not entry_doc.exists:
+                return {"success": False, "error": "Entry not found"}
+            
+            entry_data = entry_doc.to_dict()
+            if entry_data.get("uid") != uid:
+                return {"success": False, "error": "Unauthorized: Entry does not belong to user"}
+            
+            # Update the journal entry text
+            IST = pytz.timezone("Asia/Kolkata")
+            self.db.collection("journal_entries").document(entry_id).update({
+                "entry_text": new_entry_text,
+                "updated_at": datetime.now(IST)
+            })
+            
+            # Find and delete existing analysis
+            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", entry_id).get()
+            old_analysis_ids = []
+            
+            for analysis_doc in analysis_query:
+                analysis_doc.reference.delete()
+                old_analysis_ids.append(analysis_doc.id)
+            
+            return {
+                "success": True,
+                "updated": {
+                    "entry_id": entry_id,
+                    "new_text": new_entry_text,
+                    "old_analysis_deleted": len(old_analysis_ids),
+                    "old_analysis_ids": old_analysis_ids,
+                    "requires_reanalysis": True  # Flag to indicate analysis needs regeneration
+                }
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to update entry: {str(e)}"}
+
+    def update_entry_with_analysis(self, entry_id: str, uid: str, new_entry_text: str, 
+                                 predictor, summarizer=None) -> dict:
+        """
+        Update a journal entry and immediately regenerate its analysis.
+        This is a convenience method that combines update and reanalysis.
+        """
+        try:
+            # First, verify the entry belongs to the user
+            entry_doc = self.db.collection("journal_entries").document(entry_id).get()
+            if not entry_doc.exists:
+                return {"success": False, "error": "Entry not found"}
+            
+            entry_data = entry_doc.to_dict()
+            if entry_data.get("uid") != uid:
+                return {"success": False, "error": "Unauthorized: Entry does not belong to user"}
+            
+            # Update the journal entry text
+            IST = pytz.timezone("Asia/Kolkata")
+            self.db.collection("journal_entries").document(entry_id).update({
+                "entry_text": new_entry_text,
+                "updated_at": datetime.now(IST)
+            })
+            
+            # Delete existing analysis
+            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", entry_id).get()
+            old_analysis_ids = []
+            
+            for analysis_doc in analysis_query:
+                analysis_doc.reference.delete()
+                old_analysis_ids.append(analysis_doc.id)
+            
+            # Generate new analysis
+            summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:200] + "..."
+            mood_probs = predictor.predict(summary)
+            
+            # Insert new analysis
+            self.insert_analysis(entry_id, summary, mood_probs)
+            
+            return {
+                "success": True,
+                "updated": {
+                    "entry_id": entry_id,
+                    "new_text": new_entry_text,
+                    "old_analysis_deleted": len(old_analysis_ids),
+                    "old_analysis_ids": old_analysis_ids,
+                    "new_analysis": {
+                        "summary": summary,
+                        "mood_probs": mood_probs
+                    }
+                }
+            }
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to update entry with analysis: {str(e)}"}
 
