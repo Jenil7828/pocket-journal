@@ -103,36 +103,6 @@ def generate_insights():
     return jsonify(insights), 200
 
 
-@app.route("/entries", methods=["GET"])
-@login_required  # your authentication decorator
-def get_entries():
-    """
-    Query journal entries with analysis.
-    Accepts query params:
-      - start_date: ISO string in IST, e.g., 2025-10-01
-      - end_date: ISO string in IST, e.g., 2025-10-02
-    """
-    IST = pytz.timezone("Asia/Kolkata")
-    uid = request.user["uid"]  # assuming your login_required sets request.user
-    start_date = request.args.get("start_date") 
-    end_date = request.args.get("end_date")      
-    if start_date:
-        try:
-            start_date = IST.localize(datetime.strptime(start_date, "%Y-%m-%d"))
-        except ValueError:
-            return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD."}), 400
-
-    if end_date:
-        try:
-            end_date = IST.localize(datetime.strptime(end_date, "%Y-%m-%d"))
-        except ValueError:
-            return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD."}), 400
-
-    try:
-        entries = db.fetch_entries_with_analysis(uid, start_date=start_date, end_date=end_date)
-        return jsonify({"entries": entries, "count": len(entries)}), 200
-    except Exception as e:
-        return jsonify({"error": "Failed to fetch entries", "details": str(e)}), 500
 
 @app.route("/entries/<entry_id>", methods=["DELETE"])
 @login_required
@@ -918,7 +888,7 @@ def get_entries_filtered():
             return jsonify({"error": "Offset must be non-negative"}), 400
         
         # Build query
-        query = db.db.collection("journal_entries").where("uid", "==", uid)
+        query = db.db.collection("journal_entries").where(filter=firestore.FieldFilter("uid", "==", uid))
         
         # Apply date filters
         if start_date and start_date.strip():
@@ -929,7 +899,7 @@ def get_entries_filtered():
                 # Make it timezone-aware (IST)
                 IST = pytz.timezone("Asia/Kolkata")
                 start_datetime = IST.localize(start_datetime_naive)
-                query = query.where("created_at", ">=", start_datetime)
+                query = query.where(filter=firestore.FieldFilter("created_at", ">=", start_datetime))
             except ValueError as e:
                 return jsonify({"error": "Invalid start_date format. Use YYYY-MM-DD"}), 400
         
@@ -941,7 +911,7 @@ def get_entries_filtered():
                 # Make it timezone-aware (IST) and set to end of day
                 IST = pytz.timezone("Asia/Kolkata")
                 end_datetime = IST.localize(end_datetime_naive.replace(hour=23, minute=59, second=59))
-                query = query.where("created_at", "<=", end_datetime)
+                query = query.where(filter=firestore.FieldFilter("created_at", "<=", end_datetime))
             except ValueError as e:
                 return jsonify({"error": "Invalid end_date format. Use YYYY-MM-DD"}), 400
         
@@ -970,7 +940,7 @@ def get_entries_filtered():
                 # Get analysis for mood filtering
                 if mood_filter:
                     try:
-                        analysis_query = db.db.collection("entry_analysis").where("entry_id", "==", entry_data["entry_id"]).get()
+                        analysis_query = db.db.collection("entry_analysis").where(filter=firestore.FieldFilter("entry_id", "==", entry_data["entry_id"])).get()
                         has_matching_mood = False
                         
                         for analysis_doc in analysis_query:

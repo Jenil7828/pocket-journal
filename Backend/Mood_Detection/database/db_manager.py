@@ -75,15 +75,23 @@ class DBManager:
 
         # Convert date strings to IST datetime
         if start_date:
-            start_dt_naive = datetime.strptime(str(start_date), "%Y-%m-%d")
-            start_dt = self.tz.localize(start_dt_naive).replace(
-                hour=0, minute=0, second=0, microsecond=0)
-            query = query.where("created_at", ">=", start_dt)
+            try:
+                start_dt_naive = datetime.strptime(str(start_date), "%Y-%m-%d")
+                start_dt = self.tz.localize(start_dt_naive).replace(
+                    hour=0, minute=0, second=0, microsecond=0)
+                query = query.where("created_at", ">=", start_dt)
+            except ValueError:
+                # If date parsing fails, skip the filter
+                pass
         if end_date:
-            end_dt_naive = datetime.strptime(str(end_date), "%Y-%m-%d")
-            end_dt = self.tz.localize(end_dt_naive).replace(
-                hour=23, minute=59, second=59, microsecond=999999)
-            query = query.where("created_at", "<=", end_dt)
+            try:
+                end_dt_naive = datetime.strptime(str(end_date), "%Y-%m-%d")
+                end_dt = self.tz.localize(end_dt_naive).replace(
+                    hour=23, minute=59, second=59, microsecond=999999)
+                query = query.where("created_at", "<=", end_dt)
+            except ValueError:
+                # If date parsing fails, skip the filter
+                pass
 
         query = query.order_by("created_at")
         docs = query.stream()
