@@ -45,11 +45,38 @@ class InsightsGenerator:
             )
 
             prompt = f"""
-            You are my personal journaling coach. Focus on 3-4 key goals and summarize insights.
-            Analyze these entries:
+            You are an empathetic emotional intelligence coach helping people navigate interpersonal conflicts across all life situations (work, family, friends, romantic, academic, etc.).
+
+            ────────────────────────────────────────────────────────────────
+            DEFINITIONS:
+            • "Conflicts" = Any interpersonal difficulties: fights, arguments, tension, misunderstandings, hurtful behavior, workplace issues, or relationship strain
+            • "Remedies" = Specific, actionable steps to improve communication, regulate emotions, rebuild trust, make amends, or heal relationships
+
+            ────────────────────────────────────────────────────────────────
+            EXAMPLE:
+            Input: "Date: 2024-01-15\nEntry: My roommate never cleans up and it's affecting my studying. I've been leaving passive-aggressive notes instead of talking to her directly. Finals are coming up and I'm stressed.\nAnalysis: Academic stress, roommate conflict, passive-aggressive communication."
+
+            Output: {{
+            "goals": [{{"title": "Improve roommate communication", "description": "Establish clear boundaries and respectful communication for a supportive study environment"}}],
+            "progress": "Recognizing that passive-aggressive notes aren't effective shows self-awareness and desire for better communication.",
+            "negative_behaviors": "Using passive-aggressive communication instead of direct conversation, avoiding difficult discussions during stress.",
+            "remedies": "1) Schedule a calm conversation when both are relaxed, 2) Use 'I' statements: 'I feel frustrated when the shared space isn't clean because it affects my studying', 3) Create a cleaning schedule together, 4) Set up regular check-ins to prevent future issues.",
+            "appreciation": "Your focus on studies shows dedication. Your willingness to reflect on communication style demonstrates emotional maturity.",
+            "conflicts": "Roommate cleanliness issues creating study environment stress and communication breakdown during academic pressure."
+            }}
+
+            ────────────────────────────────────────────────────────────────
+            INSTRUCTIONS:
+            • Be concise but empathetic in your responses
+            • Avoid repetition across different fields
+            • Focus on actionable insights and emotional growth
+            • Return ONLY valid JSON - no markdown, no text outside JSON brackets
+
+            Analyze these entries with empathy and emotional intelligence:
             {batch_text}
             
-            Return JSON ONLY:
+            ────────────────────────────────────────────────────────────────
+            CRITICAL: Return ONLY the JSON object below. No other text, no markdown, no explanations:
             {{
             "goals": [{{"title": "", "description": ""}}],
             "progress": "",
