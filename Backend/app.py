@@ -19,9 +19,9 @@ from Media_Recommendation.search_song import search_songs_or_artist
 from Media_Recommendation.books_recommendation import recommend_books_by_emotion
 from Media_Recommendation.search_books import search_books_robust
 from Mood_Detection.database.db_manager import DBManager
-from Mood_Detection.mood_detection_sentence.predictor_sentence_level import SentencePredictor
+from Mood_Detection.mood_detection_roberta.predictor import SentencePredictor
 from Mood_Detection.summarization.summarizer import Summarizer
-from Mood_Detection.mood_detection_sentence.config_sentence import Config
+from Mood_Detection.mood_detection_roberta.config import Config
 from Mood_Detection.analysis.insight_analyzer import InsightsGenerator
 
 app = Flask(__name__)
@@ -56,7 +56,7 @@ predictor = SentencePredictor(out_dir)
 try:
     summarizer = Summarizer()
 except Exception as e:
-    print("⚠️ Summarizer not available, skipping. Error:", e)
+    print("WARNING: Summarizer not available, skipping. Error:", e)
     summarizer = None
 
 # -------------------- Routes --------------------
@@ -72,7 +72,8 @@ def process_entry():
 
     entry_id = db.insert_entry(uid, text)
     summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
-    mood_probs = predictor.predict(summary)
+    mood_result = predictor.predict(summary)
+    mood_probs = mood_result["probabilities"]  # Extract just the probabilities
     db.insert_analysis(entry_id, summary, mood_probs)
 
     return jsonify({
