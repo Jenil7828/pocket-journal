@@ -8,8 +8,8 @@ from transformers import (
     Trainer
 )
 from sklearn.metrics import f1_score, accuracy_score, precision_recall_fscore_support
-from config import Config
-from dataset_loader import SentenceDatasetLoader
+from .config import Config
+from .dataset_loader import SentenceDatasetLoader
 
 class SentenceTrainer:
     def __init__(self):

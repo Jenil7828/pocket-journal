@@ -2,7 +2,7 @@ import os
 import glob
 import numpy as np
 from datasets import Dataset
-from config import Config
+from .config import Config
 
 class SentenceDatasetLoader:
     def __init__(self, root_dir="../data"):

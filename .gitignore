@@ -29,6 +29,9 @@ __pycache__/
 *.sqlite3
 data
 
+# --- Models and Checkpoints ---
+# Ignore machine learning model files and checkpoints
+models/
 
 # --- Operating System Files ---
 # Ignore OS-specific metadata files
