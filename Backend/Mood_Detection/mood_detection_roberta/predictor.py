@@ -2,7 +2,7 @@ import os
 import torch
 import numpy as np
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from .config import Config
+from config import Config
 
 class SentencePredictor:
     def __init__(self, model_path=Config.OUTPUT_DIR):

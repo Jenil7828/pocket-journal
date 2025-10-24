@@ -4,7 +4,7 @@ import numpy as np
 from collections import Counter
 from sklearn.metrics import accuracy_score, f1_score, hamming_loss, precision_recall_fscore_support
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from .config import Config
+from config import Config
 
 class SentenceLevelMoodEvaluator:
     def __init__(self, model_dir: str, labels: list, device: str = None):
