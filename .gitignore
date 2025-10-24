@@ -28,8 +28,7 @@ __pycache__/
 *.sqlite
 *.sqlite3
 data
-# Ignore the large Roberta model folder
-Backend/Mood_Detection/outputs/
+
 
 # --- Operating System Files ---
 # Ignore OS-specific metadata files
