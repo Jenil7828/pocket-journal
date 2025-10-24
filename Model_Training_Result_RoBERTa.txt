@@ -1,0 +1,187 @@
+
+(venv) D:\Cursor\pocket-journal\Backend\Mood_Detection\mood_detection_roberta>python -c "import torch; print('CUDA available:', torch.cuda.is_available()); print('CUDA version:', torch.version.cuda)"
+CUDA available: True
+CUDA version: 11.8
+
+(venv) D:\Cursor\pocket-journal\Backend\Mood_Detection\mood_detection_roberta>python train.py
+🎭 Enhanced RoBERTa Mood Detection Training
+==================================================
+🚀 Initializing enhanced trainer...
+📊 Dataset loaded: 13048 samples
+🏷️  Labels: ['anger', 'disgust', 'fear', 'happy', 'neutral', 'sad', 'surprise']
+⚙️  Configuration:
+   - Epochs: 8
+   - Batch size: 2
+   - Learning rate: 2e-05
+   - Prediction threshold: 0.35
+   - Class weighting: True
+Training on CUDA
+Using class weights: [1.0030856442921214, 1.0403664115596567, 1.087081893632117, 0.9881472480450795, 0.617975495241714, 1.0569386198853858, 1.2064046873439251]
+Map: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 13048/13048 [00:00<00:00, 19252.12 examples/s]
+Map: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 13048/13048 [00:00<00:00, 123538.71 examples/s]
+Some weights of RobertaForSequenceClassification were not initialized from the model checkpoint at roberta-base and are newly initialized: ['classifier.dense.bias', 'classifier.dense.weight', 'classifier.out_proj.bias', 'classifier.out_proj.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+D:\Cursor\pocket-journal\Backend\Mood_Detection\mood_detection_roberta\trainer.py:80: FutureWarning: `tokenizer` is deprecated and will be removed in version 5.0.0 for `WeightedTrainer.__init__`. Use `processing_class` instead.
+  super().__init__(*args, **kwargs)
+🚀 Starting enhanced training for overlapping emotions...
+📊 Training for 8 epochs with batch size 2
+🎯 Using threshold 0.35 for multi-label classification
+{'loss': 0.6131, 'grad_norm': 1.2479060888290405, 'learning_rate': 9.800000000000001e-06, 'epoch': 0.08}
+{'loss': 0.3736, 'grad_norm': 1.3035451173782349, 'learning_rate': 1.9600000000000002e-05, 'epoch': 0.15}
+{'loss': 0.3321, 'grad_norm': 1.3280774354934692, 'learning_rate': 1.9812646370023422e-05, 'epoch': 0.23}
+{'loss': 0.2975, 'grad_norm': 6.397235870361328, 'learning_rate': 1.9617486338797815e-05, 'epoch': 0.31}
+{'loss': 0.2709, 'grad_norm': 2.466832160949707, 'learning_rate': 1.942232630757221e-05, 'epoch': 0.38}
+{'loss': 0.2602, 'grad_norm': 2.4775853157043457, 'learning_rate': 1.9227166276346605e-05, 'epoch': 0.46}
+{'loss': 0.254, 'grad_norm': 2.1222751140594482, 'learning_rate': 1.9032006245121e-05, 'epoch': 0.54}
+{'loss': 0.2387, 'grad_norm': 1.758833885192871, 'learning_rate': 1.8836846213895397e-05, 'epoch': 0.61}
+{'loss': 0.2495, 'grad_norm': 2.7759718894958496, 'learning_rate': 1.864168618266979e-05, 'epoch': 0.69}
+{'loss': 0.231, 'grad_norm': 2.3919901847839355, 'learning_rate': 1.8446526151444187e-05, 'epoch': 0.77}
+{'loss': 0.2355, 'grad_norm': 1.9255986213684082, 'learning_rate': 1.825136612021858e-05, 'epoch': 0.84}
+{'loss': 0.2271, 'grad_norm': 2.5827603340148926, 'learning_rate': 1.8056206088992976e-05, 'epoch': 0.92}
+{'loss': 0.2402, 'grad_norm': 2.1457605361938477, 'learning_rate': 1.786104605776737e-05, 'epoch': 1.0}
+{'eval_loss': 0.22645924985408783, 'eval_accuracy': 0.6252873563218391, 'eval_f1': 0.6628972509261064, 'eval_precision': 0.6748709805478365, 'eval_recall': 0.6513409961685823, 'eval_runtime': 66.261, 'eval_samples_per_second': 39.39, 'eval_steps_per_second': 19.695, 'epoch': 1.0}
+{'loss': 0.2099, 'grad_norm': 2.5856637954711914, 'learning_rate': 1.7665886026541765e-05, 'epoch': 1.07}
+{'loss': 0.2136, 'grad_norm': 3.0726709365844727, 'learning_rate': 1.747072599531616e-05, 'epoch': 1.15}
+{'loss': 0.1943, 'grad_norm': 2.9368512630462646, 'learning_rate': 1.7275565964090555e-05, 'epoch': 1.23}
+{'loss': 0.1935, 'grad_norm': 1.7038055658340454, 'learning_rate': 1.708040593286495e-05, 'epoch': 1.3}
+{'loss': 0.1972, 'grad_norm': 2.9843204021453857, 'learning_rate': 1.6885245901639347e-05, 'epoch': 1.38}
+{'loss': 0.2154, 'grad_norm': 1.8364306688308716, 'learning_rate': 1.669008587041374e-05, 'epoch': 1.46}
+{'loss': 0.2153, 'grad_norm': 2.678208827972412, 'learning_rate': 1.6494925839188137e-05, 'epoch': 1.53}
+{'loss': 0.2005, 'grad_norm': 3.153365135192871, 'learning_rate': 1.629976580796253e-05, 'epoch': 1.61}
+{'loss': 0.1843, 'grad_norm': 2.6512370109558105, 'learning_rate': 1.6104605776736926e-05, 'epoch': 1.69}
+{'loss': 0.1968, 'grad_norm': 2.864891290664673, 'learning_rate': 1.590944574551132e-05, 'epoch': 1.76}
+{'loss': 0.1948, 'grad_norm': 2.7602920532226562, 'learning_rate': 1.5714285714285715e-05, 'epoch': 1.84}
+{'loss': 0.1903, 'grad_norm': 4.900949954986572, 'learning_rate': 1.551912568306011e-05, 'epoch': 1.92}
+{'loss': 0.2005, 'grad_norm': 1.9782023429870605, 'learning_rate': 1.5323965651834505e-05, 'epoch': 1.99}
+{'eval_loss': 0.21808071434497833, 'eval_accuracy': 0.6367816091954023, 'eval_f1': 0.6705744431418523, 'eval_precision': 0.6842105263157895, 'eval_recall': 0.6574712643678161, 'eval_runtime': 46.7721, 'eval_samples_per_second': 55.803, 'eval_steps_per_second': 27.901, 'epoch': 2.0}
+{'loss': 0.169, 'grad_norm': 3.651472330093384, 'learning_rate': 1.51288056206089e-05, 'epoch': 2.07}
+{'loss': 0.1777, 'grad_norm': 6.731418609619141, 'learning_rate': 1.4933645589383297e-05, 'epoch': 2.14}
+{'loss': 0.1593, 'grad_norm': 5.048631191253662, 'learning_rate': 1.4738485558157692e-05, 'epoch': 2.22}
+{'loss': 0.1568, 'grad_norm': 3.3392114639282227, 'learning_rate': 1.4543325526932087e-05, 'epoch': 2.3}
+{'loss': 0.1697, 'grad_norm': 2.482673406600952, 'learning_rate': 1.4352068696330992e-05, 'epoch': 2.37}
+{'loss': 0.1718, 'grad_norm': 3.6887786388397217, 'learning_rate': 1.4156908665105386e-05, 'epoch': 2.45}
+{'loss': 0.1596, 'grad_norm': 3.645993709564209, 'learning_rate': 1.3961748633879783e-05, 'epoch': 2.53}
+{'loss': 0.1682, 'grad_norm': 3.322152614593506, 'learning_rate': 1.376658860265418e-05, 'epoch': 2.6}
+{'loss': 0.1659, 'grad_norm': 3.7104063034057617, 'learning_rate': 1.3571428571428574e-05, 'epoch': 2.68}
+{'loss': 0.1661, 'grad_norm': 8.244179725646973, 'learning_rate': 1.3376268540202969e-05, 'epoch': 2.76}
+{'loss': 0.1563, 'grad_norm': 3.278238534927368, 'learning_rate': 1.3181108508977363e-05, 'epoch': 2.83}
+{'loss': 0.1549, 'grad_norm': 2.9681687355041504, 'learning_rate': 1.2985948477751758e-05, 'epoch': 2.91}
+{'loss': 0.1699, 'grad_norm': 3.551928997039795, 'learning_rate': 1.2790788446526153e-05, 'epoch': 2.99}
+{'eval_loss': 0.21972127258777618, 'eval_accuracy': 0.6329501915708812, 'eval_f1': 0.663868752384586, 'eval_precision': 0.6610942249240122, 'eval_recall': 0.6666666666666666, 'eval_runtime': 97.2219, 'eval_samples_per_second': 26.846, 'eval_steps_per_second': 13.423, 'epoch': 3.0}
+{'loss': 0.1489, 'grad_norm': 3.8864407539367676, 'learning_rate': 1.2595628415300547e-05, 'epoch': 3.06}
+{'loss': 0.1282, 'grad_norm': 4.298837661743164, 'learning_rate': 1.2400468384074942e-05, 'epoch': 3.14}
+{'loss': 0.1454, 'grad_norm': 4.8429131507873535, 'learning_rate': 1.2205308352849337e-05, 'epoch': 3.22}
+{'loss': 0.1305, 'grad_norm': 6.630527973175049, 'learning_rate': 1.2010148321623731e-05, 'epoch': 3.29}
+{'loss': 0.1302, 'grad_norm': 9.604313850402832, 'learning_rate': 1.1814988290398128e-05, 'epoch': 3.37}
+{'loss': 0.1264, 'grad_norm': 5.498809814453125, 'learning_rate': 1.1623731459797034e-05, 'epoch': 3.45}
+{'loss': 0.126, 'grad_norm': 2.498777151107788, 'learning_rate': 1.1428571428571429e-05, 'epoch': 3.52}
+{'loss': 0.1429, 'grad_norm': 3.748033285140991, 'learning_rate': 1.1233411397345824e-05, 'epoch': 3.6}
+{'loss': 0.1291, 'grad_norm': 4.312251567840576, 'learning_rate': 1.1038251366120218e-05, 'epoch': 3.68}
+{'loss': 0.1285, 'grad_norm': 12.73714542388916, 'learning_rate': 1.0843091334894615e-05, 'epoch': 3.75}
+{'loss': 0.138, 'grad_norm': 1.8224855661392212, 'learning_rate': 1.064793130366901e-05, 'epoch': 3.83}
+{'loss': 0.1467, 'grad_norm': 2.878450393676758, 'learning_rate': 1.0452771272443406e-05, 'epoch': 3.91}
+{'loss': 0.1325, 'grad_norm': 14.057002067565918, 'learning_rate': 1.02576112412178e-05, 'epoch': 3.98}
+{'eval_loss': 0.23111651837825775, 'eval_accuracy': 0.6463601532567049, 'eval_f1': 0.6776577600909608, 'eval_precision': 0.6704161979752531, 'eval_recall': 0.6850574712643678, 'eval_runtime': 89.4404, 'eval_samples_per_second': 29.181, 'eval_steps_per_second': 14.591, 'epoch': 4.0}
+{'loss': 0.1126, 'grad_norm': 4.6938652992248535, 'learning_rate': 1.0062451209992195e-05, 'epoch': 4.06}
+{'loss': 0.1043, 'grad_norm': 3.9811275005340576, 'learning_rate': 9.86729117876659e-06, 'epoch': 4.13}
+{'loss': 0.1031, 'grad_norm': 3.9483389854431152, 'learning_rate': 9.672131147540984e-06, 'epoch': 4.21}
+{'loss': 0.0966, 'grad_norm': 2.805142879486084, 'learning_rate': 9.47697111631538e-06, 'epoch': 4.29}
+{'loss': 0.1153, 'grad_norm': 8.19498062133789, 'learning_rate': 9.281811085089775e-06, 'epoch': 4.36}
+{'loss': 0.1091, 'grad_norm': 5.008594036102295, 'learning_rate': 9.08665105386417e-06, 'epoch': 4.44}
+{'loss': 0.1032, 'grad_norm': 2.5229978561401367, 'learning_rate': 8.891491022638565e-06, 'epoch': 4.52}
+{'loss': 0.1094, 'grad_norm': 4.304019927978516, 'learning_rate': 8.69633099141296e-06, 'epoch': 4.59}
+{'loss': 0.1091, 'grad_norm': 2.7687273025512695, 'learning_rate': 8.501170960187354e-06, 'epoch': 4.67}
+{'loss': 0.1013, 'grad_norm': 5.336082935333252, 'learning_rate': 8.30601092896175e-06, 'epoch': 4.75}
+{'loss': 0.1109, 'grad_norm': 6.605869293212891, 'learning_rate': 8.110850897736145e-06, 'epoch': 4.82}
+{'loss': 0.1111, 'grad_norm': 6.4822187423706055, 'learning_rate': 7.91569086651054e-06, 'epoch': 4.9}
+{'loss': 0.1065, 'grad_norm': 3.5863916873931885, 'learning_rate': 7.720530835284934e-06, 'epoch': 4.98}
+{'eval_loss': 0.23998168110847473, 'eval_accuracy': 0.6478927203065135, 'eval_f1': 0.6722817764165391, 'eval_precision': 0.6717674062739097, 'eval_recall': 0.6727969348659004, 'eval_runtime': 88.6267, 'eval_samples_per_second': 29.449, 'eval_steps_per_second': 14.725, 'epoch': 5.0}
+{'loss': 0.0939, 'grad_norm': 3.541196346282959, 'learning_rate': 7.525370804059329e-06, 'epoch': 5.05}
+{'loss': 0.0942, 'grad_norm': 3.6036055088043213, 'learning_rate': 7.330210772833725e-06, 'epoch': 5.13}
+{'loss': 0.0799, 'grad_norm': 4.299202919006348, 'learning_rate': 7.135050741608119e-06, 'epoch': 5.21}
+{'loss': 0.0875, 'grad_norm': 5.825995445251465, 'learning_rate': 6.939890710382514e-06, 'epoch': 5.28}
+{'loss': 0.0891, 'grad_norm': 6.3553056716918945, 'learning_rate': 6.744730679156909e-06, 'epoch': 5.36}
+{'loss': 0.0808, 'grad_norm': 6.211452960968018, 'learning_rate': 6.549570647931304e-06, 'epoch': 5.44}
+{'loss': 0.0788, 'grad_norm': 3.768674850463867, 'learning_rate': 6.3544106167057e-06, 'epoch': 5.51}
+{'loss': 0.0961, 'grad_norm': 10.199959754943848, 'learning_rate': 6.159250585480094e-06, 'epoch': 5.59}
+{'loss': 0.0753, 'grad_norm': 4.397805213928223, 'learning_rate': 5.964090554254489e-06, 'epoch': 5.67}
+{'loss': 0.0877, 'grad_norm': 8.039451599121094, 'learning_rate': 5.768930523028884e-06, 'epoch': 5.74}
+{'loss': 0.083, 'grad_norm': 3.4272751808166504, 'learning_rate': 5.573770491803278e-06, 'epoch': 5.82}
+{'loss': 0.0917, 'grad_norm': 8.696833610534668, 'learning_rate': 5.378610460577675e-06, 'epoch': 5.9}
+{'loss': 0.0819, 'grad_norm': 6.623306751251221, 'learning_rate': 5.183450429352069e-06, 'epoch': 5.97}
+{'eval_loss': 0.26576825976371765, 'eval_accuracy': 0.6444444444444445, 'eval_f1': 0.671201814058957, 'eval_precision': 0.6621923937360179, 'eval_recall': 0.6804597701149425, 'eval_runtime': 89.6296, 'eval_samples_per_second': 29.12, 'eval_steps_per_second': 14.56, 'epoch': 6.0}
+{'loss': 0.0791, 'grad_norm': 4.947282791137695, 'learning_rate': 4.988290398126464e-06, 'epoch': 6.05}
+{'loss': 0.078, 'grad_norm': 4.233503341674805, 'learning_rate': 4.793130366900859e-06, 'epoch': 6.13}
+{'loss': 0.0692, 'grad_norm': 3.6852591037750244, 'learning_rate': 4.597970335675254e-06, 'epoch': 6.2}
+{'loss': 0.0722, 'grad_norm': 2.821214437484741, 'learning_rate': 4.402810304449649e-06, 'epoch': 6.28}
+{'loss': 0.0766, 'grad_norm': 5.47908353805542, 'learning_rate': 4.207650273224044e-06, 'epoch': 6.36}
+{'loss': 0.0703, 'grad_norm': 7.942534923553467, 'learning_rate': 4.012490241998439e-06, 'epoch': 6.43}
+{'loss': 0.0665, 'grad_norm': 6.591990947723389, 'learning_rate': 3.817330210772834e-06, 'epoch': 6.51}
+{'loss': 0.0657, 'grad_norm': 8.351400375366211, 'learning_rate': 3.622170179547229e-06, 'epoch': 6.59}
+{'loss': 0.0832, 'grad_norm': 5.531643390655518, 'learning_rate': 3.427010148321624e-06, 'epoch': 6.66}
+{'loss': 0.0666, 'grad_norm': 3.6214003562927246, 'learning_rate': 3.2318501170960194e-06, 'epoch': 6.74}
+{'loss': 0.0568, 'grad_norm': 4.242934703826904, 'learning_rate': 3.036690085870414e-06, 'epoch': 6.82}
+{'loss': 0.0698, 'grad_norm': 4.930657863616943, 'learning_rate': 2.8415300546448087e-06, 'epoch': 6.89}
+{'loss': 0.0652, 'grad_norm': 5.99350118637085, 'learning_rate': 2.646370023419204e-06, 'epoch': 6.97}
+{'eval_loss': 0.2780899703502655, 'eval_accuracy': 0.6482758620689655, 'eval_f1': 0.6722211702329104, 'eval_precision': 0.6645451141894422, 'eval_recall': 0.6800766283524904, 'eval_runtime': 46.6648, 'eval_samples_per_second': 55.931, 'eval_steps_per_second': 27.965, 'epoch': 7.0}
+{'loss': 0.0607, 'grad_norm': 2.170670509338379, 'learning_rate': 2.451209992193599e-06, 'epoch': 7.04}
+{'loss': 0.0625, 'grad_norm': 9.609929084777832, 'learning_rate': 2.256049960967994e-06, 'epoch': 7.12}
+{'loss': 0.0634, 'grad_norm': 2.441664457321167, 'learning_rate': 2.060889929742389e-06, 'epoch': 7.2}
+{'loss': 0.0574, 'grad_norm': 5.854357719421387, 'learning_rate': 1.8657298985167841e-06, 'epoch': 7.27}
+{'loss': 0.0627, 'grad_norm': 7.544842720031738, 'learning_rate': 1.6705698672911788e-06, 'epoch': 7.35}
+{'loss': 0.0691, 'grad_norm': 5.116182327270508, 'learning_rate': 1.4754098360655739e-06, 'epoch': 7.43}
+{'loss': 0.0572, 'grad_norm': 8.411369323730469, 'learning_rate': 1.280249804839969e-06, 'epoch': 7.5}
+{'loss': 0.0588, 'grad_norm': 14.64881420135498, 'learning_rate': 1.0850897736143639e-06, 'epoch': 7.58}
+{'loss': 0.0661, 'grad_norm': 8.257074356079102, 'learning_rate': 8.899297423887588e-07, 'epoch': 7.66}
+{'loss': 0.0527, 'grad_norm': 4.09083890914917, 'learning_rate': 6.947697111631538e-07, 'epoch': 7.73}
+{'loss': 0.0574, 'grad_norm': 6.418317794799805, 'learning_rate': 4.996096799375488e-07, 'epoch': 7.81}
+{'loss': 0.056, 'grad_norm': 4.394516468048096, 'learning_rate': 3.044496487119438e-07, 'epoch': 7.89}
+{'loss': 0.0496, 'grad_norm': 9.211665153503418, 'learning_rate': 1.0928961748633881e-07, 'epoch': 7.96}
+{'eval_loss': 0.28337234258651733, 'eval_accuracy': 0.6417624521072797, 'eval_f1': 0.6694449706383785, 'eval_precision': 0.6620457100037467, 'eval_recall': 0.6770114942528735, 'eval_runtime': 45.7067, 'eval_samples_per_second': 57.103, 'eval_steps_per_second': 28.552, 'epoch': 8.0}
+{'train_runtime': 6821.4467, 'train_samples_per_second': 12.241, 'train_steps_per_second': 0.766, 'train_loss': 0.13930692120952956, 'epoch': 8.0}
+100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 5224/5224 [1:53:41<00:00,  1.31s/it]
+✅ Enhanced Sentence-level Multilabel Training Complete!
+💾 Model saved at: outputs\models\mood_detector
+🎭 Optimized for overlapping/mixed emotions detection
+
+🔍 Evaluating model performance...
+
+📝 Sample predictions:
+
+Text 1: I'm so excited about my new job but also nervous about the challenges ahead!
+D:\Cursor\pocket-journal\Backend\Mood_Detection\mood_detection_roberta\evaluator.py:35: UserWarning: Creating a tensor from a list of numpy.ndarrays is extremely slow. Please consider converting the list to a single numpy.ndarray with numpy.array() before converting to a tensor. (Triggered internally at C:\actions-runner\_work\pytorch\pytorch\pytorch\torch\csrc\utils\tensor_new.cpp:257.)
+  all_probs = torch.tensor(all_probs)
+Emotion probabilities:
+anger: 0.013556
+disgust: 0.003297
+fear: 0.274079
+happy: 0.607726
+neutral: 0.028666
+sad: 0.025186
+surprise: 0.011916
+Active emotions: ['happy']
+
+Text 2: I feel angry and disappointed about what happened yesterday.
+Emotion probabilities:
+anger: 0.927578
+disgust: 0.014630
+fear: 0.006552
+happy: 0.027356
+neutral: 0.033840
+sad: 0.050021
+surprise: 0.008071
+Active emotions: ['anger']
+
+Text 3: I'm happy to see my family but sad that my friend couldn't make it.
+Emotion probabilities:
+anger: 0.011911
+disgust: 0.009486
+fear: 0.011927
+happy: 0.056228
+neutral: 0.029894
+sad: 0.960101
+surprise: 0.012472
+Active emotions: ['sad']
+
+✅ Training complete! Model saved to: outputs\models\mood_detector
+🎯 Model optimized for overlapping/mixed emotions detection

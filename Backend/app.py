@@ -72,7 +72,8 @@ def process_entry():
 
     entry_id = db.insert_entry(uid, text)
     summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
-    mood_result = predictor.predict(summary)
+    # Use lower threshold for better mixed emotion detection
+    mood_result = predictor.predict(summary, threshold=0.25)
     mood_probs = mood_result["probabilities"]  # Extract just the probabilities
     db.insert_analysis(entry_id, summary, mood_probs)
 
