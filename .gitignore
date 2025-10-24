@@ -31,7 +31,7 @@ data
 
 # --- Models and Checkpoints ---
 # Ignore machine learning model files and checkpoints
-models/
+# models/
 
 # --- Operating System Files ---
 # Ignore OS-specific metadata files

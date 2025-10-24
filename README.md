@@ -59,7 +59,10 @@ pocket-journal/
 │   │   │   ├── trainer_sentence.py
 │   │   │   ├── evaluator_sentence_level.py
 │   │   │   └── visualizer.py
-│   │   ├── outputs/                   # Model checkpoints, logs
+│   │   ├── outputs/                   # Model files (Git LFS)
+│   │   │   ├── models/
+│   │   │   │   └── mood_detector/     # Trained mood detection model
+│   │   │   └── summarizer/            # Summarization model (if trained)
 │   │   └── summarization/
 │   │       ├── summarizer.py
 │   │       ├── trainer.py
@@ -81,6 +84,41 @@ pocket-journal/
 ```bash
 git clone https://github.com/Jenil7828/pocket-journal.git
 cd pocket-journal
+```
+
+**📦 Model Files & Git LFS**
+This repository uses Git LFS (Large File Storage) to handle model files efficiently. The trained mood detection model is stored in `Backend/Mood_Detection/outputs/models/mood_detector/` and includes:
+- `model.safetensors` - Trained model weights (~500MB)
+- `config.json` - Model configuration
+- `tokenizer.json` - Tokenizer files
+- Other essential model artifacts
+
+**If you encounter issues with model files:**
+
+**For new clones:**
+```bash
+# Clone with LFS support
+git lfs clone https://github.com/Jenil7828/pocket-journal.git
+```
+
+**For existing clones:**
+```bash
+# Install Git LFS if not already installed
+git lfs install
+
+# Pull LFS files
+git lfs pull
+
+# Or fetch and checkout LFS files
+git lfs fetch
+git lfs checkout
+```
+
+**Verify LFS files are downloaded:**
+```bash
+# Check if model files exist and have proper size
+ls -la Backend/Mood_Detection/outputs/models/mood_detector/
+# Should show model.safetensors (~500MB) and other model files
 ```
 2️⃣ Backend Setup
 ```bash
@@ -206,7 +244,9 @@ Authorization: Bearer <token>
 ## 📌 Notes
 
 - Ensure Firebase and APIs are enabled.
-- Models for summarization & mood detection may need initial downloads.
+- **Model Files**: The repository includes a pre-trained mood detection model optimized for production use. Training checkpoints have been removed to save space.
+- **Git LFS**: Model files are stored using Git LFS to handle large files efficiently.
+- **Model Loading**: If the local model fails to load, the system will fall back to the base RoBERTa model.
 - Firestore stores:
   - journal_entries → {entry_id, user_id, entry_text, created_at}
   - entry_analysis → {entry_id, summary, mood}
