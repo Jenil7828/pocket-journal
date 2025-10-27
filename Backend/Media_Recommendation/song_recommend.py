@@ -1,103 +1,101 @@
+import os
 import json
+import random
+from dotenv import load_dotenv
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
-import random 
-import os
-from dotenv import load_dotenv
-# 1️⃣ Authentication
+
+# -------------------------------------------------------------------
+# Load environment variables
+# -------------------------------------------------------------------
 load_dotenv()
 client_id = os.getenv("SONG_ID")
 client_secret = os.getenv("SONG_SECRET")
 
+# Spotify setup
 auth_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
 sp = spotipy.Spotify(auth_manager=auth_manager)
 
-# ----------------- History File -----------------
 HISTORY_FILE = "song_history.json"
+
+# -------------------------------------------------------------------
+# Mood → genre keywords
+# -------------------------------------------------------------------
+MOOD_KEYWORDS = {
+    "happy": ["pop", "party", "dance", "feel good"],
+    "sad": ["sad", "acoustic", "piano", "melancholy", "slow"],
+    "chill": ["chill", "lofi", "relax", "ambient"],
+    "romantic": ["love", "romantic", "r-n-b", "soft"],
+    "energetic": ["rock", "edm", "hip-hop", "workout"]
+}
+
+# -------------------------------------------------------------------
+# Main Function
+# -------------------------------------------------------------------
 def get_mood_songs(user_mood, limit=10, language="both"):
     """
-    Returns a list of song recommendations for the given mood and language.
-    language: "english", "hindi", or "both"
+    Returns a list of SONGS (tracks only) for the given mood.
+    Uses Spotify search instead of recommendations (never 404s).
     """
-    # Load or initialize history
-   
+    user_mood = user_mood.lower()
+    if user_mood not in MOOD_KEYWORDS:
+        return {"error": f"Unknown mood '{user_mood}'."}
 
-# Load or initialize history safely
-    if not os.path.exists(HISTORY_FILE) or os.path.getsize(HISTORY_FILE) == 0:
+    # Load or init history
+    if not os.path.exists(HISTORY_FILE):
         song_history = {}
     else:
         try:
             with open(HISTORY_FILE, "r") as f:
                 song_history = json.load(f)
-        except json.JSONDecodeError:
-            # If file is corrupted or empty
+        except:
             song_history = {}
-
-    mood_queries = {
-        "sad": "sad acoustic",
-        "happy": "happy pop",
-        "chill": "chill lofi",
-        "energetic": "energetic rock",
-        "romantic": "romantic r&b"
-    }
-
-    if user_mood not in mood_queries:
-        return {"error": "Mood not recognized."}
-
-    query = mood_queries[user_mood]
 
     if user_mood not in song_history:
         song_history[user_mood] = []
 
-    # Random offset to get different songs
-    random_offset = random.randint(0, 1000)
-    results = sp.search(q=query, limit=20, type="track", offset=random_offset)
+    keywords = MOOD_KEYWORDS[user_mood]
+    query = random.choice(keywords)
+    print(f"🎵 Searching for mood='{user_mood}' using keyword='{query}'")
 
-    tracks = results['tracks']['items']
-    random.shuffle(tracks)
-
-    # Filter out previously suggested songs
-    new_songs = []
-    for track in tracks:
-        track_id = track['id']
-        track_name = track['name'].lower()
-        artist_name = track['artists'][0]['name'].lower()
-
-        # Language filter
-        if language == "english" and any(word in track_name for word in ["हिंदी", "bollywood"]) :
-            continue
-        if language == "hindi" and all(word not in track_name for word in ["हिंदी", "bollywood"]):
-            continue
-
-        if track_id not in song_history[user_mood]:
-            new_songs.append(track)
-            song_history[user_mood].append(track_id)
-
-    # Reset history if all songs exhausted
-    if not new_songs:
-        song_history[user_mood] = []
-        results = sp.search(q=query, limit=20, type="track", offset=random_offset)
-        tracks = results['tracks']['items']
+    try:
+        results = sp.search(q=query, type="track", limit=limit * 2, market="IN")
+        tracks = results.get("tracks", {}).get("items", [])
         random.shuffle(tracks)
+
+        new_songs = []
         for track in tracks:
-            track_id = track['id']
-            if track_id not in song_history[user_mood]:
-                new_songs.append(track)
-                song_history[user_mood].append(track_id)
+            tid = track["id"]
+            if tid in song_history[user_mood]:
+                continue
 
-    # Save updated history
-    with open(HISTORY_FILE, "w") as f:
-        json.dump(song_history, f)
+            name = track["name"]
+            artist = track["artists"][0]["name"]
 
-    # Prepare output
-    output = []
-    for track in new_songs[:limit]:
-        item = {
-            "song_name": track['name'],
-            "artist_name": track['artists'][0]['name'],
-            "spotify_link": track['external_urls']['spotify'],
-            "poster_url": track['album']['images'][0]['url'] if track['album']['images'] else None
-        }
-        output.append(item)
+            new_songs.append({
+                "song_name": name,
+                "artist_name": artist,
+                "spotify_link": track["external_urls"]["spotify"],
+                "poster_url": track["album"]["images"][0]["url"] if track["album"]["images"] else None
+            })
 
-    return output
+            song_history[user_mood].append(tid)
+            if len(new_songs) >= limit:
+                break
+
+        with open(HISTORY_FILE, "w") as f:
+            json.dump(song_history, f, indent=4)
+
+        if not new_songs:
+            return {"message": "No new unique songs found. Try again!"}
+        return new_songs
+
+    except spotipy.exceptions.SpotifyException as e:
+        return {"error": "Spotify API error", "details": str(e)}
+    except Exception as e:
+        return {"error": "Unknown error", "details": str(e)}
+
+if __name__ == "__main__":
+    mood = input("Enter mood (happy/sad/chill/romantic/energetic): ").strip().lower()
+    songs = get_mood_songs(mood, limit=5)
+    print(json.dumps(songs, indent=2, ensure_ascii=False))
