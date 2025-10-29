@@ -19,6 +19,11 @@ datasets>=2.0.0
 accelerate>=0.26.0
 scikit-learn>=1.0.0
 numpy>=1.21.0
+pandas>=2.0.0
+safetensors>=0.4.0
+evaluate>=0.4.0
+huggingface-hub>=0.20.0
+protobuf>=4.21.0
 tf-keras>=2.20.0
 
 # LangChain & Google AI

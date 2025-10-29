@@ -28,6 +28,7 @@ __pycache__/
 *.sqlite
 *.sqlite3
 data
+summary.csv
 
 # --- Models and Checkpoints ---
 # Ignore machine learning model files and checkpoints
@@ -47,3 +48,7 @@ build/
 # Ignore Gemini API client files
 gen-lang-client-0920522291-a80064ac014b.json
 pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
+
+
+# Summarizer model files (large files, should not be committed)
+Backend/Mood_Detection/outputs/models/summarizer/*.safetensors
