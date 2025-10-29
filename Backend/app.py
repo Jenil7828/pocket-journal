@@ -1,4 +1,11 @@
 # app.py
+import os
+import warnings
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+warnings.filterwarnings('ignore', category=FutureWarning)
+warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
+
 from flask import Flask, request, jsonify, render_template_string
 from functools import wraps
 import os
@@ -20,7 +27,7 @@ from Media_Recommendation.books_recommendation import recommend_books_by_emotion
 from Media_Recommendation.search_books import search_books_robust
 from Mood_Detection.database.db_manager import DBManager
 from Mood_Detection.mood_detection_roberta.predictor import SentencePredictor
-from Mood_Detection.summarization.summarizer import Summarizer
+from Mood_Detection.summarization.predictor import SummarizationPredictor
 from Mood_Detection.mood_detection_roberta.config import Config
 from Mood_Detection.analysis.insight_analyzer import InsightsGenerator
 
@@ -54,34 +61,41 @@ db = DBManager(firebase_json_path=FIREBASE_JSON)
 predictor = SentencePredictor(out_dir)
 
 try:
-    summarizer = Summarizer()
+    summarizer_model_path = os.path.join(os.path.dirname(__file__), "Mood_Detection", "outputs", "models", "summarizer")
+    summarizer = SummarizationPredictor(model_path=summarizer_model_path)
 except Exception as e:
-    print("WARNING: Summarizer not available, skipping. Error:", e)
+    print("WARNING: SummarizationPredictor not available, skipping. Error:", e)
     summarizer = None
 
 # -------------------- Routes --------------------
 @app.route("/process_entry", methods=["POST"])
 @login_required
 def process_entry():
-    data = request.get_json()
-    if not data or "entry_text" not in data:
-        return jsonify({"error": "Missing entry_text"}), 400
+    try:
+        data = request.get_json()
+        if not data or "entry_text" not in data:
+            return jsonify({"error": "Missing entry_text"}), 400
 
-    uid = request.user["uid"]
-    text = data["entry_text"]
+        uid = request.user["uid"]
+        text = data["entry_text"]
 
-    entry_id = db.insert_entry(uid, text)
-    summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
-    # Use lower threshold for better mixed emotion detection
-    mood_result = predictor.predict(summary, threshold=0.25)
-    mood_probs = mood_result["probabilities"]  # Extract just the probabilities
-    db.insert_analysis(entry_id, summary, mood_probs)
+        entry_id = db.insert_entry(uid, text)
+        summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
+        # Use lower threshold for better mixed emotion detection
+        mood_result = predictor.predict(summary, threshold=0.25)
+        mood_probs = mood_result["probabilities"]  # Extract just the probabilities
+        db.insert_analysis(entry_id, summary, mood_probs)
 
-    return jsonify({
-        "entry_id": entry_id,
-        "summary": summary,
-        "mood_probs": mood_probs
-    }), 200
+        return jsonify({
+            "entry_id": entry_id,
+            "summary": summary,
+            "mood_probs": mood_probs
+        }), 200
+    except Exception as e:
+        print(f"Error in process_entry: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error", "details": str(e)}), 500
 
 @app.route("/generate_insights", methods=["POST"])
 @login_required
