@@ -1,0 +1,47 @@
+# Exclude git and metadata
+.git
+.gitignore
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment directories
+.venv/
+venv/
+env/
+ENV/
+
+# Distribution/build directories
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts and caches
+.pytest_cache/
+testing_api/
+test_reports/
+
+# Environment / secrets
+.env
+Backend/*.json
+
+# Model outputs and training artifacts (may be large) - we rebuild/train in the build stage
+Backend/Mood_Detection/outputs/
+Backend/Mood_Detection/mood_detection_roberta/*.pt
+Backend/Mood_Detection/mood_detection_roberta/*.bin
+
+# Misc
+*.log
