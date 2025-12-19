@@ -1,8 +1,24 @@
-import requests, time
+import requests
+import time
 import os
+import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
+logger = logging.getLogger("pocket_journal.tmdb")
+
+# Standardize TMDb API key env name
 API_KEY = os.getenv("TMDB_API_KEY")
 BASE_IMG_URL = "https://image.tmdb.org/t/p/w500"
+
+# Fail fast if credential missing
+if not API_KEY:
+    raise RuntimeError("TMDB_API_KEY is required in environment for TMDb integration")
+
+# Session with retries for robustness
+_session = requests.Session()
+retries = Retry(total=2, backoff_factor=0.3, status_forcelist=(500,502,503,504))
+_session.mount("https://", HTTPAdapter(max_retries=retries))
 
 MOOD_GENRE_MAP = {
     "happy": ["35", "12", "10751"],
@@ -21,11 +37,11 @@ def tmdb_get(path, params=None):
     params["api_key"] = API_KEY
     url = f"https://api.themoviedb.org/3/{path}"
     try:
-        r = requests.get(url, params=params, timeout=6)
+        r = _session.get(url, params=params, timeout=6)
         r.raise_for_status()
         return r.json()
     except Exception as e:
-        print("TMDb request failed:", e)
+        logger.warning("TMDb request failed for %s: %s", path, e)
         return {}
 
 def get_movies_by_genre(genre_ids, max_results=10):

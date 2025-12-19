@@ -2,6 +2,9 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from .config import Config
+import logging
+
+logger = logging.getLogger("pocket_journal.summarizer")
 
 class SummarizationPredictor:
     def __init__(self, model_path=None):
@@ -15,31 +18,42 @@ class SummarizationPredictor:
     def _load_model(self):
         """Load the trained model or fallback to base model"""
         if os.path.exists(self.model_path) and os.path.exists(os.path.join(self.model_path, "config.json")):
-            print(f"📁 Loading trained model from {self.model_path}")
+            logger.info("Loading trained summarizer from %s", self.model_path)
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
             self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_path)
         else:
-            print(f"⚠️ Trained model not found at {self.model_path}, using base model")
+            logger.warning("Trained summarizer not found at %s; falling back to base model %s", self.model_path, Config.MODEL_NAME)
             self.tokenizer = AutoTokenizer.from_pretrained(Config.MODEL_NAME)
             self.model = AutoModelForSeq2SeqLM.from_pretrained(Config.MODEL_NAME)
         
         # Fix BART configuration warning
-        if hasattr(self.model.config, 'forced_bos_token_id') and self.model.config.forced_bos_token_id is None:
-            self.model.config.forced_bos_token_id = 0
+        # Set a compatible forced_bos_token_id only if tokenizer provides a bos token id
+        try:
+            bos_id = getattr(self.tokenizer, "bos_token_id", None)
+            if hasattr(self.model.config, 'forced_bos_token_id') and self.model.config.forced_bos_token_id is None and bos_id is not None:
+                self.model.config.forced_bos_token_id = bos_id
+                # Persist updated config to model path when possible
+                try:
+                    if os.path.exists(self.model_path):
+                        self.model.config.save_pretrained(self.model_path)
+                except Exception as _:
+                    logger.debug("Could not save updated model config to %s", self.model_path)
+        except Exception:
+            logger.debug("Error while normalizing model config; continuing without forced_bos changes")
         
         # Move model to device (CPU or GPU based on Config)
         try:
             self.model.to(self.device)
             self.model.eval()
-            print(f"✅ Model loaded successfully on {self.device}")
+            logger.info("Model loaded on %s", self.device)
         except Exception as e:
             # Fallback to CPU if device error occurs
             if self.device != "cpu":
-                print(f"⚠️ Error loading model on {self.device}, falling back to CPU: {e}")
+                logger.warning("Error loading model on %s, falling back to CPU: %s", self.device, e)
                 self.device = "cpu"
                 self.model.to(self.device)
                 self.model.eval()
-                print(f"✅ Model loaded successfully on {self.device}")
+                logger.info("Model loaded on %s", self.device)
             else:
                 raise
     
@@ -122,7 +136,7 @@ class SummarizationPredictor:
                 summary = self.summarize(text, **kwargs)
                 summaries.append(summary)
             except Exception as e:
-                print(f"❌ Error summarizing text {i}: {e}")
+                logger.warning("Error summarizing text %s: %s", i, e)
                 summaries.append(text[:100] + "...")  # Fallback
         
         return summaries

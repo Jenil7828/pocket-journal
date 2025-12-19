@@ -2,8 +2,13 @@ import os
 from datetime import datetime, time
 import firebase_admin
 from firebase_admin import credentials, firestore
+from firebase_admin import firestore as _fa_firestore
 from collections import defaultdict
+from utils import extract_dominant_mood
 import pytz
+import logging
+
+logger = logging.getLogger("pocket_journal.db_manager")
 
 class DBManager:
     def __init__(self, firebase_json_path=None):
@@ -71,7 +76,7 @@ class DBManager:
     # -------------------- Fetch Entries --------------------
     def fetch_entries_with_analysis(self, uid: str, start_date: str = None, end_date: str = None):
         collection = self.db.collection("journal_entries")
-        query = collection.where("uid", "==", uid)
+        query = collection.where(filter=("uid", "==", uid))
 
         # Convert date strings to IST datetime
         if start_date:
@@ -79,7 +84,7 @@ class DBManager:
                 start_dt_naive = datetime.strptime(str(start_date), "%Y-%m-%d")
                 start_dt = self.tz.localize(start_dt_naive).replace(
                     hour=0, minute=0, second=0, microsecond=0)
-                query = query.where("created_at", ">=", start_dt)
+                query = query.where(filter=("created_at", ">=", start_dt))
             except ValueError:
                 # If date parsing fails, skip the filter
                 pass
@@ -88,7 +93,7 @@ class DBManager:
                 end_dt_naive = datetime.strptime(str(end_date), "%Y-%m-%d")
                 end_dt = self.tz.localize(end_dt_naive).replace(
                     hour=23, minute=59, second=59, microsecond=999999)
-                query = query.where("created_at", "<=", end_dt)
+                query = query.where(filter=("created_at", "<=", end_dt))
             except ValueError:
                 # If date parsing fails, skip the filter
                 pass
@@ -102,7 +107,7 @@ class DBManager:
             data["id"] = doc.id
 
             # attach analysis
-            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", doc.id).limit(1).get()
+            analysis_query = self.db.collection("entry_analysis").where(filter=("entry_id", "==", doc.id)).limit(1).get()
             data["analysis"] = analysis_query[0].to_dict() if analysis_query else {}
 
             result.append(data)
@@ -110,22 +115,22 @@ class DBManager:
         return result
 
     def fetch_today_entries_with_mood_summary(self, uid: str):
-        print("===== FETCH TODAY ENTRIES START =====")
+        """Fetch today's entries for `uid` and return dominant mood plus entries.
 
+        Keep logging minimal: do not dump per-entry document data or analysis content.
+        """
         now = datetime.now(self.tz)
         today = now.date()
 
         start_dt = datetime.combine(today, time.min).replace(tzinfo=self.tz)
         end_dt = datetime.combine(today, time.max).replace(tzinfo=self.tz)
-        print("Start datetime (IST):", start_dt)
-        print("End datetime (IST):", end_dt)
 
         collection = self.db.collection("journal_entries")
         query = (
             collection
-            .where("uid", "==", uid)
-            .where("created_at", ">=", start_dt)
-            .where("created_at", "<=", end_dt)
+            .where(filter=_fa_firestore.FieldFilter("uid", "==", uid))
+            .where(filter=_fa_firestore.FieldFilter("created_at", ">=", start_dt))
+            .where(filter=_fa_firestore.FieldFilter("created_at", "<=", end_dt))
             .order_by("created_at")
         )
 
@@ -133,33 +138,28 @@ class DBManager:
         entries = []
         mood_counts = defaultdict(int)
 
-        for count, doc in enumerate(docs, start=1):
+        for doc in docs:
             data = doc.to_dict()
             data["id"] = doc.id
-            print(f"\n--- Entry {count} ---")
-            print("Document data:", data)
 
-            # Fetch entry_analysis
-            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", doc.id).limit(1).get()
+            # Attach analysis if present, but do not log its contents
+            analysis_query = self.db.collection("entry_analysis").where(filter=_fa_firestore.FieldFilter("entry_id", "==", doc.id)).limit(1).get()
             if analysis_query:
-                data["analysis"] = analysis_query[0].to_dict()
-                mood = data["analysis"].get("mood")
-                if mood:
-                    dominant_entry = max(mood, key=mood.get)
+                analysis = analysis_query[0].to_dict()
+                data["analysis"] = analysis
+                mood = analysis.get("mood")
+                dominant_entry = extract_dominant_mood(mood)
+                if dominant_entry:
                     mood_counts[dominant_entry] += 1
-                    print(f"Dominant mood for this entry: {dominant_entry}")
-                print("Analysis found:", data["analysis"])
             else:
                 data["analysis"] = {}
-                print("No analysis found")
 
             entries.append(data)
 
         dominant_mood = max(mood_counts, key=mood_counts.get) if mood_counts else None
-        print("Mood counts:", dict(mood_counts))
-        print("Dominant mood:", dominant_mood)
-        print("Number of docs fetched:", len(entries))
-        print("===== FETCH TODAY ENTRIES END =====\n")
+
+        # Summary logging only: uid, dominant mood and number of entries
+        logger.info("Fetched %s entries for uid=%s; dominant_mood=%s", len(entries), uid, dominant_mood)
 
         return {"dominant_mood": dominant_mood, "entries": entries}
 
@@ -183,7 +183,7 @@ class DBManager:
             self.db.collection("journal_entries").document(entry_id).delete()
             
             # Find and delete associated analysis
-            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", entry_id).get()
+            analysis_query = self.db.collection("entry_analysis").where(filter=_fa_firestore.FieldFilter("entry_id", "==", entry_id)).get()
             analysis_deleted = 0
             analysis_ids = []
             
@@ -193,7 +193,7 @@ class DBManager:
                 analysis_ids.append(analysis_doc.id)
             
             # Also delete any insight mappings that reference this entry
-            insight_mapping_query = self.db.collection("insight_entry_mapping").where("entry_id", "==", entry_id).get()
+            insight_mapping_query = self.db.collection("insight_entry_mapping").where(filter=_fa_firestore.FieldFilter("entry_id", "==", entry_id)).get()
             insight_mappings_deleted = 0
             
             for mapping_doc in insight_mapping_query:
@@ -264,7 +264,7 @@ class DBManager:
             })
             
             # Find and delete existing analysis
-            analysis_query = self.db.collection("entry_analysis").where("entry_id", "==", entry_id).get()
+            analysis_query = self.db.collection("entry_analysis").where(filter=_fa_firestore.FieldFilter("entry_id", "==", entry_id)).get()
             old_analysis_ids = []
             
             for analysis_doc in analysis_query:
