@@ -1,11 +1,11 @@
 from rapidfuzz import process
 
-from Media_Recommendation.mood_recommend import get_movies_by_genre, MOOD_GENRE_MAP
-from Media_Recommendation.song_recommend import get_mood_songs
-from Media_Recommendation.books_recommendation import recommend_books_by_emotion
-from Media_Recommendation.movie_search import search_movie_robust
-from Media_Recommendation.search_song import search_songs_or_artist
-from Media_Recommendation.search_books import search_books_robust
+from Backend.Media_Recommendation.mood_recommend import get_movies_by_genre, MOOD_GENRE_MAP
+from Backend.Media_Recommendation.song_recommend import get_mood_songs
+from Backend.Media_Recommendation.books_recommendation import recommend_books_by_emotion
+from Backend.Media_Recommendation.movie_search import search_movie_robust
+from Backend.Media_Recommendation.search_song import search_songs_or_artist
+from Backend.Media_Recommendation.search_books import search_books_robust
 
 
 def recommend_movies_for_mood(mood):
@@ -79,7 +79,7 @@ def search_movies(query):
     if not q:
         return {"error": "Provide movie parameter like ?movie=Inception", "results": []}, 200
     res = search_movie_robust(q, max_candidates=300, top_k=6)
-    # Normalize search to always return 200 with results array (may be empty)
+    # Normalize search to always return 200 with a result array (maybe empty)
     if res.get("error"):
         return {"searched": q, "results": []}, 200
     return {"searched": q, "results": res.get("results", [])}, 200
@@ -93,7 +93,7 @@ def get_songs(mood, language, limit):
 def search_songs(query, search_type, limit):
     q = (query or "").strip()
     if not q:
-        return {"error": "Provide query parameter like ?q=Arjit Sngh&type=artist"}, 400
+        return {"error": "Provide query parameter like ?q=Arjit Singh&type=artist"}, 400
     res = search_songs_or_artist(q, search_type=search_type, limit=limit)
     return res, 200
 

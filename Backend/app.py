@@ -9,8 +9,8 @@ warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
 from flask import Flask, request, jsonify, render_template
 from functools import wraps
 from dotenv import load_dotenv
-from datetime import datetime, time
-import pytz
+# from datetime import datetime, time
+# import pytz
 # Logging
 import logging
 # Load environment variables
@@ -26,14 +26,14 @@ logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"
 logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))
 
 import firebase_admin
-from firebase_admin import credentials, auth, firestore
-from Mood_Detection.mood_detection_roberta.config import Config
-import journal_entries
-import insights_service
-import media_recommendations
-import stats_service
-import export_service
-import health_service
+from firebase_admin import credentials, auth #, firestore
+from Backend.Mood_Detection.mood_detection_roberta.config import Config
+from Backend import journal_entries
+from Backend import insights_service
+from Backend import media_recommendations
+from Backend import stats_service
+from Backend import export_service
+from Backend import health_service
 
 # Lazy singletons (initialized on first use)
 _db = None
@@ -45,8 +45,8 @@ def get_db():
     """Lazily initialize DBManager to avoid heavy work at import time."""
     global _db
     if _db is None:
-        # Import here to avoid firebase side-effects during module import
-        from Mood_Detection.database.db_manager import DBManager
+        # Import here to avoid firebase side effects during module import
+        from Backend.Mood_Detection.database.db_manager import DBManager
         FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
         _db = DBManager(firebase_json_path=FIREBASE_JSON)
     return _db
@@ -56,7 +56,7 @@ def get_predictor():
     """Lazily create SentencePredictor (model loaded once)."""
     global _predictor
     if _predictor is None:
-        from Mood_Detection.mood_detection_roberta.predictor import SentencePredictor
+        from Backend.Mood_Detection.mood_detection_roberta.predictor import SentencePredictor
         out_dir = os.path.join(os.path.dirname(__file__), "Mood_Detection", Config.OUTPUT_DIR)
         _predictor = SentencePredictor(out_dir)
     return _predictor
@@ -67,7 +67,7 @@ def get_summarizer():
     global _summarizer
     if _summarizer is None:
         try:
-            from Mood_Detection.summarization.predictor import SummarizationPredictor
+            from Backend.Mood_Detection.summarization.predictor import SummarizationPredictor
             summarizer_model_path = os.path.join(os.path.dirname(__file__), "Mood_Detection", "outputs", "models", "summarizer")
             _summarizer = SummarizationPredictor(model_path=summarizer_model_path)
         except Exception:
@@ -75,6 +75,24 @@ def get_summarizer():
     return _summarizer
 
 app = Flask(__name__)
+# Initialize models once at process startup so they are reused by all requests
+# Models are loaded in the worker process (Gunicorn loads the app per worker by
+# default) and not per-request. We keep DB and Firebase lazy to avoid secrets
+# initialization at import time.
+def _init_models_at_startup():
+    try:
+        logger.info("Initializing ML models at process startup")
+        # This will load model artifacts from disk into process memory once
+        # and keep them in module-level singletons (`_predictor`, `_summarizer`).
+        get_predictor()
+        get_summarizer()
+        logger.info("Model initialization complete")
+    except Exception:
+        logger.exception("Model initialization failed (continuing so process can still start)")
+
+# Call the initializer so models are loaded when the module is imported in
+# worker processes (Gunicorn default behavior loads app in each worker).
+_init_models_at_startup()
 # Print model output dir only when initializing predictor to avoid spamming during reloads
 _ = None
 # -------------------- Firebase Initialization --------------------
@@ -125,7 +143,7 @@ def login_required(f):
 @login_required
 def process_entry():
     data = request.get_json()
-    # lazily obtain DB and models when needed; avoids reload side-effects
+    # lazily get DB and models when needed; avoids reload side effects
     _db = get_db()
     predictor = get_predictor()
     summarizer = get_summarizer()
@@ -207,7 +225,7 @@ def update_entry(entry_id):
     Request Body:
       {
         "entry_text": "Updated journal text here...",
-        "regenerate_analysis": true  // optional, defaults to true
+        "regenerate_analysis": true // optional, defaults to true
       }
     
     Returns:

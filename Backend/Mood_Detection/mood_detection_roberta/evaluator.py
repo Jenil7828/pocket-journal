@@ -78,7 +78,7 @@ class SentenceLevelMoodEvaluator:
         # Aggregate sentence probabilities
         agg_probs = self.aggregate_sentence_probabilities(all_probs, mode)
         
-        # Apply threshold for multi-label classification
+        # Apply a threshold for multi-label classification
         final_labels = [1 if p >= threshold else 0 for p in agg_probs]
         
         # Format results as requested
@@ -130,10 +130,12 @@ class SentenceLevelMoodEvaluator:
 
         return results
 
-    def evaluate_thresholds(self, dataset, thresholds=[0.1, 0.2, 0.3, 0.35, 0.4, 0.5]):
+    def evaluate_thresholds(self, dataset, thresholds=None):
         """
         Evaluate different thresholds for multi-label classification
         """
+        if thresholds is None:
+            thresholds = [0.1, 0.2, 0.3, 0.35, 0.4, 0.5]
         results = {}
         y_true = np.array(dataset["labels"])
 

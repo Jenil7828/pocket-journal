@@ -1,7 +1,7 @@
 import os
 import re
 import json
-from Mood_Detection.database.db_manager import DBManager
+from Backend.Mood_Detection.database.db_manager import DBManager
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Set Gemini credentials explicitly

@@ -6,7 +6,7 @@ from .config import Config
 
 class SentencePredictor:
     def __init__(self, model_path=Config.OUTPUT_DIR):
-        # Check if model exists, otherwise use base model
+        # Check if model exists, otherwise use a base model
         if os.path.exists(model_path) and os.path.exists(os.path.join(model_path, "config.json")):
             self.tokenizer = AutoTokenizer.from_pretrained(model_path)
             self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
@@ -44,11 +44,11 @@ class SentencePredictor:
             
             with torch.no_grad():
                 outputs = self.model(**tokens)
-                # Convert to numpy array immediately
+                # Convert to a numpy array immediately
                 logits = outputs.logits.cpu().numpy()[0]
                 probs = 1 / (1 + np.exp(-logits))  # Sigmoid using numpy
             
-            # Apply threshold for multi-label classification
+            # Apply a threshold for multi-label classification
             binary_preds = (probs >= threshold).astype(int)
             
             results = {
@@ -84,7 +84,7 @@ class SentencePredictor:
                 results.append(result)
             except Exception as e:
                 print(f"Error processing text '{text[:50]}...': {e}")
-                # Add neutral result for failed predictions
+                # Add a neutral result for failed predictions
                 neutral_probs = np.array([0.5] * len(self.labels))
                 binary_preds = (neutral_probs >= threshold).astype(int)
                 results.append({

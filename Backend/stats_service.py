@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from firebase_admin import firestore
-from utils import extract_dominant_mood
+from Backend.utils import extract_dominant_mood
 
 
 def get_user_stats(uid, db):

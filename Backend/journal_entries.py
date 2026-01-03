@@ -1,7 +1,7 @@
 from datetime import datetime
 import pytz
 from firebase_admin import firestore
-from utils import extract_dominant_mood
+from Backend.utils import extract_dominant_mood
 
 
 def process_entry(user, data, db, predictor, summarizer):

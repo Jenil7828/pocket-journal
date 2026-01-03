@@ -5,11 +5,11 @@ Optimized for overlapping/mixed emotions detection
 """
 
 import os
-import sys
-import torch
+# import sys
+# import torch
 from .trainer import SentenceTrainer
 from .evaluator import SentenceLevelMoodEvaluator
-from .predictor import SentencePredictor
+# from .predictor import SentencePredictor
 from .config import Config
 
 def main():

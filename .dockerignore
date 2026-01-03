@@ -6,6 +6,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache
+*/__pycache__
 
 # Virtual environment directories
 .venv/
@@ -38,10 +40,22 @@ test_reports/
 .env
 Backend/*.json
 
-# Model outputs and training artifacts (may be large) - we rebuild/train in the build stage
+# Model outputs and training artifacts (we exclude training outputs except for
+# the inference models directory which must be present locally and included in
+# the runtime image). The `!` lines re-include the models directory.
 Backend/Mood_Detection/outputs/
 Backend/Mood_Detection/mood_detection_roberta/*.pt
 Backend/Mood_Detection/mood_detection_roberta/*.bin
+!Backend/Mood_Detection/outputs/models
+!Backend/Mood_Detection/outputs/models/**
+
+# Explicitly exclude training scripts and large datasets; keep inference/summarization code
+Backend/Mood_Detection/mood_detection_roberta/train.py
+Backend/Mood_Detection/mood_detection_roberta/trainer.py
+Backend/Mood_Detection/mood_detection_roberta/evaluator.py
+Backend/Mood_Detection/mood_detection_roberta/dataset_loader.py
+Backend/Mood_Detection/data/
+Backend/Mood_Detection/analysis/
 
 # Misc
 *.log

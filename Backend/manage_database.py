@@ -34,25 +34,25 @@ def main():
             
             if choice == "1":
                 print("\n🔄 Running database reset...")
-                from Mood_Detection.database.reset_database import reset_database
+                from Backend.Mood_Detection.database.reset_database import reset_database
                 reset_database()
                 break
                 
             elif choice == "2":
                 print("\n🔄 Adding updated_at field...")
-                from Mood_Detection.database.add_updated_at_field import add_updated_at_field
+                from Backend.Mood_Detection.database.add_updated_at_field import add_updated_at_field
                 add_updated_at_field()
                 break
                 
             elif choice == "3":
                 print("\n🔍 Verifying database structure...")
-                from Mood_Detection.database.verify_database import verify_database
+                from Backend.Mood_Detection.database.verify_database import verify_database
                 verify_database()
                 break
                 
             elif choice == "4":
                 print("\n📋 Showing database schema...")
-                from Mood_Detection.database.database_schema import DatabaseSchema
+                from Backend.Mood_Detection.database.database_schema import DatabaseSchema
                 
                 print("\n📝 Journal Entry Schema:")
                 sample_entry = DatabaseSchema.get_journal_entry_schema("user123", "Sample entry")

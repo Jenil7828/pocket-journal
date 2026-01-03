@@ -29,7 +29,10 @@ class SentenceDatasetLoader:
         return dataset, label_names
 
     def compute_class_weights(self, labels):
-        """Compute class weights for handling imbalanced datasets"""
+        """Compute class weights for handling imbalanced datasets
+        :param labels:
+        :return:
+        """
         if not Config.USE_CLASS_WEIGHTING:
             return None
             

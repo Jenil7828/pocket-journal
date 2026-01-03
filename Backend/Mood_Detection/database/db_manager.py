@@ -4,7 +4,7 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from firebase_admin import firestore as _fa_firestore
 from collections import defaultdict
-from utils import extract_dominant_mood
+from Backend.utils import extract_dominant_mood
 import pytz
 import logging
 

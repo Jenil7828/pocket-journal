@@ -251,6 +251,15 @@ Authorization: Bearer <token>
   - journal_entries → {entry_id, user_id, entry_text, created_at}
   - entry_analysis → {entry_id, summary, mood}
 
+## Docker Build and Run Commands
+docker build -f Dockerfile.prod -t pocket-journal:prod .
+
+docker run ^
+  --env-file .env ^
+  -v "%cd%\secrets:/secrets:ro" ^
+  -p 8080:8080 ^
+  pocket-journal:prod
+
 ## 👨‍💻 Contributors
 - Jenil Rathod
 - Manas Joshi

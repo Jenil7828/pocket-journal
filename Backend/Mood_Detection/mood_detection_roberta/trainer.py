@@ -1,4 +1,4 @@
-import numpy as np
+# import numpy as np
 import torch
 import torch.nn as nn
 from transformers import (
@@ -7,7 +7,7 @@ from transformers import (
     TrainingArguments,
     Trainer
 )
-from sklearn.metrics import f1_score, accuracy_score, precision_recall_fscore_support
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support # ,f1_score
 from .config import Config
 from .dataset_loader import SentenceDatasetLoader
 
@@ -70,7 +70,7 @@ class SentenceTrainer:
             fp16=Config.FP16,
             warmup_steps=100,  # Add warmup for better convergence
             logging_steps=50,   # More frequent logging
-            save_total_limit=3, # Keep only best 3 models
+            save_total_limit=3, # Keep only the best 3 models
             dataloader_drop_last=True,  # For consistent batch sizes
         )
 

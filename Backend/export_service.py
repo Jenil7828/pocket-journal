@@ -62,7 +62,7 @@ def export_data(uid, start_date, end_date, export_format, db):
         output = io.StringIO()
         writer = csv.writer(output)
         writer.writerow(["entry_id", "entry_text", "created_at", "updated_at", "dominant_mood", "mood_confidence"])
-        from utils import extract_dominant_mood
+        from Backend.utils import extract_dominant_mood
 
         for entry in entries:
             dominant_mood = None

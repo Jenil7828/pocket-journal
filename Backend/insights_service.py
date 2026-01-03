@@ -37,7 +37,7 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True):
 
     # Now import the heavy generator locally and run it
     try:
-        from Mood_Detection.analysis.insight_analyzer import InsightsGenerator
+        from Backend.Mood_Detection.analysis.insight_analyzer import InsightsGenerator
         generator = InsightsGenerator(db)
         insights = generator.generate_insights(uid, start_date, end_date)
         return insights, 200

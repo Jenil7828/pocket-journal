@@ -14,7 +14,7 @@ class Config:
     # Enhanced training settings for better overlapping emotion learning
     TEST_SPLIT = 0.2
     SEED = 42
-    BATCH_SIZE = 2  # Reduced for 4GB VRAM
+    BATCH_SIZE = 2  # Reduced for 4GB Virtual RAM
     EPOCHS = 8  # Reduced for faster training
     LEARNING_RATE = 2e-5
     GRADIENT_ACCUMULATION_STEPS = 8  # Increased to maintain effective batch size
