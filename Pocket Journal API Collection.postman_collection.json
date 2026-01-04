@@ -40,7 +40,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"email\":\"jenilrathod117@gmail.com\",\n    \"password\":\"Jenil_7828\",\n    \"returnSecureToken\":true\n}"
+							"raw": "{\n    \"email\":\"\",\n    \"password\":\"\",\n    \"returnSecureToken\":true\n}"
 						},
 						"url": {
 							"raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{Private_variable}}",
@@ -909,7 +909,7 @@
 				"exec": [
 					"// Auto-set base URL if not set",
 					"if (!pm.collectionVariables.get('baseURL')) {",
-					"    pm.collectionVariables.set('baseURL', 'http://127.0.0.1:5000');",
+					"    pm.collectionVariables.set('baseURL', 'http://127.0.0.1:8080');",
 					"}"
 				]
 			}
@@ -918,7 +918,7 @@
 	"variable": [
 		{
 			"key": "baseURL",
-			"value": "http://127.0.0.1:5000",
+			"value": "http://127.0.0.1:8080",
 			"type": "string"
 		},
 		{

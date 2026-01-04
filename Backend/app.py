@@ -1,104 +1,299 @@
+# # app.py
+# import os
+# import warnings
+# # Suppress TensorFlow warnings
+# os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+# warnings.filterwarnings('ignore', category=FutureWarning)
+# warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
+
+# from flask import Flask, request, jsonify, render_template
+# from functools import wraps
+# from dotenv import load_dotenv
+# # from datetime import datetime, time
+# # import pytz
+# # Logging
+# import logging
+# # Load environment variables
+# load_dotenv()
+
+# # Configure logging for the application. Use APP_LOG_LEVEL to control verbosity.
+# LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
+# logging.basicConfig(level=LOG_LEVEL, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
+# logger = logging.getLogger("pocket_journal")
+
+# # Reduce noise from verbose libraries in development
+# logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"))
+# logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))
+
+# import firebase_admin
+# from firebase_admin import credentials, auth #, firestore
+# from Mood_Detection.mood_detection_roberta.config import Config
+# from Backend import journal_entries
+# from Backend import insights_service
+# from Backend import media_recommendations
+# from Backend import stats_service
+# from Backend import export_service
+# from Backend import health_service
+
+# # Lazy singletons (initialized on first use)
+# _db = None
+# _predictor = None
+# _summarizer = None
+
+
+# def get_db():
+#     """Lazily initialize DBManager to avoid heavy work at import time."""
+#     global _db
+#     if _db is None:
+#         # Import here to avoid firebase side effects during module import
+#         from Mood_Detection.database.db_manager import DBManager
+#         FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+#         _db = DBManager(firebase_json_path=FIREBASE_JSON)
+#     return _db
+
+
+# def get_predictor():
+#     """Lazily create SentencePredictor (model loaded once)."""
+#     global _predictor
+#     if _predictor is None:
+#         from Mood_Detection.mood_detection_roberta.predictor import SentencePredictor
+#         out_dir = os.path.join(os.path.dirname(__file__), "Mood_Detection", Config.OUTPUT_DIR)
+#         _predictor = SentencePredictor(out_dir)
+#     return _predictor
+
+
+# def get_summarizer():
+#     """Lazily create SummarizationPredictor if available."""
+#     global _summarizer
+#     if _summarizer is None:
+#         try:
+#             from Mood_Detection.summarization.predictor import SummarizationPredictor
+#             summarizer_model_path = os.path.join(os.path.dirname(__file__), "Mood_Detection", "outputs", "models", "summarizer")
+#             _summarizer = SummarizationPredictor(model_path=summarizer_model_path)
+#         except Exception:
+#             _summarizer = None
+#     return _summarizer
+
+# app = Flask(__name__)
+# # Initialize models once at process startup so they are reused by all requests
+# # Models are loaded in the worker process (Gunicorn loads the app per worker by
+# # default) and not per-request. We keep DB and Firebase lazy to avoid secrets
+# # initialization at import time.
+# def _init_models_at_startup():
+#     try:
+#         logger.info("Initializing ML models at process startup")
+#         # This will load model artifacts from disk into process memory once
+#         # and keep them in module-level singletons (`_predictor`, `_summarizer`).
+#         get_predictor()
+#         get_summarizer()
+#         logger.info("Model initialization complete")
+#     except Exception:
+#         logger.exception("Model initialization failed (continuing so process can still start)")
+
+# # Call the initializer so models are loaded when the module is imported in
+# # worker processes (Gunicorn default behavior loads app in each worker).
+# _init_models_at_startup()
+# # Print model output dir only when initializing predictor to avoid spamming during reloads
+# _ = None
+# # -------------------- Firebase Initialization --------------------
+# # Do NOT initialize firebase or models at import time. Use get_db()/get_predictor() instead.
+
+# # Feature flags (runtime-configurable via env vars)
+# ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() in ("1", "true", "yes")
+# ENABLE_INSIGHTS = os.getenv("ENABLE_INSIGHTS", str(ENABLE_LLM)).lower() in ("1", "true", "yes")
+
+
+# # -------------------- Auth Decorator --------------------
+# def login_required(f):
+#     @wraps(f)
+#     def decorated(*args, **kwargs):
+#         # Ensure Firebase SDK is initialized before attempting token verification.
+#         try:
+#             firebase_admin.get_app()
+#         except ValueError:
+#             FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+#             if FIREBASE_JSON and os.path.exists(FIREBASE_JSON):
+#                 try:
+#                     cred = credentials.Certificate(FIREBASE_JSON)
+#                     firebase_admin.initialize_app(cred)
+#                 except Exception:
+#                     # Fallback: try initializing with default credentials
+#                     firebase_admin.initialize_app()
+#             else:
+#                 # Initialize with default credentials (if available in environment)
+#                 firebase_admin.initialize_app()
+
+#         header = request.headers.get("Authorization")
+#         if not header or not header.startswith("Bearer "):
+#             return jsonify({"error": "Missing or invalid token"}), 401
+#         id_token = header.split(" ")[1]
+#         try:
+#             decoded_token = auth.verify_id_token(id_token)
+#             request.user = decoded_token
+#         except Exception as e:
+#             return jsonify({"error": "Invalid token", "details": str(e)}), 401
+#         return f(*args, **kwargs)
+#     return decorated
+
+# # -------------------- Initialize DB and models --------------------
+# # DB and models are lazily initialized via `get_db()`, `get_predictor()` and `get_summarizer()`.
+
+# # -------------------- Routes --------------------
+# @app.route("/process_entry", methods=["POST"])
+# @login_required
+# def process_entry():
+#     data = request.get_json()
+#     # lazily get DB and models when needed; avoids reload side effects
+#     _db = get_db()
+#     predictor = get_predictor()
+#     summarizer = get_summarizer()
+#     body, status = journal_entries.process_entry(request.user, data, _db, predictor, summarizer)
+#     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+# @app.route("/generate_insights", methods=["POST"])
+# @login_required
+# def generate_insights():
+#     data = request.get_json() or {}
+#     # Set Gemini credentials before initializing InsightsGenerator
+#     GEMINI_JSON = os.getenv("GEMINI_CREDENTIALS_PATH")
+#     if GEMINI_JSON:
+#         os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GEMINI_JSON
+#     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+#     # Use the DB instance lazily and pass flags so external LLM calls can be disabled
+#     _db = get_db()
+#     body, status = insights_service.generate_insights(request.user, data, _db, enable_llm=ENABLE_LLM, enable_insights=ENABLE_INSIGHTS)
+#     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # app.py
 import os
 import warnings
+
 # Suppress TensorFlow warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-warnings.filterwarnings('ignore', category=FutureWarning)
-warnings.filterwarnings('ignore', category=UserWarning, module='tensorflow')
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
 
 from flask import Flask, request, jsonify, render_template
 from functools import wraps
 from dotenv import load_dotenv
-# from datetime import datetime, time
-# import pytz
-# Logging
 import logging
+
 # Load environment variables
 load_dotenv()
 
-# Configure logging for the application. Use APP_LOG_LEVEL to control verbosity.
+# -------------------- Logging --------------------
 LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
-logging.basicConfig(level=LOG_LEVEL, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+)
 logger = logging.getLogger("pocket_journal")
 
-# Reduce noise from verbose libraries in development
 logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"))
 logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))
 
-import firebase_admin
-from firebase_admin import credentials, auth #, firestore
-from Backend.Mood_Detection.mood_detection_roberta.config import Config
-from Backend import journal_entries
-from Backend import insights_service
-from Backend import media_recommendations
-from Backend import stats_service
-from Backend import export_service
-from Backend import health_service
+# Ensure logs are always emitted to stdout in containerized environments
+import sys
 
-# Lazy singletons (initialized on first use)
+def _ensure_stream_handler(logger_obj):
+    for h in list(logger_obj.handlers):
+        if isinstance(h, logging.StreamHandler):
+            return
+    numeric_level = getattr(logging, LOG_LEVEL, logging.INFO) if isinstance(LOG_LEVEL, str) else LOG_LEVEL
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(numeric_level)
+    stream_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(name)s: %(message)s"))
+    logger_obj.addHandler(stream_handler)
+
+# Add a stream handler to the app logger and the root logger so both app
+# messages and Werkzeug/Gunicorn logs propagate to container stdout/stderr.
+_ensure_stream_handler(logger)
+_ensure_stream_handler(logging.getLogger())
+
+# -------------------- Firebase --------------------
+import firebase_admin
+from firebase_admin import credentials, auth
+
+# -------------------- NEW ARCH IMPORTS (FIXED) --------------------
+from services import (
+    journal_entries,
+    insights_service,
+    media_recommendations,
+    stats_service,
+    export_service,
+    health_service,
+)
+
+from persistence.db_manager import DBManager
+
+from ml.mood_detection.inference.mood_detection.roberta.config import Config
+from ml.mood_detection.inference.mood_detection.roberta.predictor import SentencePredictor
+from ml.mood_detection.inference.summarization.bart.predictor import SummarizationPredictor
+
+# -------------------- Lazy singletons --------------------
 _db = None
 _predictor = None
 _summarizer = None
 
 
 def get_db():
-    """Lazily initialize DBManager to avoid heavy work at import time."""
     global _db
     if _db is None:
-        # Import here to avoid firebase side effects during module import
-        from Backend.Mood_Detection.database.db_manager import DBManager
         FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
         _db = DBManager(firebase_json_path=FIREBASE_JSON)
     return _db
 
 
 def get_predictor():
-    """Lazily create SentencePredictor (model loaded once)."""
     global _predictor
     if _predictor is None:
-        from Backend.Mood_Detection.mood_detection_roberta.predictor import SentencePredictor
-        out_dir = os.path.join(os.path.dirname(__file__), "Mood_Detection", Config.OUTPUT_DIR)
-        _predictor = SentencePredictor(out_dir)
+        model_dir = os.path.join(
+            os.path.dirname(__file__),
+            "ml",
+            "mood_detection",
+            "models",
+            "mood_detection",
+            "roberta",
+            "v1",
+        )
+        _predictor = SentencePredictor(model_dir)
     return _predictor
 
 
 def get_summarizer():
-    """Lazily create SummarizationPredictor if available."""
     global _summarizer
     if _summarizer is None:
         try:
-            from Backend.Mood_Detection.summarization.predictor import SummarizationPredictor
-            summarizer_model_path = os.path.join(os.path.dirname(__file__), "Mood_Detection", "outputs", "models", "summarizer")
-            _summarizer = SummarizationPredictor(model_path=summarizer_model_path)
+            model_dir = os.path.join(
+                os.path.dirname(__file__),
+                "ml",
+                "mood_detection",
+                "models",
+                "summarization",
+                "bart",
+                "v1",
+            )
+            _summarizer = SummarizationPredictor(model_path=model_dir)
         except Exception:
             _summarizer = None
     return _summarizer
 
+# -------------------- Flask App --------------------
 app = Flask(__name__)
-# Initialize models once at process startup so they are reused by all requests
-# Models are loaded in the worker process (Gunicorn loads the app per worker by
-# default) and not per-request. We keep DB and Firebase lazy to avoid secrets
-# initialization at import time.
-def _init_models_at_startup():
-    try:
-        logger.info("Initializing ML models at process startup")
-        # This will load model artifacts from disk into process memory once
-        # and keep them in module-level singletons (`_predictor`, `_summarizer`).
-        get_predictor()
-        get_summarizer()
-        logger.info("Model initialization complete")
-    except Exception:
-        logger.exception("Model initialization failed (continuing so process can still start)")
 
-# Call the initializer so models are loaded when the module is imported in
-# worker processes (Gunicorn default behavior loads app in each worker).
-_init_models_at_startup()
-# Print model output dir only when initializing predictor to avoid spamming during reloads
-_ = None
-# -------------------- Firebase Initialization --------------------
-# Do NOT initialize firebase or models at import time. Use get_db()/get_predictor() instead.
-
-# Feature flags (runtime-configurable via env vars)
 ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() in ("1", "true", "yes")
 ENABLE_INSIGHTS = os.getenv("ENABLE_INSIGHTS", str(ENABLE_LLM)).lower() in ("1", "true", "yes")
 
@@ -107,63 +302,58 @@ ENABLE_INSIGHTS = os.getenv("ENABLE_INSIGHTS", str(ENABLE_LLM)).lower() in ("1",
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        # Ensure Firebase SDK is initialized before attempting token verification.
         try:
             firebase_admin.get_app()
         except ValueError:
             FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
             if FIREBASE_JSON and os.path.exists(FIREBASE_JSON):
-                try:
-                    cred = credentials.Certificate(FIREBASE_JSON)
-                    firebase_admin.initialize_app(cred)
-                except Exception:
-                    # Fallback: try initializing with default credentials
-                    firebase_admin.initialize_app()
+                cred = credentials.Certificate(FIREBASE_JSON)
+                firebase_admin.initialize_app(cred)
             else:
-                # Initialize with default credentials (if available in environment)
                 firebase_admin.initialize_app()
 
         header = request.headers.get("Authorization")
         if not header or not header.startswith("Bearer "):
             return jsonify({"error": "Missing or invalid token"}), 401
-        id_token = header.split(" ")[1]
+
         try:
-            decoded_token = auth.verify_id_token(id_token)
+            decoded_token = auth.verify_id_token(header.split(" ")[1])
             request.user = decoded_token
         except Exception as e:
             return jsonify({"error": "Invalid token", "details": str(e)}), 401
+
         return f(*args, **kwargs)
+
     return decorated
 
-# -------------------- Initialize DB and models --------------------
-# DB and models are lazily initialized via `get_db()`, `get_predictor()` and `get_summarizer()`.
 
-# -------------------- Routes --------------------
+# -------------------- ROUTES (UNCHANGED LOGIC) --------------------
 @app.route("/process_entry", methods=["POST"])
 @login_required
 def process_entry():
     data = request.get_json()
-    # lazily get DB and models when needed; avoids reload side effects
-    _db = get_db()
-    predictor = get_predictor()
-    summarizer = get_summarizer()
-    body, status = journal_entries.process_entry(request.user, data, _db, predictor, summarizer)
+    body, status = journal_entries.process_entry(
+        request.user,
+        data,
+        get_db(),
+        get_predictor(),
+        get_summarizer(),
+    )
     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
 
 @app.route("/generate_insights", methods=["POST"])
 @login_required
 def generate_insights():
     data = request.get_json() or {}
-    # Set Gemini credentials before initializing InsightsGenerator
-    GEMINI_JSON = os.getenv("GEMINI_CREDENTIALS_PATH")
-    if GEMINI_JSON:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GEMINI_JSON
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-    # Use the DB instance lazily and pass flags so external LLM calls can be disabled
-    _db = get_db()
-    body, status = insights_service.generate_insights(request.user, data, _db, enable_llm=ENABLE_LLM, enable_insights=ENABLE_INSIGHTS)
+    body, status = insights_service.generate_insights(
+        request.user,
+        data,
+        get_db(),
+        enable_llm=ENABLE_LLM,
+        enable_insights=ENABLE_INSIGHTS,
+    )
     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
 
 
 @app.route("/entries/<entry_id>", methods=["DELETE"])
@@ -577,10 +767,13 @@ def export_data():
 def home():
     return render_template("home.html")
 
-# -------------------- Run App --------------------
+# -------------------- Run --------------------
 if __name__ == "__main__":
-    # Respect environment debug/reloader flags to avoid multiple model loads
     FLASK_DEBUG = os.getenv("FLASK_DEBUG", "true").lower() in ("1", "true", "yes")
     DISABLE_RELOADER = os.getenv("DISABLE_RELOADER", "false").lower() in ("1", "true", "yes")
-    use_reloader = FLASK_DEBUG and not DISABLE_RELOADER
-    app.run(host="0.0.0.0", port=int(os.getenv("PORT", 5000)), debug=FLASK_DEBUG, use_reloader=use_reloader)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),
+        debug=FLASK_DEBUG,
+        use_reloader=FLASK_DEBUG and not DISABLE_RELOADER,
+    )
