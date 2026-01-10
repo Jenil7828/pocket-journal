@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "632094031065",
+    "project_id": "pocket-journal-be",
+    "storage_bucket": "pocket-journal-be.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:632094031065:android:95e13e0e05e7ef2c8d12c8",
+        "android_client_info": {
+          "package_name": "com.example.diary"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "632094031065-hs5dav39upbf5ofof3pdkb0gl4fp2tdk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDS8t9xtQUgJJJ1Ce1kRgq5Wjvv9GOfHAE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "632094031065-hs5dav39upbf5ofof3pdkb0gl4fp2tdk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
