@@ -48,10 +48,7 @@ build/
 # Ignore Gemini API client files
 gen-lang-client-0920522291-a80064ac014b.json
 pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
-secrets/
 
-# Model outputs and training artifacts (we exclude training outputs except for
-# the inference models directory which must be present locally and included in 
-# the runtime image). The `!` lines re-include the models directory.
-Backend/ml/mood_detection/models/
-song_history.json
+
+# Summarizer model files (large files, should not be committed)
+Backend/Mood_Detection/outputs/models/summarizer/*.safetensors
