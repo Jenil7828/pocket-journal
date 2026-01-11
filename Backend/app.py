@@ -1,389 +1,616 @@
-from flask import Flask, request, jsonify, render_template_string
-from rapidfuzz import process
-from Media_Recommendation.mood_recommend import get_movies_by_genre, MOOD_GENRE_MAP
-from Media_Recommendation.movie_search import search_movie_robust
-from Media_Recommendation.song_recommend import get_mood_songs
-from Media_Recommendation.search_song import search_songs_or_artist
-from Media_Recommendation.books_recommendation import recommend_books_by_emotion
-from Media_Recommendation.search_books import search_books_robust
-from Mood_Detection.database.db_manager import DBManager
-from Mood_Detection.mood_detection_sentence.predictor_sentence_level import SentencePredictor
-from Mood_Detection.summarization.summarizer import Summarizer
-from Mood_Detection.mood_detection_sentence.config_sentence import Config
-from Mood_Detection.analysis.insight_analyzer import InsightsGenerator
+# app.py
 import os
-app = Flask(__name__)
-out_dir = os.path.join(os.path.dirname(__file__), "Mood_Detection", Config.OUTPUT_DIR)
-# Initialize DB and models
-db = DBManager()
-predictor = SentencePredictor(out_dir)
+import warnings
 
+# Suppress TensorFlow warnings
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
+
+from flask import Flask, request, jsonify, render_template
+from functools import wraps
+from dotenv import load_dotenv
+import logging
+
+# Load environment variables
+load_dotenv()
+
+# -------------------- Logging --------------------
+LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("pocket_journal")
+
+logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"))
+logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))
+
+# Ensure logs are always emitted to stdout in containerized environments
+import sys
+
+def _ensure_stream_handler(logger_obj):
+    for h in list(logger_obj.handlers):
+        if isinstance(h, logging.StreamHandler):
+            return
+    numeric_level = getattr(logging, LOG_LEVEL, logging.INFO) if isinstance(LOG_LEVEL, str) else LOG_LEVEL
+    stream_handler = logging.StreamHandler(sys.stdout)
+    stream_handler.setLevel(numeric_level)
+    stream_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(name)s: %(message)s"))
+    logger_obj.addHandler(stream_handler)
+
+# Add a stream handler to the app logger and the root logger so both app
+# messages and Werkzeug/Gunicorn logs propagate to container stdout/stderr.
+_ensure_stream_handler(logger)
+_ensure_stream_handler(logging.getLogger())
+
+# -------------------- Firebase --------------------
+import firebase_admin
+from firebase_admin import credentials, auth
+
+# -------------------- NEW ARCH IMPORTS (FIXED) --------------------
+from services import (
+    journal_entries,
+    insights_service,
+    media_recommendations,
+    stats_service,
+    export_service,
+    health_service,
+    entry_response,
+)
+
+from persistence.db_manager import DBManager
+
+from ml.mood_detection.inference.mood_detection.roberta.config import Config
+from ml.mood_detection.inference.mood_detection.roberta.predictor import SentencePredictor
+from ml.mood_detection.inference.summarization.bart.predictor import SummarizationPredictor
+
+# -------------------- Lazy singletons --------------------
+_db = None
+_predictor = None
+_summarizer = None
+
+
+def get_db():
+    global _db
+    if _db is None:
+        FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+        _db = DBManager(firebase_json_path=FIREBASE_JSON)
+    return _db
+
+
+def get_predictor():
+    global _predictor
+    if _predictor is None:
+        model_dir = os.path.join(
+            os.path.dirname(__file__),
+            "ml",
+            "mood_detection",
+            "models",
+            "mood_detection",
+            "roberta",
+            "v1",
+        )
+        _predictor = SentencePredictor(model_dir)
+    return _predictor
+
+
+def get_summarizer():
+    global _summarizer
+    if _summarizer is None:
+        try:
+            model_dir = os.path.join(
+                os.path.dirname(__file__),
+                "ml",
+                "mood_detection",
+                "models",
+                "summarization",
+                "bart",
+                "v1",
+            )
+            _summarizer = SummarizationPredictor(model_path=model_dir)
+        except Exception:
+            _summarizer = None
+    return _summarizer
+
+# -------------------- Eager model loading at startup --------------------
 try:
-    summarizer = Summarizer()
+    # Load models once at process start so they aren't reloaded per-request
+    _predictor = get_predictor()
+    _summarizer = get_summarizer()
+    logger.info("Eagerly loaded predictor and summarizer at startup")
 except Exception as e:
-    print("⚠️ Summarizer not available, skipping. Error:", e)
-    summarizer = None
+    # Do not fail startup if models unavailable; keep server running and degrade gracefully
+    logger.warning("Failed to eagerly load models at startup: %s", str(e))
+
+# NEW: expose module-level cached references for route handlers to use
+PREDICTOR = _predictor
+SUMMARIZER = _summarizer
+
+# -------------------- Flask App --------------------
+app = Flask(__name__)
+
+ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() in ("1", "true", "yes")
+ENABLE_INSIGHTS = os.getenv("ENABLE_INSIGHTS", str(ENABLE_LLM)).lower() in ("1", "true", "yes")
 
 
-# -------------------- API Routes --------------------
-# Mood entry processing and storing
+# -------------------- Auth Decorator --------------------
+def login_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        try:
+            firebase_admin.get_app()
+        except ValueError:
+            FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+            if FIREBASE_JSON and os.path.exists(FIREBASE_JSON):
+                cred = credentials.Certificate(FIREBASE_JSON)
+                firebase_admin.initialize_app(cred)
+            else:
+                firebase_admin.initialize_app()
+
+        header = request.headers.get("Authorization")
+        if not header or not header.startswith("Bearer "):
+            return jsonify({"error": "Missing or invalid token"}), 401
+
+        try:
+            decoded_token = auth.verify_id_token(header.split(" ")[1])
+            request.user = decoded_token
+        except Exception as e:
+            return jsonify({"error": "Invalid token", "details": str(e)}), 401
+
+        return f(*args, **kwargs)
+
+    return decorated
+
+
+# -------------------- ROUTES (UNCHANGED LOGIC) --------------------
 @app.route("/process_entry", methods=["POST"])
+@login_required
 def process_entry():
-    """
-    Expects JSON payload:
-    {
-        "user_id": 1,
-        "entry_text": "Your journal text here..."
-    }
-    Args:
-        user_id: int
-        entry_text: str
-    Returns:
-        {
-            "entry_id": 123,
-            "summary": "Summarized text...",
-            "mood_probs": {"happy": 0.7, "sad": 0.1, ...}
-        }
-    """
     data = request.get_json()
-    if not data or "user_id" not in data or "entry_text" not in data:
-        return jsonify({"error": "Missing user_id or entry_text"}), 400
+    # Use cached predictor/summarizer loaded at startup; get_predictor() still works as a fallback
+    body, status = journal_entries.process_entry(
+        request.user,
+        data,
+        get_db(),
+        PREDICTOR or get_predictor(),
+        SUMMARIZER or get_summarizer(),
+    )
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    user_id = data["user_id"]
-    text = data["entry_text"]
 
-    # Insert journal entry into DB
-    entry_id = db.insert_entry(user_id, text)
-
-    # Summarize
-    summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
-
-    # Predict mood
-    mood_probs = predictor.predict(summary)
-
-    # Save analysis
-    db.insert_analysis(entry_id, summary, mood_probs)
-
-    # Return result
-    response = {
-        "entry_id": entry_id,
-        "summary": summary,
-        "mood_probs": mood_probs
-    }
-
-    return jsonify(response), 200
-
-#Gemini-based insights generation
 @app.route("/generate_insights", methods=["POST"])
+@login_required
 def generate_insights():
+    data = request.get_json() or {}
+    body, status = insights_service.generate_insights(
+        request.user,
+        data,
+        get_db(),
+        enable_llm=ENABLE_LLM,
+        enable_insights=ENABLE_INSIGHTS,
+    )
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+
+@app.route("/entries/<entry_id>", methods=["DELETE"])
+@login_required
+def delete_entry(entry_id):
     """
-    Expects JSON payload:
-    {
-        "user_id": 1,
-        "start_date": "2025-09-01",
-        "end_date": "2025-09-30"
-    }
-    Args:
-        user_id: int
-        start_date: str (optional)
-        end_date: str (optional)
+    Delete a specific journal entry and its associated analysis.
+    
+    Path Parameters:
+      - entry_id: The ID of the journal entry to delete
+    
     Returns:
-        {
-            "goals": [...],
-            "progress": [...],
-            "challenges": [...],
-            ...
-        }
+      - Success: Details of what was deleted
+      - Error: Error message with details
     """
+    uid = request.user["uid"]
+    if not entry_id:
+        return jsonify({"error": "Entry ID is required"}), 400
+    _db = get_db()
+    body, status = journal_entries.delete_entry(entry_id, uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/entries/batch", methods=["DELETE"])
+@login_required
+def delete_entries_batch():
+    """
+    Delete multiple journal entries and their associated analysis.
+    
+    Request Body:
+      {
+        "entry_ids": ["entry_id_1", "entry_id_2", ...]
+      }
+    
+    Returns:
+      - Success: Summary of deleted entries
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
     data = request.get_json()
-    if not data or "user_id" not in data:
-        return jsonify({"error": "Missing user_id"}), 400
+    if not data or "entry_ids" not in data:
+        return jsonify({"error": "Missing entry_ids in request body"}), 400
+    entry_ids = data["entry_ids"]
+    if not isinstance(entry_ids, list) or len(entry_ids) == 0:
+        return jsonify({"error": "entry_ids must be a non-empty array"}), 400
 
-    user_id = data["user_id"]
-    start_date = data.get("start_date")
-    end_date = data.get("end_date")
+    _db = get_db()
+    body, status = journal_entries.delete_entries_batch(entry_ids, uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    generator = InsightsGenerator(db)
-    insights = generator.generate_insights(user_id, start_date, end_date)
+@app.route("/entries/<entry_id>", methods=["PUT"])
+@login_required
+def update_entry(entry_id):
+    """
+    Update a journal entry and regenerate its analysis.
+    
+    Path Parameters:
+      - entry_id: The ID of the journal entry to update
+    
+    Request Body:
+      {
+        "entry_text": "Updated journal text here...",
+        "regenerate_analysis": true // optional, defaults to true
+      }
+    
+    Returns:
+      - Success: Updated entry details and new analysis
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    data = request.get_json()
+    _db = get_db()
+    predictor = PREDICTOR or get_predictor()
+    summarizer = SUMMARIZER or get_summarizer()
+    body, status = journal_entries.update_entry(entry_id, uid, data, _db, predictor, summarizer)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    return jsonify(insights), 200
-# Mood-based movie recommendation
+@app.route("/entries/<entry_id>/reanalyze", methods=["POST"])
+@login_required
+def reanalyze_entry(entry_id):
+    """
+    Regenerate analysis for an existing journal entry.
+    Useful when analysis was not generated during update.
+    
+    Path Parameters:
+      - entry_id: The ID of the journal entry to reanalyze
+    
+    Returns:
+      - Success: New analysis data
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    _db = get_db()
+    predictor = PREDICTOR or get_predictor()
+    summarizer = SUMMARIZER or get_summarizer()
+    body, status = journal_entries.reanalyze_entry(entry_id, uid, _db, predictor, summarizer)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+# ==================== NEW API ENDPOINTS ====================
+
+@app.route("/entries/<entry_id>", methods=["GET"])
+@login_required
+def get_single_entry(entry_id):
+    """
+    Get a specific journal entry with its analysis.
+    
+    Path Parameters:
+      - entry_id: The ID of the journal entry to retrieve
+    
+    Returns:
+      - Success: Entry details with analysis
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    _db = get_db()
+    body, status = journal_entries.get_single_entry(entry_id, uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/entries/<entry_id>/analysis", methods=["GET"])
+@login_required
+def get_entry_analysis(entry_id):
+    """
+    Get mood analysis for a specific journal entry.
+    
+    Path Parameters:
+      - entry_id: The ID of the journal entry
+    
+    Returns:
+      - Success: Analysis details
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    _db = get_db()
+    body, status = journal_entries.get_entry_analysis(entry_id, uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/insights", methods=["GET"])
+@login_required
+def get_insights():
+    """
+    Get all insights for the authenticated user.
+    
+    Query Parameters:
+      - limit: Maximum number of insights to return (default: 50)
+      - offset: Number of insights to skip (default: 0)
+    
+    Returns:
+      - Success: List of insights
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    try:
+        limit = int(request.args.get("limit", 50))
+        offset = int(request.args.get("offset", 0))
+    except ValueError:
+        return jsonify({"error": "Invalid limit or offset parameter"}), 400
+    _db = get_db()
+    body, status = insights_service.get_insights(uid, limit, offset, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/insights/<insight_id>", methods=["GET"])
+@login_required
+def get_single_insight(insight_id):
+    """
+    Get a specific insight by ID.
+    
+    Path Parameters:
+      - insight_id: The ID of the insight to retrieve
+    
+    Returns:
+      - Success: Insight details
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    if not insight_id:
+        return jsonify({"error": "Insight ID is required"}), 400
+    _db = get_db()
+    body, status = insights_service.get_single_insight(insight_id, uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/insights/<insight_id>", methods=["DELETE"])
+@login_required
+def delete_insight(insight_id):
+    """
+    Delete a specific insight and its associated mappings.
+    
+    Path Parameters:
+      - insight_id: The ID of the insight to delete
+    
+    Returns:
+      - Success: Deletion confirmation
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    if not insight_id:
+        return jsonify({"error": "Insight ID is required"}), 400
+    _db = get_db()
+    body, status = insights_service.delete_insight(insight_id, uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+# -------------------- Movies, Songs, Books APIs --------------------
 @app.route("/api/recommend", methods=["GET"])
+@login_required
 def api_recommend():
-    """
-    Query param: mood (e.g. ?mood=happy)
-    Args:
-        mood: str
-    Returns:
-        {
-            "mood": "happy",
-            "recommendations": [
-                {"title": "Movie 1", "overview": "...", "release_date": "...", ...},
-                ...
-            ]
-        }
-    """
-    mood = (request.args.get("mood") or "").strip().lower()
-    if not mood:
-        return jsonify({"error": "Provide mood parameter like ?mood=excited"}), 400
-    # fuzzy match mood
-    if mood not in MOOD_GENRE_MAP:
-        closest_mood, score, _ = process.extractOne(mood, MOOD_GENRE_MAP.keys())
-        genre_ids = MOOD_GENRE_MAP[closest_mood]
-    else:
-        genre_ids = MOOD_GENRE_MAP[mood]
-    movies = get_movies_by_genre(genre_ids, max_results=12)
-    return jsonify({"mood": mood, "recommendations": movies})
+    mood = request.args.get("mood")
+    _db = get_db()
+    # recommend_movies_for_mood expects only the mood string
+    body, status = media_recommendations.recommend_movies_for_mood(mood)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-# Movie search (typos OK)
+@app.route("/movie/recommend", methods=["GET"])
+@login_required
+def movie_recommend():
+    uid = request.user["uid"]
+    _db = get_db()
+    body, status = media_recommendations.recommend_movies_for_user(uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/song/recommend", methods=["GET"])
+@login_required
+def song_recommend():
+    uid = request.user["uid"]
+    try:
+        limit = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "Invalid limit"}), 400
+    language = request.args.get("language", "both")
+    _db = get_db()
+    body, status = media_recommendations.recommend_songs_for_user(uid, limit, language, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+@app.route("/book/recommend", methods=["GET"])
+@login_required
+def book_recommend():
+    uid = request.user["uid"]
+    _db = get_db()
+    body, status = media_recommendations.recommend_books_for_user(uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+
+
 @app.route("/api/search", methods=["GET"])
+@login_required
 def api_search():
-    """
-    Query param: movie (e.g. ?movie=Inception)
-    Args:
-        q: str
-    Returns:
-        {
-            "searched": "Inception",
-            "results": [...]
-        }
-    """
-    q = (request.args.get("movie") or "").strip()
-    if not q:
-        return jsonify({"error": "Provide movie parameter like ?movie=Incepton"}), 400
-    res = search_movie_robust(q, max_candidates=300, top_k=6)
-    if res.get("error"):
-        return jsonify({"error": res["error"], "results": []}), 404
-    return jsonify({"searched": q, "results": res["results"]})
-
-
+    q = request.args.get("movie")
+    _db = get_db()
+    # search_movies expects only the query string
+    body, status = media_recommendations.search_movies(q)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
 @app.route("/api/songs", methods=["GET"])
+@login_required
 def get_songs():
-    """
-    Query parameters:
-        mood: str (default: happy)
-        language: str (default: both)
-        limit: int (default: 10)
-      Args:
-        mood: str
-        language: str
-        limit: int
-      Returns:
-        [
-            {"title": "Song 1", "artist": "Artist 1", "language": "English", ...},
-            ...
-        ] 
-    """
     mood = request.args.get("mood", "happy").lower()
-    language = request.args.get("language", "both").lower()  # english, hindi, both
-    limit = int(request.args.get("limit", 10))
-    
-    # Call the updated function
-    songs = get_mood_songs(user_mood=mood, limit=limit, language=language)
-    
-    return jsonify(songs)
-
-
+    language = request.args.get("language", "both").lower()
+    try:
+        limit = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "Invalid limit"}), 400
+    body, status = media_recommendations.get_songs(mood, language, limit)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
 @app.route("/api/search_song", methods=["GET"])
+@login_required
 def api_search_song():
-    """
-    Query parameters:
-        q: str
-        type: str (default: track)
-        limit: int (default: 10)
-    Args:
-        q: str
-        type: str
-        limit: int
-    Returns:
-        {
-            "query": "arjit sngh",
-            "type": "artist",
-            "results": [...]
-        }
-    """
-    query = (request.args.get("q") or "").strip()
-    search_type = (request.args.get("type") or "track").lower()  # track / artist
-    limit = int(request.args.get("limit", 10))
-
-    if not query:
-        return jsonify({"error": "Provide query parameter like ?q=Arjit Sngh&type=artist"}), 400
-
-    res = search_songs_or_artist(query, search_type=search_type, limit=limit)
-
-    return jsonify(res)
-
+    query = request.args.get("q")
+    search_type = (request.args.get("type") or "track").lower()
+    try:
+        limit = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "Invalid limit"}), 400
+    body, status = media_recommendations.search_songs(query, search_type, limit)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
 @app.route("/api/books", methods=["GET"])
+@login_required
 def get_books_by_emotion():
-    """
-    Query parameters:
-        emotion: str (default: happy)
-        limit: int (default: 5)
-    Args:
-        emotion: str
-        limit: int
-    Returns:
-        {
-            "emotion": "happy",
-            "results": [
-                {"title": "Book 1", "author": "Author 1", ...},
-                ...
-            ]
-        }
-    """
     emotion = request.args.get("emotion", "happy").lower()
-    limit = int(request.args.get("limit", 5))
-    books = recommend_books_by_emotion(emotion, limit)
-    return jsonify({
-        "emotion": emotion,
-        "results": books
-    })
+    try:
+        limit = int(request.args.get("limit", 5))
+    except ValueError:
+        return jsonify({"error": "Invalid limit"}), 400
+    body, status = media_recommendations.books_by_emotion(emotion, limit)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
 @app.route("/api/search_books", methods=["GET"])
+@login_required
 def api_search_books():
+    query = request.args.get("query")
+    search_type = (request.args.get("type") or "both").lower()
+    try:
+        max_results = int(request.args.get("limit", 10))
+    except ValueError:
+        return jsonify({"error": "Invalid limit"}), 400
+    body, status = media_recommendations.search_books(query, search_type, max_results)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+
+
+
+# ==================== ADDITIONAL API ENDPOINTS ====================
+
+@app.route("/entries", methods=["GET"])
+@login_required
+def get_entries_filtered():
     """
-    Query parameters:
-        query: str
-        type: str (default: both)
-        limit: int (default: 10)
-    Args:
-        query: str  # book title or author
-        type: str   # title, author, both     
-        limit: int  # number of results
-    Returns:
-        {
-            "query": "harry poter",
-            "type": "both",
-            "results": [...]
-        }
-    """
-    query = (request.args.get("query") or "").strip()
-    search_type = (request.args.get("type") or "both").lower()  # title, author, both
-    max_results = int(request.args.get("limit", 10))
+    Get journal entries with filtering options.
     
-    if not query:
-        return jsonify({"error": "Provide query parameter like ?query=Harry Potter"}), 400
+    Query Parameters:
+      - start_date: Start date filter (YYYY-MM-DD)
+      - end_date: End date filter (YYYY-MM-DD)
+      - mood: Filter by dominant mood (happy, sad, angry, etc.)
+      - search: Search in entry text
+      - limit: Maximum number of entries (default: 50)
+      - offset: Number of entries to skip (default: 0)
+    
+    Returns:
+      - Success: Filtered list of entries
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    params = {
+        "start_date": request.args.get("start_date"),
+        "end_date": request.args.get("end_date"),
+        "mood": request.args.get("mood"),
+        "search": request.args.get("search"),
+        "limit": request.args.get("limit", 50),
+        "offset": request.args.get("offset", 0),
+    }
+    _db = get_db()
+    body, status = journal_entries.get_entries_filtered(uid, params, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    results = search_books_robust(query=query, max_results=max_results, search_type=search_type)
-    return jsonify(results)
+@app.route("/stats", methods=["GET"])
+@login_required
+def get_user_stats():
+    """
+    Get user statistics and dashboard data.
+    
+    Returns:
+      - Success: User statistics
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    _db = get_db()
+    body, status = stats_service.get_user_stats(uid, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-MAIN_TEMPLATE = """
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8">
-  <title>📓 Pocket Journal — Mood-Based Recommendations API</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-    h1, h2 { color: #2c3e50; }
-    code { background: #f4f4f4; padding: 3px 6px; border-radius: 4px; }
-    ul { margin: 10px 0 20px 20px; }
-    li { margin-bottom: 6px; }
-    .section { margin-bottom: 30px; }
-  </style>
-</head>
-<body>
-  <h1>📓 Pocket Journal — Mood-Based Recommendations API</h1>
-  <p>Welcome! Use the following endpoints to analyze journal entries and get personalized recommendations for movies, songs, and books.</p>
+@app.route("/mood-trends", methods=["GET"])
+@login_required
+def get_mood_trends():
+    """
+    Get mood trends over time.
+    
+    Query Parameters:
+      - days: Number of days to analyze (default: 30)
+    
+    Returns:
+      - Success: Mood trends data
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    try:
+        days = int(request.args.get("days", 30))
+    except ValueError:
+        return jsonify({"error": "Invalid days parameter"}), 400
+    _db = get_db()
+    body, status = stats_service.get_mood_trends(uid, days, _db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-  <div class="section">
-    <h2>📝 Journal Entry Processing</h2>
-    <p><code>POST /process_entry</code></p>
-    <p><b>Request JSON:</b></p>
-    <pre>{
-  "user_id": 1,
-  "entry_text": "Your journal text here..."
-}</pre>
-    <p><b>Response:</b> Summary + mood probabilities + entry_id</p>
-  </div>
-  <div class="section">
-    <h2>🔍 Generate Insights</h2>
-    <p><code>POST /generate_insights</code></p>
-    <p><b>Request JSON:</b></p>
-    <pre>{
-  "user_id": 1,
-  "start_date": "2025-09-01",  // optional 
-  "end_date": "2025-09-30"     // optional
-}</pre>
-    <p><b>Response:</b> Extracted insights (goals, progress, challenges, etc.)</p>
-  </div>
 
-  <div class="section">
-    <h2>🎬 Movies</h2>
-    <ul>
-      <li>Get movies by mood: <code>/api/recommend?mood=happy</code></li>
-      <li>Search movies (typo-tolerant): <code>/api/search?movie=Incepton</code></li>
-    </ul>
-  </div>
+@app.route("/health", methods=["GET"])
+def health_check():
+    """
+    Health check endpoint for API status.
+    
+    Returns:
+      - Success: API health status
+    """
+    _db = get_db()
+    body, status = health_service.health_check(_db)
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-  <div class="section">
-    <h2>🎵 Songs</h2>
-    <ul>
-      <li>
-        Get songs by mood:  
-        <code>/api/songs?mood=happy&language=both&limit=5</code><br>
-        <small>Parameters:</small>
-        <ul>
-          <li><b>mood</b>: Mood of the songs (happy, sad, chill, energetic, romantic)</li>
-          <li><b>language</b>: Song language (english, hindi, both). Default = both</li>
-          <li><b>limit</b>: Number of songs (default = 10)</li>
-        </ul>
-      </li>
-      <li>
-        Search songs or artists:  
-        <code>/api/search_song?q=arjit sngh&type=artist&limit=10</code><br>
-        <small>Parameters:</small>
-        <ul>
-          <li><b>q</b>: Song or artist name (typo-tolerant)</li>
-          <li><b>type</b>: "track" or "artist" (default = track)</li>
-          <li><b>limit</b>: Number of results (default = 10)</li>
-        </ul>
-      </li>
-    </ul>
-  </div>
+@app.route("/export", methods=["GET"])
+@login_required
+def export_data():
+    """
+    Export user data in JSON format.
+    
+    Query Parameters:
+      - start_date: Start date for export (YYYY-MM-DD)
+      - end_date: End date for export (YYYY-MM-DD)
+      - format: Export format (json, csv) - default: json
+    
+    Returns:
+      - Success: Exported data
+      - Error: Error message with details
+    """
+    uid = request.user["uid"]
+    start_date = request.args.get("start_date")
+    end_date = request.args.get("end_date")
+    export_format = request.args.get("format", "json").lower()
 
-  <div class="section">
-    <h2>📚 Books</h2>
-    <ul>
-      <li>
-        Get books by emotion:  
-        <code>/api/books?emotion=happy&limit=5</code><br>
-        <small>Example emotions: <b>happy, sad, angry, romantic, stressed, bored</b></small>
-      </li>
-      <li>
-        Search books (typo-tolerant):  
-        <code>/api/search_books?query=harry poter&type=both&limit=5</code><br>
-        <small>Parameters:</small>
-        <ul>
-          <li><b>query</b>: Book title or author</li>
-          <li><b>type</b>: "title", "author", or "both" (default = both)</li>
-          <li><b>limit</b>: Number of results (default = 10)</li>
-        </ul>
-      </li>
-    </ul>
-  </div>
+    _db = get_db()
+    result = export_service.export_data(uid, start_date, end_date, export_format, _db)
+    if isinstance(result, tuple) and len(result) == 3:
+        return result
+    body, status = result
+    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-  <footer>
-    <p>🚀 Pocket Journal API is running. Use Postman, Curl, or your browser to test the endpoints.</p>
-  </footer>
-</body>
-</html>
-"""
-
+# -------------------- Home Page --------------------
 @app.route("/", methods=["GET"])
 def home():
-    """
-    Simple homepage with API info"""
-    return render_template_string(MAIN_TEMPLATE)
+    return render_template("home.html")
 
-# -------------------- Run App --------------------
+# -------------------- Run --------------------
 if __name__ == "__main__":
-    """
-    Run the Flask app
-    Accessible at http://127.0.0.1:5000 (on laptop)
-    Running on http://192.168.1.33:5000 (on local network such as phone)
-    """
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    FLASK_DEBUG = os.getenv("FLASK_DEBUG", "true").lower() in ("1", "true", "yes")
+    DISABLE_RELOADER = os.getenv("DISABLE_RELOADER", "false").lower() in ("1", "true", "yes")
+    app.run(
+        host="0.0.0.0",
+        port=int(os.getenv("PORT", 5000)),
+        debug=FLASK_DEBUG,
+        use_reloader=FLASK_DEBUG and not DISABLE_RELOADER,
+    )

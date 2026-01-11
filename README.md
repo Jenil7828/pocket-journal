@@ -1,60 +1,76 @@
-# Pocket Journal
-A personal journaling application with mood detection and summarization features.
+# 📓 Pocket Journal
+A personal journaling application that helps users write journal entries, track moods, get summaries, generate insights, and receive media recommendations (movies, songs, books) based on their emotions.
 
-## Features
-- User authentication (signup, login)
-- Journal entry creation and retrieval
-- Mood detection using a pre-trained model
-- Text summarization
-- Insight generation from journal entries
-- RESTful API endpoints
-- MySQL database integration
+## 🚀 Features
+- 🔐 Firebase Authentication (signup/login with secure token verification)
+- 📝 Journal Entry Creation & Retrieval (stored in Firestore)
+- 😊 Mood Detection (sentence-level analysis using pre-trained model)
+- ✍️ Text Summarization of journal entries
+- 📊 Insight Generation from past entries (progress, remedies, behavior patterns, etc.)
+- 🎬🎶📚 Personalized Recommendations:
+  - Movies (via TMDB API)
+  - Songs (via Spotify API)
+  - Books (via Google Books API)
 
-## Technologies Used
-- Flutter (Frontend)
-- Python (Backend)
-- Flask (Python web framework)
-- MySQL (Database)
-- Transformers (Hugging Face for NLP tasks)
-- Scikit-learn (Machine learning)
-- Torch (Deep learning)
-- Spotipy 
-- Langchain
-## Project Structure
-```
+## 🛠️ Technologies Used
+
+- Frontend: Flutter
+- Backend: Python (Flask)
+- Database: Firebase Firestore
+- Authentication: Firebase Authentication
+- NLP/ML: Transformers (Hugging Face), Torch, Scikit-learn
+- Recommendations: TMDB API, Spotify API, Google Books API
+- LangChain & Gemini AI for insights generation
+
+## 📂 Project Structure
+```bash
 pocket-journal/
 ├── Backend/
-│   ├── app.py
-│   ├── Media_Recommendation
-│   │   ├──books_recommendation.py
-│   │   ├──mood_recommend.py
-│   │   ├──movie_search.py
-│   │   ├──song_recommend.py
-│   │   ├──song_search.py
-│   │   └──search_books.py
-│   ├── Mood_Detection
-│   │   ├── analysis
-│   │   │   └── insight_generation.py
-│   │   ├── database
-│   │   │   ├── db_manager.py
-│   │   │   └── database.sql
-│   │   ├── mood_detection_sentence
+│   ├── app.py                        # Main Flask app
+│   ├── requirements.txt
+│   ├── pocket-journal-be-firebase-adminsdk.json  # Firebase credentials
+│   ├── gen-lang-client-XXXX.json      # Gemini credentials
+│   ├── song_history.json
+│   ├── Media_Recommendation/          # Media recommendation module
+│   │   ├── app.py
+│   │   ├── books_recommendation.py
+│   │   ├── mood_recommend.py
+│   │   ├── movie_search.py
+│   │   ├── search_books.py
+│   │   ├── search_song.py
+│   │   ├── song_recommend.py
+│   │   ├── song_history.json
+│   │   └── __pycache__/
+│   │
+│   ├── Mood_Detection/                # Mood detection & NLP module
+│   │   ├── app.py
+│   │   ├── main.py
+│   │   ├── train_mood_sentence.py
+│   │   ├── analysis/
+│   │   │   └── insight_analyzer.py
+│   │   ├── database/
+│   │   │   └── db_manager.py
+│   │   ├── data/                      # Datasets
+│   │   ├── embeddings/                # Embedding storage
+│   │   ├── mood_detection_sentence/
 │   │   │   ├── config_sentence.py
 │   │   │   ├── dataset_loader.py
-│   │   │   ├── evaluator_sentence_level.py
 │   │   │   ├── predictor_sentence_level.py
 │   │   │   ├── trainer_sentence.py
+│   │   │   ├── evaluator_sentence_level.py
 │   │   │   └── visualizer.py
-│   │   ├── outputs
-│   │   │   └── (model checkpoints and logs)
-│   │   ├── summarization
-│   │   │   ├── config.py
-│   │   │   ├── dataset_loader.py
-│   │   │   ├── summarizer.py
-│   │   │   ├── trainer.py
-|   |   |──train_moood_sentence.py
-│   ├── requirements.txt
-│   └── .env
+│   │   ├── outputs/                   # Model files (Git LFS)
+│   │   │   ├── models/
+│   │   │   │   └── mood_detector/     # Trained mood detection model
+│   │   │   └── summarizer/            # Summarization model (if trained)
+│   │   └── summarization/
+│   │       ├── summarizer.py
+│   │       ├── trainer.py
+│   │       ├── config.py
+│   │       └── dataset_loader.py
+│   │
+│   └── venv/                          # Python virtual environment
+│
 ├── Frontend/
 │   ├── lib/
 │   │   ├── main.dart
@@ -63,80 +79,117 @@ pocket-journal/
 │   │   └── services/
 ```
 
-## Setup Instructions
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Jenil7828/pocket-journal.git
-   ```
-2. Navigate to the project directory:
-   ```bash
-   cd pocket-journal
-   ```
-3. Set up a virtual environment and activate it:
-   ```bash
-   cd Backend
-   python -m venv venv
-   cd venv/Scripts
-   activate
-   ```
-4. Install the required Python packages:
-   ```bash
-   pip install -r requirements.txt
-    ```
-5. Set up the MySQL database:
-   - Create a MySQL database and user.
-   - Run the SQL script located at `Backend/database/database.sql` to create the necessary tables.
-6. Configure environment variables:
-   - Create a `.env` file in the `Backend` directory.
-    - Add your database credentials and any other necessary configurations.
-7. Run the Flask application:
-    ```bash
-    python app.py
-    ```
-8. The backend server should now be running at  http://127.0.0.1:5000 and http://192.168.1.33:5000
+## ⚙️ Setup Instructions
+1️⃣ Clone the Repository
+```bash
+git clone https://github.com/Jenil7828/pocket-journal.git
+cd pocket-journal
+```
 
-## API Endpoints
-- Process Journal Entry: `POST /process_entry` Requires JSON body with `user_id` and `entry_text`.
-- Generate Insights: `POST /generate_insights` Requires JSON body with `user_id` , `start_date`, and `end_date`.
-- Movies Recommendation by Mood: `GET  /api/recommend?mood=<mood>` 
-- Movies Recommendation by Search Query: `GET /api/search?movie=<query>`
-- Songs Recommendation by Mood: `GET /api/songs?mood=<mood>&language=<language>&limit=<limit>`
-    - Parameters: 
-        - mood: Mood of the songs (happy, sad, chill, energetic, romantic)
-        - language: Song language (english, hindi, both). Default = both
-        - limit: Number of songs (default = 10)
-- Songs Search by Artist or Title: `GET /api/search_song?q=<query>&type=<type>&limit=<limit>`
-    - Parameters:
-        - q: Song or artist name (typo-tolerant)
-        - type: "track" or "artist" (default = track)
-        - limit: Number of results (default = 10)
-- Books Recommendation by Emotion: `GET /api/books?emotion=<emotion>&limit=<limit>`
-    - Example emotions: happy, sad, angry, romantic, stressed, bored
-    - limit: Number of results (default = 5)
-- Books Search by Title or Author: `GET /api/search_books?query=<query>&type=<type>&limit=<limit>`
-    - Parameters:
-        - query: Book title or author
-        - type: "title", "author", or "both" (default = both)
-        - limit: Number of results (default = 10)
+**📦 Model Files & Git LFS**
+This repository uses Git LFS (Large File Storage) to handle model files efficiently. The trained mood detection model is stored in `Backend/Mood_Detection/outputs/models/mood_detector/` and includes:
+- `model.safetensors` - Trained model weights (~500MB)
+- `config.json` - Model configuration
+- `tokenizer.json` - Tokenizer files
+- Other essential model artifacts
 
-## Example Usage
-### Journal Entry Processing
+**If you encounter issues with model files:**
+
+**For new clones:**
 ```bash
-  POST http://127.0.0.1:5000/process_entry user_id=1 entry_text="Today was a great day! I went to the park and enjoyed the sunshine."
+# Clone with LFS support
+git lfs clone https://github.com/Jenil7828/pocket-journal.git
 ```
-### Generate Insights
+
+**For existing clones:**
 ```bash
-  POST http://127.0.0.1:5000/generate_insights user_id=1 start_date="2023-01-01" end_date="2023-01-31"
+# Install Git LFS if not already installed
+git lfs install
+
+# Pull LFS files
+git lfs pull
+
+# Or fetch and checkout LFS files
+git lfs fetch
+git lfs checkout
 ```
-### Movies Recommendation by Mood
+
+**Verify LFS files are downloaded:**
 ```bash
-  GET http://127.0.0.1:5000/api/recommend?mood=happy
+# Check if model files exist and have proper size
+ls -la Backend/Mood_Detection/outputs/models/mood_detector/
+# Should show model.safetensors (~500MB) and other model files
 ```
-### Songs Recommendation by Mood
+2️⃣ Backend Setup
 ```bash
-  GET http://127.0.0.1:5000/api/songs?mood=happy&language=both&limit=10
+cd Backend
+python -m venv venv
+source venv/bin/activate   # (Linux/Mac)
+venv\Scripts\activate      # (Windows)
+pip install -r requirements.txt
 ```
-### Books Recommendation by Emotion
+3️⃣ Firebase Setup
+```bash
+Create a Firebase project.
+Enable Authentication (Email/Password or Google Sign-in).
+Enable Cloud Firestore.
+Download your Service Account JSON and set the path in .env.
+```
+4️⃣ Environment Variables
+```bash
+Create a .env file inside Backend/:
+
+# Firebase
+FIREBASE_CREDENTIALS_PATH=serviceAccount.json
+
+# Gemini AI
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_CREDENTIALS_PATH=path_to_gemini_service.json
+
+# External APIs
+TMDB_API_KEY=your_tmdb_key
+SONG_ID=your_spotify_client_id
+SONG_SECRET=your_spotify_client_secret
+```
+5️⃣ Run the Flask App
+```bash
+python app.py
+```
+
+## Server will run at:
+
+Local: 
+```bash 
+http://127.0.0.1:5000
+```
+
+LAN:
+```bash
+ http://192.168.1.33:5000
+```
+
+## 📡 API Endpoints
+- 🔑 Authentication
+ - All endpoints require
+ ```  bash
+  Authorization: Bearer <Firebase_ID_Token> in headers.
+  ```
+
+- 📝 Journal APIs
+  - Process Journal Entry
+
+  ``` bash
+  POST /process_entry
+  Authorization: Bearer <token>
+  Content-Type: application/json
+  {
+    "entry_text": "Today was amazing, I had a great time with friends."
+  }
+  ```
+
+  - ✅ Returns: entry_id, summary, mood_probs
+
+- Generate Insights
 ```bash
   GET http://127.0.0.1:5000/api/books?emotion=happy&limit=5
 ```
@@ -162,9 +215,81 @@ This project is licensed under the MIT License. See the LICENSE file for details
 Contributions are welcome! Please fork the repository and create a pull request with your changes.
 
 ## Contributors
+=======
+POST /generate_insights
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "start_date": "2025-09-01",
+  "end_date": "2025-09-30"
+}
+```
+  - ✅ Returns: AI-generated insights + fetched entries (for debugging).
+
+- 🎬 Movies
+  - By Mood
+``` bash
+GET /api/recommend?mood=happy
+Authorization: Bearer <token>
+```
+  - Search
+``` bash
+GET /api/search?movie=Inception
+Authorization: Bearer <token>
+```
+- 🎶 Songs
+  - By Mood
+``` bash
+GET /api/songs?mood=sad&language=english&limit=5
+Authorization: Bearer <token>
+```
+  - Search
+``` bash
+GET /api/search_song?q=Arijit Singh&type=artist&limit=10
+Authorization: Bearer <token>
+```
+- 📚 Books
+  - By Emotion
+``` bash
+GET /api/books?emotion=stressed&limit=5
+Authorization: Bearer <token>
+```
+  - Search
+``` bash
+GET /api/search_books?query=Harry Potter&type=both&limit=5
+Authorization: Bearer <token>
+```
+
+## 🧪 Example Postman Collection
+- Import the above endpoints into Postman.
+- Add a variable {{token}} for Authorization.
+- Get Firebase ID Token after login and set it as {{token}}.
+
+## 📌 Notes
+
+- Ensure Firebase and APIs are enabled.
+- **Model Files**: The repository includes a pre-trained mood detection model optimized for production use. Training checkpoints have been removed to save space.
+- **Git LFS**: Model files are stored using Git LFS to handle large files efficiently.
+- **Model Loading**: If the local model fails to load, the system will fall back to the base RoBERTa model.
+- Firestore stores:
+  - journal_entries → {entry_id, user_id, entry_text, created_at}
+  - entry_analysis → {entry_id, summary, mood}
+
+## Docker Build and Run Commands
+docker build -f Dockerfile.prod -t pocket-journal:prod .
+
+docker run ^
+  --env-file .env ^
+  -v "%cd%\secrets:/secrets:ro" ^
+  -p 8080:8080 ^
+  pocket-journal:prod
+
+## 👨‍💻 Contributors
 - Jenil Rathod
 - Manas Joshi
 - Saloni Naik
 - Aditya Nalla
 
-
+## 📜 License
+MIT License – Free to use and modify.

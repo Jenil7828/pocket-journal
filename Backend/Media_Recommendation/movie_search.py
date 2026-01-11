@@ -1,11 +1,27 @@
-import time, requests
+import time
+import requests
 from rapidfuzz import process, fuzz
 import os
 from dotenv import load_dotenv
+import logging
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
+
 load_dotenv()
 
-API_KEY = os.getenv("TMDB_APIKEY")
+logger = logging.getLogger("pocket_journal.tmdb")
+
+# Standard TMDb env var name
+API_KEY = os.getenv("TMDB_API_KEY")
 BASE_IMG_URL = "https://image.tmdb.org/t/p/w500"
+
+if not API_KEY:
+    raise RuntimeError("TMDB_API_KEY is required in environment for TMDb integration")
+
+# Session with retries
+_session = requests.Session()
+retries = Retry(total=2, backoff_factor=0.3, status_forcelist=(500,502,503,504))
+_session.mount("https://", HTTPAdapter(max_retries=retries))
 
 def tmdb_get(path, params=None):
     if params is None:
@@ -13,11 +29,11 @@ def tmdb_get(path, params=None):
     params["api_key"] = API_KEY
     url = f"https://api.themoviedb.org/3/{path}"
     try:
-        r = requests.get(url, params=params, timeout=6)
+        r = _session.get(url, params=params, timeout=6)
         r.raise_for_status()
         return r.json()
     except Exception as e:
-        print("TMDb request failed:", e)
+        logger.warning("TMDb request failed for %s: %s", path, e)
         return {}
 
 def search_movie_robust(query, max_candidates=300, top_k=6):
@@ -70,6 +86,7 @@ def search_movie_robust(query, max_candidates=300, top_k=6):
             time.sleep(0.2)
 
     if not candidates:
+        # Normalize to success with empty results (higher-level API will return 200)
         return {"error": "No candidates found on TMDb", "results": []}
 
     titles = []

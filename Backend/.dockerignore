@@ -1,0 +1,92 @@
+# Exclude git and metadata
+.git
+.gitignore
+
+# Python caches and bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache
+*/__pycache__
+*.pyo
+*.pyd
+
+# Virtual environment directories
+.venv/
+venv/
+env/
+ENV/
+.env
+# Distribution/build directories
+build/
+dist/
+*.egg-info/
+pip-wheel-metadata/
+
+# Editor and IDE files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test artifacts and caches
+.pytest_cache/
+testing_api/
+test_reports/
+
+# Environment / secrets
+.env
+Backend/*.json
+*.json
+# Model outputs and training artifacts (we exclude training outputs except for
+# the inference models directory which must be present locally and included in
+# the runtime image). The `!` lines re-include the models directory.
+
+# ================================
+# 🚫 TRAINING — EXPLICITLY EXCLUDED
+# ================================
+ml/mood_detection/training/
+ml/mood_detection/training/**
+
+# ================================
+# 🚫 DATASETS / RAW DATA
+# ================================
+data/
+data/**
+
+# ================================
+# ✅ KEEP INFERENCE CODE
+# ================================
+!ml/mood_detection/inference/
+!ml/mood_detection/inference/**
+
+# ================================
+# ✅ KEEP TRAINED MODELS
+# ================================
+!ml/mood_detection/models/
+!ml/mood_detection/models/**
+
+# ================================
+# ✅ KEEP CORE BACKEND
+# ================================
+!app.py
+!services/
+!services/**
+!persistence/
+!persistence/**
+!ai_insights/
+!ai_insights/**
+!templates/
+
+# ================================
+# ✅ KEEP REQUIREMENTS
+# ================================
+!requirements.prod.txt
+
+
+# Misc
+*.log

@@ -11,7 +11,7 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-
+*.cache
 # --- IDE & Editor Folders ---
 # Ignore settings from popular editors
 .vscode/
@@ -28,8 +28,11 @@ __pycache__/
 *.sqlite
 *.sqlite3
 data
-# Ignore the large Roberta model folder
-Backend/Mood_Detection/outputs/
+summary.csv
+
+# --- Models and Checkpoints ---
+# Ignore machine learning model files and checkpoints
+# models/
 
 # --- Operating System Files ---
 # Ignore OS-specific metadata files
@@ -43,5 +46,20 @@ build/
 
 # --- Gemini Files ---
 # Ignore Gemini API client files
-gen-lang-client-0920522291-a80064ac014b.json
-pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
+*.json
+secrets/
+
+# Model outputs and training artifacts (we exclude training outputs except for
+# the inference models directory which must be present locally and included in 
+# the runtime image). The `!` lines re-include the models directory.
+Backend/ml/mood_detection/models/
+song_history.json
+
+
+build/
+.dart_tool/
+.idea/
+.vscode/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml

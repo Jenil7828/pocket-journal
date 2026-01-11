@@ -1,0 +1,945 @@
+{
+	"info": {
+		"_postman_id": "26a47ddb-52d1-49fc-82cc-53dc749a13a5",
+		"name": "Pocket Journal API Collection",
+		"description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, and utility endpoints",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "46097507",
+		"_collection_link": "https://jenilrathod-604380.postman.co/workspace/Jenil-Rathod's-Workspace~6c9de163-52e3-499d-89e5-d7aaa2a392ef/collection/46097507-26a47ddb-52d1-49fc-82cc-53dc749a13a5?action=share&source=collection_link&creator=46097507"
+	},
+	"item": [
+		{
+			"name": "🔐 Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('token_id', response.token);",
+									"    console.log('Token saved:', response.token);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\":\"\",\n    \"password\":\"\",\n    \"returnSecureToken\":true\n}"
+						},
+						"url": {
+							"raw": "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={{Private_variable}}",
+							"protocol": "https",
+							"host": [
+								"identitytoolkit",
+								"googleapis",
+								"com"
+							],
+							"path": [
+								"v1",
+								"accounts:signInWithPassword"
+							],
+							"query": [
+								{
+									"key": "key",
+									"value": "{{Private_variable}}"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📝 Journal Entries",
+			"item": [
+				{
+					"name": "Create Entry",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('entry_id', response.entry_id);",
+									"    console.log('Entry ID saved:', response.entry_id);",
+									"}"
+								],
+								"type": "text/javascript",
+								"packages": {},
+								"requests": {}
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"entry_text\": \"I had a wonderful day today! The weather was perfect and I accomplished all my goals. Feeling very positive and motivated for tomorrow.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/process_entry",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"process_entry"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Entries",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/entries",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Entries with Filters",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/entries?mood=happy&search=wonderful&limit=10&offset=0",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2025-01-01",
+									"disabled": true
+								},
+								{
+									"key": "end_date",
+									"value": "2025-01-31",
+									"disabled": true
+								},
+								{
+									"key": "mood",
+									"value": "happy"
+								},
+								{
+									"key": "search",
+									"value": "wonderful"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Entry",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/entries/{{entry_id}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"{{entry_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Entry Analysis",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/entries/{{entry_id}}/analysis",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"{{entry_id}}",
+								"analysis"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Entry",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"entry_text\": \"I had an absolutely amazing day today! The weather was perfect, I accomplished all my goals, and I'm feeling incredibly positive and motivated for tomorrow. This has been one of the best days in recent memory.\",\n  \"regenerate_analysis\": true\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/entries/{{entry_id}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"{{entry_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Update Entry (No Reanalysis)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"entry_text\": \"Just a small text correction\",\n  \"regenerate_analysis\": false\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/entries/{{entry_id}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"{{entry_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reanalyze Entry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/entries/{{entry_id}}/reanalyze",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"{{entry_id}}",
+								"reanalyze"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Single Entry",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/entries/{{entry_id}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"{{entry_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Batch Entries",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"entry_ids\": [\"entry_id_1\", \"entry_id_2\", \"entry_id_3\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/entries/batch",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"entries",
+								"batch"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "💡 Insights",
+			"item": [
+				{
+					"name": "Generate Insights",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    pm.collectionVariables.set('insight_id', response.insight_id);",
+									"    console.log('Insight ID saved:', response.insight_id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-01-31\"\n}"
+						},
+						"url": {
+							"raw": "{{baseURL}}/generate_insights",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"generate_insights"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Insights",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/insights?limit=50&offset=0",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"insights"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "50"
+								},
+								{
+									"key": "offset",
+									"value": "0"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Single Insight",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/insights/{{insight_id}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"insights",
+								"{{insight_id}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Insight",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/insights/{{insight_id}}",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"insights",
+								"{{insight_id}}"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "📊 Analytics & Statistics",
+			"item": [
+				{
+					"name": "Get User Statistics",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/stats",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"stats"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mood Trends (30 days)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/mood-trends?days=30",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"mood-trends"
+							],
+							"query": [
+								{
+									"key": "days",
+									"value": "30"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Mood Trends (7 days)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/mood-trends?days=7",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"mood-trends"
+							],
+							"query": [
+								{
+									"key": "days",
+									"value": "7"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🔧 Utility & Export",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseURL}}/health",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"health"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Export Data (JSON)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/export?start_date=2025-09-01&end_date=2025-09-30&format=json",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"export"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2025-09-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2025-09-30"
+								},
+								{
+									"key": "format",
+									"value": "json"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Export Data (CSV)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/export?start_date=2025-09-01&end_date=2025-09-30&format=csv",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"export"
+							],
+							"query": [
+								{
+									"key": "start_date",
+									"value": "2025-09-01"
+								},
+								{
+									"key": "end_date",
+									"value": "2025-09-30"
+								},
+								{
+									"key": "format",
+									"value": "csv"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "🎬 Media Recommendations",
+			"item": [
+				{
+					"name": "General Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/recommend?mood=happy",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"recommend"
+							],
+							"query": [
+								{
+									"key": "mood",
+									"value": "happy"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Movie Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/movie/recommend?limit=10",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"movie",
+								"recommend"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Song Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/song/recommend?limit=10&language=both",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"song",
+								"recommend"
+							],
+							"query": [
+								{
+									"key": "limit",
+									"value": "10"
+								},
+								{
+									"key": "language",
+									"value": "both"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Book Recommendations",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/book/recommend",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"book",
+								"recommend"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Movies",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/search?query=inception&limit=5",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"search"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "inception"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Songs",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/songs?query=happy&limit=10",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"songs"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "happy"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Search Books",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token_id}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseURL}}/api/books?query=motivation&limit=5",
+							"host": [
+								"{{baseURL}}"
+							],
+							"path": [
+								"api",
+								"books"
+							],
+							"query": [
+								{
+									"key": "query",
+									"value": "motivation"
+								},
+								{
+									"key": "limit",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-set base URL if not set",
+					"if (!pm.collectionVariables.get('baseURL')) {",
+					"    pm.collectionVariables.set('baseURL', 'http://127.0.0.1:8080');",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseURL",
+			"value": "http://127.0.0.1:8080",
+			"type": "string"
+		},
+		{
+			"key": "token_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "entry_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "insight_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "Private_variable",
+			"value": "",
+			"type": "default"
+		}
+	]
+}
