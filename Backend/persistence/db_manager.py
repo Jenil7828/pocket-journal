@@ -36,13 +36,48 @@ class DBManager:
         })
         return doc_ref.id
 
-    def insert_analysis(self, entry_id: str, summary: str, mood: dict):
-        self.db.collection("entry_analysis").document().set({
-            "entry_id": entry_id,
-            "summary": summary,
-            "mood": mood,
-            "created_at": datetime.now(self.tz)
-        })
+    def insert_analysis(self, entry_id: str, interpreted_response_or_summary, mood: dict = None, raw_analysis: dict = None):
+        """Insert analysis for an entry.
+
+        Backwards-compatible signature:
+            insert_analysis(entry_id, summary, mood)
+        New preferred signature:
+            insert_analysis(entry_id, interpreted_response, raw_analysis=...)
+
+        If an interpreted_response dict is provided, store its top-level sections
+        (emotional_state, semantic_context, temporal_context, recommendation_strategy)
+        at top-level in the document for easier querying. The raw ML outputs may be
+        stored under 'raw_analysis' if provided.
+        """
+        now = datetime.now(self.tz)
+
+        # Detect new call style: interpreted_response_or_summary is a dict with emotional_state
+        doc = {"entry_id": entry_id, "created_at": now}
+        if isinstance(interpreted_response_or_summary, dict) and "emotional_state" in interpreted_response_or_summary:
+            interpreted = interpreted_response_or_summary
+            # store top-level interpreted fields
+            for k in ["emotional_state", "semantic_context", "temporal_context", "recommendation_strategy"]:
+                if k in interpreted:
+                    doc[k] = interpreted[k]
+            # also keep entry_id reference and optionally raw_analysis
+            if raw_analysis:
+                doc["raw_analysis"] = raw_analysis
+                # Backcompat: copy common raw fields into top-level keys for older code
+                if isinstance(raw_analysis, dict):
+                    if "mood" in raw_analysis:
+                        doc["mood"] = raw_analysis["mood"]
+                    if "mood_probs" in raw_analysis:
+                        doc["mood"] = raw_analysis["mood_probs"]
+                    if "summary" in raw_analysis:
+                        doc["summary"] = raw_analysis["summary"]
+        else:
+            # backwards compatible: (entry_id, summary, mood)
+            summary = interpreted_response_or_summary if isinstance(interpreted_response_or_summary, str) else ""
+            doc["summary"] = summary
+            if mood is not None:
+                doc["mood"] = mood
+
+        self.db.collection("entry_analysis").document().set(doc)
 
     def insert_insights(
         self,
@@ -293,10 +328,31 @@ class DBManager:
         summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:200] + "..."
         mood_probs = predictor.predict(summary)
 
-        self.insert_analysis(entry_id, summary, mood_probs)
+        # Build interpreted response using deterministic builder and store it
+        # Import locally to avoid circular imports
+        try:
+            from services.entry_response import build_entry_response
+        except Exception:
+            # Fallback: if import fails, store legacy analysis
+            self.insert_analysis(entry_id, summary, mood_probs)
+            result["updated"]["new_analysis"] = {
+                "summary": summary,
+                "mood_probs": mood_probs,
+            }
+            return result
 
-        result["updated"]["new_analysis"] = {
-            "summary": summary,
+        # Prepare input for the builder (use timezone-aware timestamp)
+        input_for_builder = {
+            "entry_id": entry_id,
             "mood_probs": mood_probs,
+            "summary": summary,
+            "timestamp": datetime.now(self.tz),
         }
+        interpreted = build_entry_response(input_for_builder)
+
+        # Store interpreted response as primary analysis and keep raw under raw_analysis
+        raw_analysis = {"summary": summary, "mood": mood_probs}
+        self.insert_analysis(entry_id, interpreted, raw_analysis=raw_analysis)
+
+        result["updated"]["new_analysis"] = interpreted
         return result
