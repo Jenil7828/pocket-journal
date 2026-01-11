@@ -2,6 +2,10 @@ from datetime import datetime
 import pytz
 from firebase_admin import firestore
 from utils import extract_dominant_mood
+from services.entry_response import build_entry_response
+import logging
+
+logger = logging.getLogger("pocket_journal.journal_entries")
 
 
 def process_entry(user, data, db, predictor, summarizer):
@@ -13,11 +17,27 @@ def process_entry(user, data, db, predictor, summarizer):
 
     entry_id = db.insert_entry(uid, text)
     summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
-    mood_result = predictor.predict(summary, threshold=0.25)
+    # Use the original entry text for mood detection per design
+    mood_result = predictor.predict(text, threshold=0.25)
     mood_probs = mood_result["probabilities"]
-    db.insert_analysis(entry_id, summary, mood_probs)
 
-    return {"entry_id": entry_id, "summary": summary, "mood_probs": mood_probs}, 200
+    logger.debug("process_entry: entry_id=%s, analyzed_text=%s", entry_id, (text)[:200])
+
+    # Build interpreted response from deterministic builder
+    input_for_builder = {
+        "entry_id": entry_id,
+        "mood_probs": mood_probs,
+        "summary": summary,
+        "timestamp": datetime.now(),
+    }
+    interpreted = build_entry_response(input_for_builder)
+
+    # Optionally keep raw analysis under 'raw_analysis' while storing interpreted data at top-level
+    raw_analysis = {"summary": summary, "mood": mood_probs}
+    db.insert_analysis(entry_id, interpreted, raw_analysis=raw_analysis)
+
+    # Return API response matching the stored representation
+    return interpreted, 200
 
 
 def delete_entry(entry_id, uid, db):
@@ -57,11 +77,44 @@ def update_entry(entry_id, uid, data, db, predictor, summarizer):
         return {"error": "Entry text cannot be empty"}, 400
 
     if regenerate_analysis:
-        result = db.update_entry_with_analysis(entry_id, uid, new_entry_text, predictor, summarizer)
+        # Update the entry text first (will remove old analyses)
+        result = db.update_entry(entry_id, uid, new_entry_text)
+        if not result.get("success"):
+            return {"error": result.get("error", "Failed to update entry")}, 400
+
+        # NOW perform analysis deterministically on the NEW text (avoid using DB-sourced text)
+        summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:200] + "..."
+        # Use original new_entry_text for mood detection per design (not the summary)
+        mood_result = predictor.predict(new_entry_text)
+        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) else mood_result
+
+        logger.debug("update_entry (regenerate): entry_id=%s, analyzed_text=%s", entry_id, new_entry_text[:200])
+
+        # Build interpreted response and store it
+        input_for_builder = {
+            "entry_id": entry_id,
+            "mood_probs": mood_probs,
+            "summary": summary,
+            "timestamp": datetime.now(),
+        }
+        interpreted = build_entry_response(input_for_builder)
+        raw_analysis = {"summary": summary, "mood": mood_probs}
+        db.insert_analysis(entry_id, interpreted, raw_analysis=raw_analysis)
+        # Prepare a uniform result structure
+        result["updated"]["new_analysis"] = interpreted
     else:
         result = db.update_entry(entry_id, uid, new_entry_text)
 
+    logger.debug("update_entry: entry_id=%s, regenerate_analysis=%s, new_text_preview=%s", entry_id, regenerate_analysis, new_entry_text[:200])
+
     if result["success"]:
+        # If analysis was regenerated, prefer returning the interpreted analysis directly
+        if regenerate_analysis:
+            new_analysis = result["updated"].get("new_analysis")
+            if isinstance(new_analysis, dict) and "emotional_state" in new_analysis:
+                # Return the interpreted analysis (uniform with process_entry)
+                return new_analysis, 200
+        # Fallback: keep existing wrapped response
         return {"message": "Entry updated successfully", "updated": result["updated"]}, 200
     return {"error": result["error"]}, 400
 
@@ -84,15 +137,27 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
         old_analysis_ids.append(analysis_doc.id)
 
     summary = summarizer.summarize(entry_text) if summarizer else entry_text[:200] + "..."
+    # reanalyze intentionally uses the stored entry text (existing DB value)
+    logger.debug("reanalyze_entry: entry_id=%s, analyzed_text=%s", entry_id, summary[:200])
     mood_probs = predictor.predict(summary)
-    db.insert_analysis(entry_id, summary, mood_probs)
+
+    # NEW: build interpreted response and store interpreted analysis
+    input_for_builder = {
+        "entry_id": entry_id,
+        "mood_probs": mood_probs,
+        "summary": summary,
+        "timestamp": datetime.now()
+    }
+    interpreted = build_entry_response(input_for_builder)
+    raw_analysis = {"summary": summary, "mood": mood_probs}
+    db.insert_analysis(entry_id, interpreted, raw_analysis=raw_analysis)
 
     return {
         "message": "Entry reanalyzed successfully",
         "entry_id": entry_id,
         "old_analysis_deleted": len(old_analysis_ids),
         "old_analysis_ids": old_analysis_ids,
-        "new_analysis": {"summary": summary, "mood_probs": mood_probs},
+        "new_analysis": interpreted,
     }, 200
 
 

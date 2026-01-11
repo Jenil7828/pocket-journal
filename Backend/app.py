@@ -56,6 +56,7 @@ from services import (
     stats_service,
     export_service,
     health_service,
+    entry_response,
 )
 
 from persistence.db_manager import DBManager
@@ -112,6 +113,20 @@ def get_summarizer():
             _summarizer = None
     return _summarizer
 
+# -------------------- Eager model loading at startup --------------------
+try:
+    # Load models once at process start so they aren't reloaded per-request
+    _predictor = get_predictor()
+    _summarizer = get_summarizer()
+    logger.info("Eagerly loaded predictor and summarizer at startup")
+except Exception as e:
+    # Do not fail startup if models unavailable; keep server running and degrade gracefully
+    logger.warning("Failed to eagerly load models at startup: %s", str(e))
+
+# NEW: expose module-level cached references for route handlers to use
+PREDICTOR = _predictor
+SUMMARIZER = _summarizer
+
 # -------------------- Flask App --------------------
 app = Flask(__name__)
 
@@ -153,12 +168,13 @@ def login_required(f):
 @login_required
 def process_entry():
     data = request.get_json()
+    # Use cached predictor/summarizer loaded at startup; get_predictor() still works as a fallback
     body, status = journal_entries.process_entry(
         request.user,
         data,
         get_db(),
-        get_predictor(),
-        get_summarizer(),
+        PREDICTOR or get_predictor(),
+        SUMMARIZER or get_summarizer(),
     )
     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
@@ -246,8 +262,8 @@ def update_entry(entry_id):
     uid = request.user["uid"]
     data = request.get_json()
     _db = get_db()
-    predictor = get_predictor()
-    summarizer = get_summarizer()
+    predictor = PREDICTOR or get_predictor()
+    summarizer = SUMMARIZER or get_summarizer()
     body, status = journal_entries.update_entry(entry_id, uid, data, _db, predictor, summarizer)
     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
@@ -267,8 +283,8 @@ def reanalyze_entry(entry_id):
     """
     uid = request.user["uid"]
     _db = get_db()
-    predictor = get_predictor()
-    summarizer = get_summarizer()
+    predictor = PREDICTOR or get_predictor()
+    summarizer = SUMMARIZER or get_summarizer()
     body, status = journal_entries.reanalyze_entry(entry_id, uid, _db, predictor, summarizer)
     return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
