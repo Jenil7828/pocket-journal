@@ -19,10 +19,10 @@ services:
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
       # Path inside container where we'll mount the Firebase service account JSON
-      - FIREBASE_CREDENTIALS_PATH=/app/secrets/firebase.json
+      - FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
       # GEMINI_API_KEY can be provided via Backend/.env or the host environment
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-    # Mount the locally-produced model artifacts and the Firebase JSON into the container
+    # Mount the locally produced model artifacts and the Firebase JSON into the container
     volumes:
       - ./Mood_Detection/outputs/models:/app/Backend/Mood_Detection/outputs/models:ro
       - ./secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
