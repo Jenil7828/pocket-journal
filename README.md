@@ -1,37 +1,42 @@
-# 📓 Pocket Journal
-A personal journaling application that helps users write journal entries, track moods, get summaries, generate insights, and receive media recommendations (movies, songs, books) based on their emotions.
+# **POCKET JOURNAL — BACKEND (QUICK START)**
 
-## 🚀 Features
-- 🔐 Firebase Authentication (signup/login with secure token verification)
-- 📝 Journal Entry Creation & Retrieval (stored in Firestore)
-- 😊 Mood Detection (sentence-level analysis using pre-trained model)
-- ✍️ Text Summarization of journal entries
-- 📊 Insight Generation from past entries (progress, remedies, behavior patterns, etc.)
-- 🎬🎶📚 Personalized Recommendations:
-  - Movies (via TMDB API)
-  - Songs (via Spotify API)
-  - Books (via Google Books API)
+This short README covers only the essential developer steps to:
+- Clone the repository
+- Set up the Python backend environment
+- Run the server locally using `app.py`
+- Build and run the production Docker image
 
-## 🛠️ Technologies Used
+Keep this file focused — detailed developer notes and architecture live in the project docs.
 
-- Frontend: Flutter
-- Backend: Python (Flask)
-- Database: Firebase Firestore
-- Authentication: Firebase Authentication
-- NLP/ML: Transformers (Hugging Face), Torch, Scikit-learn
-- Recommendations: TMDB API, Spotify API, Google Books API
-- LangChain & Gemini AI for insights generation
-
-## 📂 Project Structure
-```bash
+### **REPOSITORY FOLDER STRUCTURE (TOP-LEVEL)**
+```
 pocket-journal/
+├── LICENSE
+├── Model_Training_Result_RoBERTa.txt
+├── Pocket Journal API Collection.postman_collection.json
+├── README.md
 ├── Backend/
-│   ├── app.py                        # Main Flask app
-│   ├── requirements.txt
-│   ├── pocket-journal-be-firebase-adminsdk.json  # Firebase credentials
-│   ├── gen-lang-client-XXXX.json      # Gemini credentials
-│   ├── song_history.json
-│   ├── Media_Recommendation/          # Media recommendation module
+│   ├── __init__.py
+│   ├── app.py
+│   ├── Docker.md
+│   ├── Dockerfile.prod
+│   ├── docker-compose.prod.yml
+│   ├── requirements.prod.txt
+│   ├── requirements.train.txt
+│   ├── utils.py
+│   ├── ai_insights/
+│   │   ├── __init__.py
+│   │   ├── gaurds.py
+│   │   ├── insight_analyzer.py
+│   │   └── prompts/
+│   │       └── journal_insights.txt
+│   ├── data/
+│   │   ├── mood_detection_data/
+│   │   │   ├── summarization_dataset.jsonl
+│   │   │   └── (label subfolders...)
+│   │   └── summarization_data/
+│   │       └── summary.csv
+│   ├── Media_Recommendation/
 │   │   ├── app.py
 │   │   ├── books_recommendation.py
 │   │   ├── mood_recommend.py
@@ -39,232 +44,191 @@ pocket-journal/
 │   │   ├── search_books.py
 │   │   ├── search_song.py
 │   │   ├── song_recommend.py
-│   │   ├── song_history.json
-│   │   └── __pycache__/
-│   │
-│   ├── Mood_Detection/                # Mood detection & NLP module
-│   │   ├── app.py
-│   │   ├── main.py
-│   │   ├── train_mood_sentence.py
-│   │   ├── analysis/
-│   │   │   └── insight_analyzer.py
-│   │   ├── database/
-│   │   │   └── db_manager.py
-│   │   ├── data/                      # Datasets
-│   │   ├── embeddings/                # Embedding storage
-│   │   ├── mood_detection_sentence/
-│   │   │   ├── config_sentence.py
-│   │   │   ├── dataset_loader.py
-│   │   │   ├── predictor_sentence_level.py
-│   │   │   ├── trainer_sentence.py
-│   │   │   ├── evaluator_sentence_level.py
-│   │   │   └── visualizer.py
-│   │   ├── outputs/                   # Model files (Git LFS)
-│   │   │   ├── models/
-│   │   │   │   └── mood_detector/     # Trained mood detection model
-│   │   │   └── summarizer/            # Summarization model (if trained)
-│   │   └── summarization/
-│   │       ├── summarizer.py
-│   │       ├── trainer.py
-│   │       ├── config.py
-│   │       └── dataset_loader.py
-│   │
-│   └── venv/                          # Python virtual environment
-│
-├── Frontend/
-│   ├── lib/
-│   │   ├── main.dart
-│   │   ├── screens/
-│   │   ├── widgets/
-│   │   └── services/
+│   ├── ml/
+│   │   └── mood_detection/
+│   │       ├── inference/
+│   │       │   └── mood_detection/roberta/   # predictor + config
+│   │       ├── training/
+│   │       │   ├── mood_detection/roberta/   # train.py, trainer
+│   │       │   └── summarization/bart/       # train.py, trainer
+│   │       └── models/                       # model artifacts
+│   ├── persistence/
+│   │   ├── __init__.py
+│   │   ├── database_schema.py
+│   │   └── db_manager.py
+│   ├── secrets/
+│   │   └── firebase-adminsdk.json
+│   ├── services/
+│   │   ├── entry_response.py
+│   │   ├── entry_response_builder.py
+│   │   ├── entry_response.py
+│   │   ├── entry_response_builder.py
+│   │   ├── entry_response.py
+│   │   └── (many service modules...)
+│   └── templates/
+│       └── home.html
+├── F/
+│   └── diary/
+│       ├── pubspec.yaml
+│       ├── pubspec.lock
+│       ├── android/
+│       ├── ios/
+│       ├── lib/
+│       ├── web/
+│       └── windows/
+├── scripts/
+│   └── db/
+│       ├── add_updated_at_field.py
+│       ├── database_manager.py
+│       ├── reset_database.py
+│       └── verify_database.py
 ```
 
-## ⚙️ Setup Instructions
-1️⃣ Clone the Repository
+### **PREREQUISITES**
+- Git
+- Python 3.10+ (or the version in `Backend/requirements.txt`)
+- pip
+- Docker (for container run)
+
+### **1) CLONE THE REPOSITORY**
+
 ```bash
-git clone https://github.com/Jenil7828/pocket-journal.git
-cd pocket-journal
+git clone <repository-url> "pocket-journal"
+cd "pocket-journal/Backend"
 ```
 
-**📦 Model Files & Git LFS**
-This repository uses Git LFS (Large File Storage) to handle model files efficiently. The trained mood detection model is stored in `Backend/Mood_Detection/outputs/models/mood_detector/` and includes:
-- `model.safetensors` - Trained model weights (~500MB)
-- `config.json` - Model configuration
-- `tokenizer.json` - Tokenizer files
-- Other essential model artifacts
+### **2) LOCAL SETUP (DEVELOPMENT)**
 
-**If you encounter issues with model files:**
+- Create and activate a virtual environment, then install dependencies:
 
-**For new clones:**
-```bash
-# Clone with LFS support
-git lfs clone https://github.com/Jenil7828/pocket-journal.git
-```
-
-**For existing clones:**
-```bash
-# Install Git LFS if not already installed
-git lfs install
-
-# Pull LFS files
-git lfs pull
-
-# Or fetch and checkout LFS files
-git lfs fetch
-git lfs checkout
-```
-
-**Verify LFS files are downloaded:**
-```bash
-# Check if model files exist and have proper size
-ls -la Backend/Mood_Detection/outputs/models/mood_detector/
-# Should show model.safetensors (~500MB) and other model files
-```
-2️⃣ Backend Setup
-```bash
-cd Backend
+```powershell
+# Windows PowerShell
 python -m venv venv
-source venv/bin/activate   # (Linux/Mac)
-venv\Scripts\activate      # (Windows)
+venv\Scripts\activate
+pip install -r requirements.txt
+
+# macOS / Linux
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
-3️⃣ Firebase Setup
-```bash
-Create a Firebase project.
-Enable Authentication (Email/Password or Google Sign-in).
-Enable Cloud Firestore.
-Download your Service Account JSON and set the path in .env.
-```
-4️⃣ Environment Variables
-```bash
-Create a .env file inside Backend/:
 
-# Firebase
-FIREBASE_CREDENTIALS_PATH=serviceAccount.json
+- Configure secrets/environment variables
+  - Create a `.env` file (or set environment variables) in `Backend/` with the scalar secrets your environment needs (do not commit `.env`).
+  - If you use JSON service account files (Firebase, etc.), mount or place them in a secure location and reference them via an environment variable like `FIREBASE_CREDENTIALS_PATH`.
 
-# Gemini AI
-GEMINI_API_KEY=your_gemini_api_key
-GEMINI_CREDENTIALS_PATH=path_to_gemini_service.json
+### **3) RUN THE FLASK APP DIRECTLY**
 
-# External APIs
-TMDB_API_KEY=your_tmdb_key
-SONG_ID=your_spotify_client_id
-SONG_SECRET=your_spotify_client_secret
-```
-5️⃣ Run the Flask App
-```bash
+- Start the server (models are expected to be available locally if required by your deployment):
+
+```powershell
+# from Backend/ with venv active
 python app.py
 ```
 
-## Server will run at:
+- The server will start and listen on the configured host/port (default: `http://127.0.0.1:5000`) — check `Backend/app.py` for overrides.
 
-Local: 
-```bash 
-http://127.0.0.1:5000
+### **4) BUILD AND RUN WITH DOCKER (PRODUCTION-STYLE)**
+
+- Build the production image (uses `Dockerfile.prod`):
+
+```powershell
+# from repository root
+docker build -f Backend/Dockerfile.prod -t pocket-journal:prod .
 ```
 
-LAN:
-```bash
- http://192.168.1.33:5000
-```
+- Run the container (example PowerShell):
 
-## 📡 API Endpoints
-- 🔑 Authentication
- - All endpoints require
- ```  bash
-  Authorization: Bearer <Firebase_ID_Token> in headers.
-  ```
-
-- 📝 Journal APIs
-  - Process Journal Entry
-
-  ``` bash
-  POST /process_entry
-  Authorization: Bearer <token>
-  Content-Type: application/json
-  {
-    "entry_text": "Today was amazing, I had a great time with friends."
-  }
-  ```
-
-  - ✅ Returns: entry_id, summary, mood_probs
-
-- Generate Insights
-```bash
-POST /generate_insights
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "start_date": "2025-09-01",
-  "end_date": "2025-09-30"
-}
-```
-  - ✅ Returns: AI-generated insights + fetched entries (for debugging).
-
-- 🎬 Movies
-  - By Mood
-``` bash
-GET /api/recommend?mood=happy
-Authorization: Bearer <token>
-```
-  - Search
-``` bash
-GET /api/search?movie=Inception
-Authorization: Bearer <token>
-```
-- 🎶 Songs
-  - By Mood
-``` bash
-GET /api/songs?mood=sad&language=english&limit=5
-Authorization: Bearer <token>
-```
-  - Search
-``` bash
-GET /api/search_song?q=Arijit Singh&type=artist&limit=10
-Authorization: Bearer <token>
-```
-- 📚 Books
-  - By Emotion
-``` bash
-GET /api/books?emotion=stressed&limit=5
-Authorization: Bearer <token>
-```
-  - Search
-``` bash
-GET /api/search_books?query=Harry Potter&type=both&limit=5
-Authorization: Bearer <token>
-```
-
-## 🧪 Example Postman Collection
-- Import the above endpoints into Postman.
-- Add a variable {{token}} for Authorization.
-- Get Firebase ID Token after login and set it as {{token}}.
-
-## 📌 Notes
-
-- Ensure Firebase and APIs are enabled.
-- **Model Files**: The repository includes a pre-trained mood detection model optimized for production use. Training checkpoints have been removed to save space.
-- **Git LFS**: Model files are stored using Git LFS to handle large files efficiently.
-- **Model Loading**: If the local model fails to load, the system will fall back to the base RoBERTa model.
-- Firestore stores:
-  - journal_entries → {entry_id, user_id, entry_text, created_at}
-  - entry_analysis → {entry_id, summary, mood}
-
-## Docker Build and Run Commands
-docker build -f Dockerfile.prod -t pocket-journal:prod .
-
+```powershell
 docker run ^
-  --env-file .env ^
-  -v "%cd%\secrets:/secrets:ro" ^
+  --env-file Backend/.env ^
+  -v "%cd%\Backend\secrets:/app/secrets:ro" ^
+  -v "%cd%\Backend\ml\mood_detection\models:/app/models:ro" ^
   -p 8080:8080 ^
   pocket-journal:prod
+```
 
-## 👨‍💻 Contributors
+### **RUNNING WITH DOCKER COMPOSE (COMMAND ONLY)**
+- From the repository root run:
+
+```powershell
+# PowerShell
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+> Note: The compose file `docker-compose.prod.yml` is present under `Backend/` — ensure you run the command from the repository root or adjust the path accordingly.
+
+### **TRAINING & DEVELOPMENT (HOW IT'S DONE)**
+
+This project separates production inference (the running backend) from model training. Training is performed offline using the training scripts present under `Backend/ml/mood_detection/training/...` and uses a separate training dependency set.
+
+Where training code lives and how to run it:
+- Mood detection training (RoBERTa)
+  - Script: `Backend/ml/mood_detection/training/mood_detection/roberta/train.py`
+  - Run example:
+
+```powershell
+# from repository root (or adjust path)
+cd Backend
+python ml/mood_detection/training/mood_detection/roberta/train.py
+```
+
+- Summarizer training (BART)
+  - Script: `Backend/ml/mood_detection/training/summarization/bart/train.py`
+  - Run example:
+
+```powershell
+cd Backend
+python ml/mood_detection/training/summarization/bart/train.py
+```
+
+Training environment setup:
+
+```powershell
+# from Backend/
+python -m venv venv-train
+venv-train\Scripts\activate
+pip install -r requirements.train.txt
+```
+
+- Training scripts will write model artifacts to `Backend/ml/mood_detection/models/` or `Backend/ml/mood_detection/outputs/` as configured by each trainer.
+- Use Git LFS for storing or distributing large model artifacts. Do not check large model binaries into regular Git history.
+
+Development workflow
+- Run the Flask app locally for API development. Ensure models are present under `Backend/ml/mood_detection/models/...` (or the path expected by the inference config) so the app can load them at startup.
+- Unit tests and quick checks:
+  - There is a `Backend/test_roberta_and_builder.py` test file for validating model + builder behaviour locally — run it using your test runner or `python -m pytest` from `Backend/`.
+
+### **SAMPLE `.env` (Backend/.env)**
+
+Create `Backend/.env` (do NOT commit) with scalar keys referenced by the app and the compose file. Example values below are placeholders—replace with your real secrets or set them as host env vars.
+
+```ini
+# Firebase service account path inside container (matches docker-compose mapping)
+FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk.json
+
+# Short scalar secrets (API keys)
+GEMINI_API_KEY=your_gemini_api_key_here
+TMDB_API_KEY=your_tmdb_api_key_here
+SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+
+# App configuration
+FLASK_ENV=production
+# Optional: PORT to bind inside container (if app.py reads it)
+PORT=8080
+```
+
+### **NOTES AND TIPS**
+- Do not commit `.env` or service account JSONs to source control.
+- Ensure required model artifacts are present before starting the server in production.
+- This README is intentionally minimal — see project docs for architecture, storage contracts, and developer patterns.
+
+### 👨‍💻 Contributors
 - Jenil Rathod
 - Manas Joshi
 - Saloni Naik
 - Aditya Nalla
 
-## 📜 License
-MIT License – Free to use and modify.
+### **LICENSE**
+MIT License. See `LICENSE` file in repository root.
