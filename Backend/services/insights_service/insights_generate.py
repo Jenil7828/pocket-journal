@@ -2,14 +2,6 @@ from firebase_admin import firestore
 
 
 def generate_insights(user, data, db, enable_llm=False, enable_insights=True):
-    """
-    Generate insights for a user. This function delays importing the
-    heavy InsightsGenerator so no LLM calls happen at module import.
-
-    If `enable_llm` is False, we will attempt to return cached insights
-    from the DB for the given date range. If none exist and LLM is
-    disabled, return a harmless message to avoid exhausting quota.
-    """
     uid = user["uid"]
     start_date = data.get("start_date") if data else None
     end_date = data.get("end_date") if data else None
@@ -32,10 +24,8 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True):
         pass
 
     if not enable_llm or not enable_insights:
-        # LLM/insights disabled in environment — avoid making external calls.
         return {"insights": [], "note": "LLM/insights disabled; enable to generate insights"}, 200
 
-    # Now import the heavy generator locally and run it
     try:
         from ai_insights.insight_analyzer import InsightsGenerator
         generator = InsightsGenerator(db)
@@ -82,3 +72,4 @@ def delete_insight(insight_id, uid, db):
 
     insight_doc.reference.delete()
     return {"message": "Insight deleted successfully", "insight_id": insight_id, "mappings_deleted": mappings_deleted}, 200
+

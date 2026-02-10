@@ -74,3 +74,4 @@ def get_mood_trends(uid, days, db):
         "trends": mood_trends,
         "total_data_points": len(mood_trends),
     }, 200
+

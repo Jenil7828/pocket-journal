@@ -4,8 +4,8 @@ services:
   pocket-journal:
     # Build from the production Dockerfile in Backend
     build:
-      context: .
-      dockerfile: Backend/Dockerfile.prod
+      context: Backend
+      dockerfile: Dockerfile.prod
       args:
         - APP_USER=app
     image: pocket-journal:prod
@@ -13,7 +13,7 @@ services:
       - "8080:8080"
     # Load runtime variables from a host .env (do NOT commit this file)
     env_file:
-      - .env
+      - Backend/.env
     environment:
       - PORT=8080
       - PYTHONDONTWRITEBYTECODE=1
@@ -22,11 +22,14 @@ services:
       - FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
       # GEMINI_API_KEY can be provided via Backend/.env or the host environment
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-    # Mount the locally produced model artifacts and the Firebase JSON into the container
+    # Mount the locally-produced model artifacts and the Firebase JSON into the container
     volumes:
-      - ./Mood_Detection/outputs/models:/app/Backend/Mood_Detection/outputs/models:ro
-      - ./secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
+      - ./Backend:/app:ro
+      - ./Backend/ml/mood_detection/models:/app/ml/mood_detection/models:ro
+      - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
+      # - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro
     restart: unless-stopped
+
 # Notes:
 # - Create a host-side `Backend/.env` (do NOT commit it). Example contents below.
 # - The Firebase JSON file is bind-mounted read-only into /app/secrets/firebase.json

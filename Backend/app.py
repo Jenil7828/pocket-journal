@@ -51,13 +51,51 @@ from firebase_admin import credentials, auth
 # -------------------- NEW ARCH IMPORTS (FIXED) --------------------
 from services import (
     journal_entries,
-    insights_service,
     media_recommendations,
-    stats_service,
-    export_service,
     health_service,
-    entry_response,
 )
+
+# New package-backed service imports (keep existing variable names for compatibility)
+from services.export_service import export_data as _export_data
+from services.insights_service import generate_insights as _generate_insights, get_insights as _get_insights, get_single_insight as _get_single_insight, delete_insight as _delete_insight
+from services.stats_service import get_user_stats as _get_user_stats, get_mood_trends as _get_mood_trends
+
+# Create facade objects expected by the rest of app.py
+class _ExportServiceFacade:
+    @staticmethod
+    def export_data(uid, start_date, end_date, export_format, db):
+        return _export_data(uid, start_date, end_date, export_format, db)
+
+class _InsightsServiceFacade:
+    @staticmethod
+    def generate_insights(user, data, db, enable_llm=False, enable_insights=True):
+        return _generate_insights(user, data, db, enable_llm=enable_llm, enable_insights=enable_insights)
+
+    @staticmethod
+    def get_insights(uid, limit, offset, db):
+        return _get_insights(uid, limit, offset, db)
+
+    @staticmethod
+    def get_single_insight(insight_id, uid, db):
+        return _get_single_insight(insight_id, uid, db)
+
+    @staticmethod
+    def delete_insight(insight_id, uid, db):
+        return _delete_insight(insight_id, uid, db)
+
+class _StatsServiceFacade:
+    @staticmethod
+    def get_user_stats(uid, db):
+        return _get_user_stats(uid, db)
+
+    @staticmethod
+    def get_mood_trends(uid, days, db):
+        return _get_mood_trends(uid, days, db)
+
+# Bind to the names used in app.py
+insights_service = _InsightsServiceFacade()
+export_service = _ExportServiceFacade()
+stats_service = _StatsServiceFacade()
 
 from persistence.db_manager import DBManager
 

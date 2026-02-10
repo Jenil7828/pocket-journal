@@ -23,7 +23,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /wheels
-COPY requirements.prod.txt ./requirements.prod.txt
+COPY Backend/requirements.prod.txt ./requirements.prod.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel && \
     mkdir -p /wheels/dist && \
@@ -43,14 +43,14 @@ WORKDIR /app
 
 # Install dependencies strictly from the prebuilt wheels (no network).
 COPY --from=deps /wheels/dist /wheels
-COPY requirements.prod.txt /tmp/requirements.prod.txt
+COPY Backend/requirements.prod.txt /tmp/requirements.prod.txt
 
 RUN python -m pip install --upgrade pip setuptools wheel && \
     pip install --no-index --find-links /wheels -r /tmp/requirements.prod.txt && \
     rm -rf /wheels /root/.cache/pip
 
 # Copy only runtime application files. .dockerignore controls what is excluded.
-COPY . /app
+COPY ./Backend /app
 
 # Model artifacts must be present locally under Backend/Mood_Detection/outputs/models
 # They are included when copying `Backend` (see .dockerignore which re-includes
