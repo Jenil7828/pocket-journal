@@ -3,7 +3,7 @@ import pytz
 from firebase_admin import firestore
 
 
-def export_data(uid, start_date, end_date, export_format, db):
+def fetch_entries_and_insights(uid: str, start_date: str, end_date: str, db):
     query = db.db.collection("journal_entries").where(filter=firestore.FieldFilter("uid", "==", uid))
 
     if start_date and start_date.strip():
@@ -46,42 +46,5 @@ def export_data(uid, start_date, end_date, export_format, db):
         insight_data["insight_id"] = insight_doc.id
         insights.append(insight_data)
 
-    export_data = {
-        "user_id": uid,
-        "export_timestamp": datetime.now().isoformat(),
-        "date_range": {"start_date": start_date, "end_date": end_date},
-        "entries": entries,
-        "insights": insights,
-        "total_entries": len(entries),
-        "total_insights": len(insights),
-    }
+    return entries, insights
 
-    if export_format == "csv":
-        import csv
-        import io
-        output = io.StringIO()
-        writer = csv.writer(output)
-        writer.writerow(["entry_id", "entry_text", "created_at", "updated_at", "dominant_mood", "mood_confidence"])
-        from utils import extract_dominant_mood
-
-        for entry in entries:
-            dominant_mood = None
-            confidence = None
-            if entry.get("analysis") and entry["analysis"].get("mood"):
-                mood_probs = entry["analysis"]["mood"]
-                dominant_mood = extract_dominant_mood(mood_probs)
-                try:
-                    confidence = entry["analysis"]["mood"].get(dominant_mood) if dominant_mood else None
-                except Exception:
-                    confidence = None
-            writer.writerow([
-                entry["entry_id"],
-                entry["entry_text"],
-                entry["created_at"].isoformat() if entry.get("created_at") else "",
-                entry.get("updated_at").isoformat() if entry.get("updated_at") else "",
-                dominant_mood,
-                confidence,
-            ])
-        return output.getvalue(), 200, {"Content-Type": "text/csv"}
-
-    return export_data, 200

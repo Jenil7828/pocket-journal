@@ -7,7 +7,7 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
 
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify
 from functools import wraps
 from dotenv import load_dotenv
 import logging
@@ -48,20 +48,90 @@ _ensure_stream_handler(logging.getLogger())
 import firebase_admin
 from firebase_admin import credentials, auth
 
+# Initialize Firebase at startup (deterministic, fail-fast)
+FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+if not FIREBASE_JSON:
+    raise RuntimeError(
+        "FIREBASE_CREDENTIALS_PATH is not set. The application requires a path to the Firebase service account JSON file."
+    )
+
+# Resolve relative paths: allow the env var to be either absolute or relative to this file
+if not os.path.isabs(FIREBASE_JSON):
+    # Candidate relative to this module's directory (Backend/)
+    module_relative = os.path.join(os.path.dirname(__file__), FIREBASE_JSON)
+    # Candidate relative to the current working directory
+    cwd_relative = os.path.abspath(FIREBASE_JSON)
+    if os.path.exists(module_relative):
+        FIREBASE_JSON = os.path.abspath(module_relative)
+    elif os.path.exists(cwd_relative):
+        FIREBASE_JSON = cwd_relative
+    else:
+        raise RuntimeError(
+            f"Firebase credentials file not found. Checked: {module_relative} and {cwd_relative}"
+        )
+else:
+    FIREBASE_JSON = os.path.abspath(FIREBASE_JSON)
+
+try:
+    cred = credentials.Certificate(FIREBASE_JSON)
+    firebase_admin.initialize_app(cred)
+    logger.info("Initialized Firebase app using credentials from %s", FIREBASE_JSON)
+except Exception as e:
+    logger.exception("Failed to initialize Firebase: %s", str(e))
+    # Crash fast on startup so misconfiguration is visible immediately
+    raise
+
 # -------------------- NEW ARCH IMPORTS (FIXED) --------------------
 from services import (
     journal_entries,
-    insights_service,
     media_recommendations,
-    stats_service,
-    export_service,
     health_service,
-    entry_response,
 )
+
+# New package-backed service imports (keep existing variable names for compatibility)
+from services.export_service import export_data as _export_data
+from services.insights_service import generate_insights as _generate_insights, get_insights as _get_insights, get_single_insight as _get_single_insight, delete_insight as _delete_insight
+from services.stats_service import get_user_stats as _get_user_stats, get_mood_trends as _get_mood_trends
+
+# Create facade objects expected by the rest of app.py
+class _ExportServiceFacade:
+    @staticmethod
+    def export_data(uid, start_date, end_date, export_format, db):
+        return _export_data(uid, start_date, end_date, export_format, db)
+
+class _InsightsServiceFacade:
+    @staticmethod
+    def generate_insights(user, data, db, enable_llm=False, enable_insights=True):
+        return _generate_insights(user, data, db, enable_llm=enable_llm, enable_insights=enable_insights)
+
+    @staticmethod
+    def get_insights(uid, limit, offset, db):
+        return _get_insights(uid, limit, offset, db)
+
+    @staticmethod
+    def get_single_insight(insight_id, uid, db):
+        return _get_single_insight(insight_id, uid, db)
+
+    @staticmethod
+    def delete_insight(insight_id, uid, db):
+        return _delete_insight(insight_id, uid, db)
+
+class _StatsServiceFacade:
+    @staticmethod
+    def get_user_stats(uid, db):
+        return _get_user_stats(uid, db)
+
+    @staticmethod
+    def get_mood_trends(uid, days, db):
+        return _get_mood_trends(uid, days, db)
+
+# Bind to the names used in app.py
+insights_service = _InsightsServiceFacade()
+export_service = _ExportServiceFacade()
+stats_service = _StatsServiceFacade()
 
 from persistence.db_manager import DBManager
 
-from ml.mood_detection.inference.mood_detection.roberta.config import Config
 from ml.mood_detection.inference.mood_detection.roberta.predictor import SentencePredictor
 from ml.mood_detection.inference.summarization.bart.predictor import SummarizationPredictor
 
@@ -138,23 +208,21 @@ ENABLE_INSIGHTS = os.getenv("ENABLE_INSIGHTS", str(ENABLE_LLM)).lower() in ("1",
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        try:
-            firebase_admin.get_app()
-        except ValueError:
-            FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
-            if FIREBASE_JSON and os.path.exists(FIREBASE_JSON):
-                cred = credentials.Certificate(FIREBASE_JSON)
-                firebase_admin.initialize_app(cred)
-            else:
-                firebase_admin.initialize_app()
-
         header = request.headers.get("Authorization")
         if not header or not header.startswith("Bearer "):
             return jsonify({"error": "Missing or invalid token"}), 401
 
         try:
-            decoded_token = auth.verify_id_token(header.split(" ")[1])
-            request.user = decoded_token
+            # Parse Authorization header safely: "Bearer <token>"
+            token = header[len("Bearer "):]
+            if not token:
+                return jsonify({"error": "Missing or invalid token"}), 401
+            decoded_token = auth.verify_id_token(token)
+            # Attach only the allowed user fields to request.user (uid and email)
+            request.user = {
+                "uid": decoded_token.get("uid"),
+                "email": decoded_token.get("email"),
+            }
         except Exception as e:
             return jsonify({"error": "Invalid token", "details": str(e)}), 401
 
@@ -164,445 +232,31 @@ def login_required(f):
 
 
 # -------------------- ROUTES (UNCHANGED LOGIC) --------------------
-@app.route("/process_entry", methods=["POST"])
-@login_required
-def process_entry():
-    data = request.get_json()
-    # Use cached predictor/summarizer loaded at startup; get_predictor() still works as a fallback
-    body, status = journal_entries.process_entry(
-        request.user,
-        data,
-        get_db(),
-        PREDICTOR or get_predictor(),
-        SUMMARIZER or get_summarizer(),
-    )
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+# Replace manual route definitions with modular route registration
+from routes import register_all as register_routes
 
+# Prepare dependency bag for routes
+deps = {
+    "login_required": login_required,
+    "get_db": get_db,
+    "journal_entries": journal_entries,
+    "insights_service": insights_service,
+    "export_service": export_service,
+    "stats_service": stats_service,
+    "media_recommendations": media_recommendations,
+    "health_service": health_service,
+    "PREDICTOR": PREDICTOR,
+    "SUMMARIZER": SUMMARIZER,
+    "get_predictor": get_predictor,
+    "get_summarizer": get_summarizer,
+    "ENABLE_LLM": ENABLE_LLM,
+    "ENABLE_INSIGHTS": ENABLE_INSIGHTS,
+}
 
-@app.route("/generate_insights", methods=["POST"])
-@login_required
-def generate_insights():
-    data = request.get_json() or {}
-    body, status = insights_service.generate_insights(
-        request.user,
-        data,
-        get_db(),
-        enable_llm=ENABLE_LLM,
-        enable_insights=ENABLE_INSIGHTS,
-    )
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-
-@app.route("/entries/<entry_id>", methods=["DELETE"])
-@login_required
-def delete_entry(entry_id):
-    """
-    Delete a specific journal entry and its associated analysis.
-    
-    Path Parameters:
-      - entry_id: The ID of the journal entry to delete
-    
-    Returns:
-      - Success: Details of what was deleted
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    if not entry_id:
-        return jsonify({"error": "Entry ID is required"}), 400
-    _db = get_db()
-    body, status = journal_entries.delete_entry(entry_id, uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/entries/batch", methods=["DELETE"])
-@login_required
-def delete_entries_batch():
-    """
-    Delete multiple journal entries and their associated analysis.
-    
-    Request Body:
-      {
-        "entry_ids": ["entry_id_1", "entry_id_2", ...]
-      }
-    
-    Returns:
-      - Success: Summary of deleted entries
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    data = request.get_json()
-    if not data or "entry_ids" not in data:
-        return jsonify({"error": "Missing entry_ids in request body"}), 400
-    entry_ids = data["entry_ids"]
-    if not isinstance(entry_ids, list) or len(entry_ids) == 0:
-        return jsonify({"error": "entry_ids must be a non-empty array"}), 400
-
-    _db = get_db()
-    body, status = journal_entries.delete_entries_batch(entry_ids, uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/entries/<entry_id>", methods=["PUT"])
-@login_required
-def update_entry(entry_id):
-    """
-    Update a journal entry and regenerate its analysis.
-    
-    Path Parameters:
-      - entry_id: The ID of the journal entry to update
-    
-    Request Body:
-      {
-        "entry_text": "Updated journal text here...",
-        "regenerate_analysis": true // optional, defaults to true
-      }
-    
-    Returns:
-      - Success: Updated entry details and new analysis
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    data = request.get_json()
-    _db = get_db()
-    predictor = PREDICTOR or get_predictor()
-    summarizer = SUMMARIZER or get_summarizer()
-    body, status = journal_entries.update_entry(entry_id, uid, data, _db, predictor, summarizer)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/entries/<entry_id>/reanalyze", methods=["POST"])
-@login_required
-def reanalyze_entry(entry_id):
-    """
-    Regenerate analysis for an existing journal entry.
-    Useful when analysis was not generated during update.
-    
-    Path Parameters:
-      - entry_id: The ID of the journal entry to reanalyze
-    
-    Returns:
-      - Success: New analysis data
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    _db = get_db()
-    predictor = PREDICTOR or get_predictor()
-    summarizer = SUMMARIZER or get_summarizer()
-    body, status = journal_entries.reanalyze_entry(entry_id, uid, _db, predictor, summarizer)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-# ==================== NEW API ENDPOINTS ====================
-
-@app.route("/entries/<entry_id>", methods=["GET"])
-@login_required
-def get_single_entry(entry_id):
-    """
-    Get a specific journal entry with its analysis.
-    
-    Path Parameters:
-      - entry_id: The ID of the journal entry to retrieve
-    
-    Returns:
-      - Success: Entry details with analysis
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    _db = get_db()
-    body, status = journal_entries.get_single_entry(entry_id, uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/entries/<entry_id>/analysis", methods=["GET"])
-@login_required
-def get_entry_analysis(entry_id):
-    """
-    Get mood analysis for a specific journal entry.
-    
-    Path Parameters:
-      - entry_id: The ID of the journal entry
-    
-    Returns:
-      - Success: Analysis details
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    _db = get_db()
-    body, status = journal_entries.get_entry_analysis(entry_id, uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/insights", methods=["GET"])
-@login_required
-def get_insights():
-    """
-    Get all insights for the authenticated user.
-    
-    Query Parameters:
-      - limit: Maximum number of insights to return (default: 50)
-      - offset: Number of insights to skip (default: 0)
-    
-    Returns:
-      - Success: List of insights
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    try:
-        limit = int(request.args.get("limit", 50))
-        offset = int(request.args.get("offset", 0))
-    except ValueError:
-        return jsonify({"error": "Invalid limit or offset parameter"}), 400
-    _db = get_db()
-    body, status = insights_service.get_insights(uid, limit, offset, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/insights/<insight_id>", methods=["GET"])
-@login_required
-def get_single_insight(insight_id):
-    """
-    Get a specific insight by ID.
-    
-    Path Parameters:
-      - insight_id: The ID of the insight to retrieve
-    
-    Returns:
-      - Success: Insight details
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    if not insight_id:
-        return jsonify({"error": "Insight ID is required"}), 400
-    _db = get_db()
-    body, status = insights_service.get_single_insight(insight_id, uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/insights/<insight_id>", methods=["DELETE"])
-@login_required
-def delete_insight(insight_id):
-    """
-    Delete a specific insight and its associated mappings.
-    
-    Path Parameters:
-      - insight_id: The ID of the insight to delete
-    
-    Returns:
-      - Success: Deletion confirmation
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    if not insight_id:
-        return jsonify({"error": "Insight ID is required"}), 400
-    _db = get_db()
-    body, status = insights_service.delete_insight(insight_id, uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-# -------------------- Movies, Songs, Books APIs --------------------
-@app.route("/api/recommend", methods=["GET"])
-@login_required
-def api_recommend():
-    mood = request.args.get("mood")
-    _db = get_db()
-    # recommend_movies_for_mood expects only the mood string
-    body, status = media_recommendations.recommend_movies_for_mood(mood)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/movie/recommend", methods=["GET"])
-@login_required
-def movie_recommend():
-    uid = request.user["uid"]
-    _db = get_db()
-    body, status = media_recommendations.recommend_movies_for_user(uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/song/recommend", methods=["GET"])
-@login_required
-def song_recommend():
-    uid = request.user["uid"]
-    try:
-        limit = int(request.args.get("limit", 10))
-    except ValueError:
-        return jsonify({"error": "Invalid limit"}), 400
-    language = request.args.get("language", "both")
-    _db = get_db()
-    body, status = media_recommendations.recommend_songs_for_user(uid, limit, language, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/book/recommend", methods=["GET"])
-@login_required
-def book_recommend():
-    uid = request.user["uid"]
-    _db = get_db()
-    body, status = media_recommendations.recommend_books_for_user(uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-
-
-@app.route("/api/search", methods=["GET"])
-@login_required
-def api_search():
-    q = request.args.get("movie")
-    _db = get_db()
-    # search_movies expects only the query string
-    body, status = media_recommendations.search_movies(q)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/api/songs", methods=["GET"])
-@login_required
-def get_songs():
-    mood = request.args.get("mood", "happy").lower()
-    language = request.args.get("language", "both").lower()
-    try:
-        limit = int(request.args.get("limit", 10))
-    except ValueError:
-        return jsonify({"error": "Invalid limit"}), 400
-    body, status = media_recommendations.get_songs(mood, language, limit)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/api/search_song", methods=["GET"])
-@login_required
-def api_search_song():
-    query = request.args.get("q")
-    search_type = (request.args.get("type") or "track").lower()
-    try:
-        limit = int(request.args.get("limit", 10))
-    except ValueError:
-        return jsonify({"error": "Invalid limit"}), 400
-    body, status = media_recommendations.search_songs(query, search_type, limit)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/api/books", methods=["GET"])
-@login_required
-def get_books_by_emotion():
-    emotion = request.args.get("emotion", "happy").lower()
-    try:
-        limit = int(request.args.get("limit", 5))
-    except ValueError:
-        return jsonify({"error": "Invalid limit"}), 400
-    body, status = media_recommendations.books_by_emotion(emotion, limit)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/api/search_books", methods=["GET"])
-@login_required
-def api_search_books():
-    query = request.args.get("query")
-    search_type = (request.args.get("type") or "both").lower()
-    try:
-        max_results = int(request.args.get("limit", 10))
-    except ValueError:
-        return jsonify({"error": "Invalid limit"}), 400
-    body, status = media_recommendations.search_books(query, search_type, max_results)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-
-
-# ==================== ADDITIONAL API ENDPOINTS ====================
-
-@app.route("/entries", methods=["GET"])
-@login_required
-def get_entries_filtered():
-    """
-    Get journal entries with filtering options.
-    
-    Query Parameters:
-      - start_date: Start date filter (YYYY-MM-DD)
-      - end_date: End date filter (YYYY-MM-DD)
-      - mood: Filter by dominant mood (happy, sad, angry, etc.)
-      - search: Search in entry text
-      - limit: Maximum number of entries (default: 50)
-      - offset: Number of entries to skip (default: 0)
-    
-    Returns:
-      - Success: Filtered list of entries
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    params = {
-        "start_date": request.args.get("start_date"),
-        "end_date": request.args.get("end_date"),
-        "mood": request.args.get("mood"),
-        "search": request.args.get("search"),
-        "limit": request.args.get("limit", 50),
-        "offset": request.args.get("offset", 0),
-    }
-    _db = get_db()
-    body, status = journal_entries.get_entries_filtered(uid, params, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/stats", methods=["GET"])
-@login_required
-def get_user_stats():
-    """
-    Get user statistics and dashboard data.
-    
-    Returns:
-      - Success: User statistics
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    _db = get_db()
-    body, status = stats_service.get_user_stats(uid, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/mood-trends", methods=["GET"])
-@login_required
-def get_mood_trends():
-    """
-    Get mood trends over time.
-    
-    Query Parameters:
-      - days: Number of days to analyze (default: 30)
-    
-    Returns:
-      - Success: Mood trends data
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    try:
-        days = int(request.args.get("days", 30))
-    except ValueError:
-        return jsonify({"error": "Invalid days parameter"}), 400
-    _db = get_db()
-    body, status = stats_service.get_mood_trends(uid, days, _db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-
-@app.route("/health", methods=["GET"])
-def health_check():
-    """
-    Health check endpoint for API status.
-    
-    Returns:
-      - Success: API health status
-    """
-    _db = get_db()
-    body, status = health_service.health_check(_db)
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-@app.route("/export", methods=["GET"])
-@login_required
-def export_data():
-    """
-    Export user data in JSON format.
-    
-    Query Parameters:
-      - start_date: Start date for export (YYYY-MM-DD)
-      - end_date: End date for export (YYYY-MM-DD)
-      - format: Export format (json, csv) - default: json
-    
-    Returns:
-      - Success: Exported data
-      - Error: Error message with details
-    """
-    uid = request.user["uid"]
-    start_date = request.args.get("start_date")
-    end_date = request.args.get("end_date")
-    export_format = request.args.get("format", "json").lower()
-
-    _db = get_db()
-    result = export_service.export_data(uid, start_date, end_date, export_format, _db)
-    if isinstance(result, tuple) and len(result) == 3:
-        return result
-    body, status = result
-    return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+register_routes(app, deps)
 
 # -------------------- Home Page --------------------
-@app.route("/", methods=["GET"])
-def home():
-    return render_template("home.html")
+# Home route is registered via routes.home
 
 # -------------------- Run --------------------
 if __name__ == "__main__":

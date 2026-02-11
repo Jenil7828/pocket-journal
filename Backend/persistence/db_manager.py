@@ -331,7 +331,7 @@ class DBManager:
         # Build interpreted response using deterministic builder and store it
         # Import locally to avoid circular imports
         try:
-            from services.entry_response import build_entry_response
+            from ..services.entry_response import build_entry_response
         except Exception:
             # Fallback: if import fails, store legacy analysis
             self.insert_analysis(entry_id, summary, mood_probs)

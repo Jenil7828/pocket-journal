@@ -24,6 +24,7 @@ pocket-journal/
 │   ├── requirements.prod.txt
 │   ├── requirements.train.txt
 │   ├── utils.py
+│   ├── test_roberta_and_builder.py
 │   ├── ai_insights/
 │   │   ├── __init__.py
 │   │   ├── gaurds.py
@@ -44,6 +45,7 @@ pocket-journal/
 │   │   ├── search_books.py
 │   │   ├── search_song.py
 │   │   ├── song_recommend.py
+│   │   └── song_history.json
 │   ├── ml/
 │   │   └── mood_detection/
 │   │       ├── inference/
@@ -52,12 +54,17 @@ pocket-journal/
 │   │       │   ├── mood_detection/roberta/   # train.py, trainer
 │   │       │   └── summarization/bart/       # train.py, trainer
 │   │       └── models/                       # model artifacts
+│   ├── Mood_Detection/   # legacy/other inference helpers and outputs
+│   │   ├── outputs/
+│   │   │   └── models/
+│   │   └── app.py
 │   ├── persistence/
 │   │   ├── __init__.py
 │   │   ├── database_schema.py
 │   │   └── db_manager.py
 │   ├── secrets/
-│   │   └── firebase-adminsdk.json
+│   │   ├── pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
+│   │   └── gen-lang-client-0920522291-a80064ac014b.json
 │   ├── services/
 │   │   ├── entry_response.py
 │   │   ├── entry_response_builder.py
