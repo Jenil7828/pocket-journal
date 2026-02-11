@@ -27,10 +27,7 @@ class _StartScreenState extends State<StartScreen> {
                 SizedBox(
                   width: size.width,
                   height: size.height,
-                  child: Image.asset(
-                    'Assets/home/home.png',
-                    fit: BoxFit.cover,
-                  ),
+                  child: Image.asset('assets/home/home.png', fit: BoxFit.cover),
                 ),
 
                 // ✅ Gradient overlay for better contrast
@@ -111,7 +108,9 @@ class _StartScreenState extends State<StartScreen> {
                               ),
                             ],
                             border: Border.all(
-                              color: const Color(0xFFF3D9B1), // soft border tone
+                              color: const Color(
+                                0xFFF3D9B1,
+                              ), // soft border tone
                               width: 1.5,
                             ),
                           ),
