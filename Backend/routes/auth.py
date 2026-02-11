@@ -126,3 +126,50 @@ def register(app, deps: dict):
             logger.exception("Error calling Firebase REST API: %s", str(e))
             return jsonify({"error": "login_failed", "details": str(e)}), 500
 
+    @app.route("/auth/change-password", methods=["POST"])
+    @login_required
+    def change_password():
+        payload = request.get_json(force=True, silent=True) or {}
+        current_password = payload.get("current_password")
+        new_password = payload.get("new_password")
+
+        if not current_password or not new_password:
+            return jsonify({"error": "current_password and new_password are required"}), 400
+
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        email = user.get("email")
+
+        if not uid or not email:
+            return jsonify({"error": "invalid_user"}), 401
+
+        api_key = os.getenv("FIREBASE_WEB_API_KEY")
+        if not api_key:
+            return jsonify({"error": "server_misconfigured", "details": "FIREBASE_WEB_API_KEY not set"}), 500
+
+        # Verify the current password by calling Firebase REST signInWithPassword
+        verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
+        verify_body = {"email": email, "password": current_password, "returnSecureToken": True}
+
+        try:
+            resp = requests.post(verify_url, json=verify_body, timeout=10)
+            resp.raise_for_status()
+        except requests.exceptions.HTTPError as he:
+            # Wrong current password or other auth error
+            resp_obj = getattr(he, 'response', None)
+            try:
+                err = resp_obj.json() if resp_obj is not None else {"error": str(he)}
+            except Exception:
+                err = {"error": str(he)}
+            return jsonify({"error": "invalid_current_password", "details": err}), 401
+        except Exception as e:
+            logger.exception("Error verifying current password for uid=%s: %s", uid, str(e))
+            return jsonify({"error": "verification_failed", "details": str(e)}), 500
+
+        # If verification succeeded, update user's password via Admin SDK
+        try:
+            firebase_auth.update_user(uid, password=new_password)
+            return jsonify({"message": "password_changed"}), 200
+        except Exception as e:
+            logger.exception("Failed to update password for uid=%s: %s", uid, str(e))
+            return jsonify({"error": "failed_to_change_password", "details": str(e)}), 500

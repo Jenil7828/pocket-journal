@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "73ff73b7-c6f1-4676-af8a-6b7011d2432b",
-    "name": "Pocket Journal API Collection",
+    "name": "New Pocket Journal API Collection",
     "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, and utility endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
@@ -84,9 +84,9 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/auth/create-user",
+              "raw": "{{baseURL}}/auth/create-user",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}"
               ],
               "path": [
                 "auth",
@@ -108,7 +108,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"alice@example.com\",\n  \"password\": \"S3cretPass!\"\n}",
+              "raw": "{\n  \"email\": \"jenilrathod114@gmail.com\",\n  \"password\": \"Testing_123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -116,13 +116,49 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/auth/login",
+              "raw": "{{baseURL}}/auth/login",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}"
               ],
               "path": [
                 "auth",
                 "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"current_password\": \"Testing_123!\",\n    \"new_password\": \"BetterPass123!\"\n  }",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/auth/change-password",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
               ]
             }
           },
@@ -973,9 +1009,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/app/about",
+              "raw": "{{baseURL}}/app/about",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}"
               ],
               "path": [
                 "app",
@@ -991,9 +1027,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/app/terms",
+              "raw": "{{baseURL}}/app/terms",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}"
               ],
               "path": [
                 "app",
@@ -1015,13 +1051,13 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{id_token}}"
+                "value": "Bearer {{token_id}}}"
               }
             ],
             "url": {
-              "raw": "{{base_url}}/me",
+              "raw": "{{baseURL}}/me",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}"
               ],
               "path": [
                 "me"
@@ -1041,7 +1077,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{id_token}}"
+                "value": "Bearer {{token_id}}"
               }
             ],
             "body": {
@@ -1054,9 +1090,9 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/me/preferences",
+              "raw": "{{baseURL}}}/me/preferences",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}}"
               ],
               "path": [
                 "me",
@@ -1077,7 +1113,7 @@
               },
               {
                 "key": "Authorization",
-                "value": "Bearer {{id_token}}"
+                "value": "Bearer {{token_id}}"
               }
             ],
             "body": {
@@ -1090,9 +1126,9 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/me/settings",
+              "raw": "{{baseURL}}/me/settings",
               "host": [
-                "{{base_url}}"
+                "{{baseURL}}"
               ],
               "path": [
                 "me",
@@ -1142,7 +1178,7 @@
     },
     {
       "key": "Private_variable",
-      "value": "AIzaSyAdp0xJe4oTWc8bwIK611dfke-jX-hfFnI",
+      "value": "",
       "type": "default"
     }
   ]
