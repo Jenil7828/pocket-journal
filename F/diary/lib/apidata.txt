@@ -1,0 +1,29 @@
+Field	
+
+(Mood)
+entry_id	:Reference
+primary_mood:	Happy / Sad
+secondary_mood:	Optional
+detected_keywords	Words
+
+
+(Insights)
+Field	
+insight_id:	Unique
+entry_id	:Mapping
+insight_type:	Behavioral / Reflection
+do_list	:Array
+dont_list:	Array
+reflection_questions	:Array
+
+
+(Media)
+
+Field	
+media_id:	Unique
+mood_type:	Optional
+category	:Song / Movie
+title:	Name
+platform	:Spotify
+url:	Link
+reason	:Explanation
