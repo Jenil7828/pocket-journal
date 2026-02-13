@@ -25,8 +25,23 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
         old_analysis_ids.append(analysis_doc.id)
 
     summary = summarizer.summarize(entry_text) if summarizer else entry_text[:200] + "..."
-    mood_result = predictor.predict(entry_text) if predictor else {}
-    mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+
+    # Check user's mood tracking setting; default True
+    mood_enabled = True
+    try:
+        user_doc = db.db.collection("users").document(uid).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict() or {}
+            settings = user_data.get("settings", {}) or {}
+            mood_enabled = settings.get("mood_tracking_enabled", True)
+    except Exception:
+        mood_enabled = True
+
+    if mood_enabled:
+        mood_result = predictor.predict(entry_text) if predictor else {}
+        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+    else:
+        mood_probs = {}
 
     logger.debug("reanalyze_entry: entry_id=%s", entry_id)
 
@@ -194,4 +209,3 @@ def get_entries_filtered(uid, params, db):
             "search": search_term,
         },
     }, 200
-

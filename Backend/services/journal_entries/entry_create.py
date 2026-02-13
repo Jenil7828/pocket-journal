@@ -20,9 +20,28 @@ def process_entry(user, data, db, predictor, summarizer):
     # Summarize (optional)
     summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
 
+    # Determine whether mood detection is enabled for the user (default: True)
+    mood_enabled = True
+    try:
+        if uid:
+            fs = getattr(db, "db", None) or None
+            if fs is not None:
+                user_doc = fs.collection("users").document(uid).get()
+                if user_doc.exists:
+                    user_data = user_doc.to_dict() or {}
+                    settings = user_data.get("settings", {}) or {}
+                    mood_enabled = settings.get("mood_tracking_enabled", True)
+    except Exception:
+        # If anything goes wrong while reading settings, default to enabled
+        mood_enabled = True
+
     # Use original entry text for mood detection per design
-    mood_result = predictor.predict(text, threshold=0.25) if predictor else {}
-    mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+    if mood_enabled:
+        mood_result = predictor.predict(text, threshold=0.25) if predictor else {}
+        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+    else:
+        # Mood tracking disabled: do not call predictor; keep mood empty
+        mood_probs = {}
 
     logger.debug("process_entry: entry_id=%s, analyzed_text_preview=%s", entry_id, (text or "")[:200])
 
