@@ -1,0 +1,27 @@
+# Core Flask Application
+Flask==3.1.2
+Werkzeug==3.1.5
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+gunicorn==25.1.0
+
+# Firebase & Authentication
+firebase-admin==7.1.0
+google-cloud-firestore==2.21.0
+google-cloud-storage==3.4.0
+google-auth==2.45.0
+google-api-core==2.25.1
+PyJWT==2.10.1
+
+# LangChain & Google AI
+langchain==1.2.10
+langchain-google-genai==4.2.0
+langchain-core>=0.3.77
+
+# Media & Utilities
+spotipy>=2.25.1
+requests>=2.32.5
+RapidFuzz>=3.14.1
+python-dotenv>=1.1.1
+pytz>=2025.2
+tqdm>=4.67.1
