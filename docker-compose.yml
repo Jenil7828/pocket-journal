@@ -1,0 +1,39 @@
+version: "3.8"
+
+services:
+  pocket-journal:
+    # Build from the production Dockerfile in Backend
+    build:
+      context: . # Root of the project, where the Backend directory is located
+      dockerfile: Dockerfile
+      args:
+        - APP_USER=app
+    image: pocket-journal:prod
+    gpus: all
+    ports:
+      - "8080:8080"
+    # Load runtime variables from a host .env (do NOT commit this file)
+    env_file:
+      - Backend/.env
+    environment:
+      - PORT=8080
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+      # Path inside container where we'll mount the Firebase service account JSON
+      - FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
+      # GEMINI_API_KEY can be provided via Backend/.env or the host environment
+#      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    # Mount the locally-produced model artifacts and the Firebase JSON into the container
+    volumes:
+      - ./Backend:/app:ro
+      - ./Backend/ml/mood_detection/models:/app/ml/mood_detection/models:ro
+      - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
+      # - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro
+    restart: unless-stopped
+
+# Notes:
+# - Create a host-side `Backend/.env` (do NOT commit it). Example contents below.
+# - The Firebase JSON file is bind-mounted read-only into /app/secrets/firebase.json
+#   and the app will read the path from FIREBASE_CREDENTIALS_PATH.
+# - You can also export GEMINI_API_KEY on the host or add it to Backend/.env.
+# - To start: `docker compose -f Backend/docker-compose.prod.yml up --build -d`
