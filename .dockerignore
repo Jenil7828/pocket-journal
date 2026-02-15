@@ -14,6 +14,7 @@ __pycache__/
 # Virtual environment directories
 .venv/
 Backend/venv/
+venv/
 env/
 ENV/
 .env
@@ -21,7 +22,7 @@ ENV/
 */env/
 */.env
 *.zip
-/ml/mood_detection/*.zip
+/ml/mood_detection/models.zip
 # Distribution/build directories
 build/
 dist/
@@ -47,9 +48,6 @@ test_reports/
 .env
 Backend/*.json
 *.json
-# Model outputs and training artifacts (we exclude training outputs except for
-# the inference models directory which must be present locally and included in
-# the runtime image). The `!` lines re-include the models directory.
 
 # ================================
 # 🚫 TRAINING — EXPLICITLY EXCLUDED
@@ -60,39 +58,12 @@ ml/mood_detection/training/**
 # ================================
 # 🚫 DATASETS / RAW DATA
 # ================================
+Backend/ml/mood_detection/training/
+Backend/data/
 data/
-data/**
-/data/
-
-# ================================
-# ✅ KEEP INFERENCE CODE
-# ================================
-!ml/mood_detection/inference/
-!ml/mood_detection/inference/**
-
-# ================================
-# ✅ KEEP TRAINED MODELS
-# ================================
-!ml/mood_detection/models/
-!ml/mood_detection/models/**
-
-# ================================
-# ✅ KEEP CORE BACKEND
-# ================================
-!app.py
-!services/
-!services/**
-!persistence/
-!persistence/**
-!ai_insights/
-!ai_insights/**
-!templates/
-
-# ================================
-# ✅ KEEP REQUIREMENTS
-# ================================
-!requirements.prod.txt
-
-
+Backend/ml/mood_detection/models/
+Backend/secrets/*.json
 # Misc
 *.log
+Backend/requirements.train.txt
+Backend/requirements.prod.txt
