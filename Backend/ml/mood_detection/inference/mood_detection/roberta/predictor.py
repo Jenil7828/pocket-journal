@@ -2,6 +2,7 @@ import os
 import torch
 import numpy as np
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from services.suppression import suppress_hf
 from .config import Config
 
 
@@ -12,16 +13,19 @@ class SentencePredictor:
         self.device = "cpu"  # force CPU for prod stability
 
         if os.path.exists(model_path) and os.path.exists(os.path.join(model_path, "config.json")):
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
+            # suppress materialization output during local model load
+            with suppress_hf():
+                self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+                self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
         else:
-            print(f"⚠️ Model not found at {model_path}, falling back to base model")
-            self.tokenizer = AutoTokenizer.from_pretrained(Config.MODEL_NAME)
-            self.model = AutoModelForSequenceClassification.from_pretrained(
-                Config.MODEL_NAME,
-                num_labels=Config.NUM_LABELS,
-                problem_type="multi_label_classification",
-            )
+            # fallback to base model
+            with suppress_hf():
+                self.tokenizer = AutoTokenizer.from_pretrained(Config.MODEL_NAME)
+                self.model = AutoModelForSequenceClassification.from_pretrained(
+                    Config.MODEL_NAME,
+                    num_labels=Config.NUM_LABELS,
+                    problem_type="multi_label_classification",
+                )
 
         self.model.to(self.device)
         self.model.eval()
@@ -56,4 +60,3 @@ class SentencePredictor:
 
     def get_emotion_probabilities(self, text: str, threshold: float | None = None) -> dict:
         return self.predict(text, threshold)["probabilities"]
-

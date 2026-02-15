@@ -4,7 +4,7 @@ services:
   pocket-journal:
     # Build from the production Dockerfile in Backend
     build:
-      context: Backend
+      context: . # Root of the project, where the Backend directory is located
       dockerfile: Dockerfile.prod
       args:
         - APP_USER=app
@@ -21,7 +21,7 @@ services:
       # Path inside container where we'll mount the Firebase service account JSON
       - FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
       # GEMINI_API_KEY can be provided via Backend/.env or the host environment
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
+#      - GEMINI_API_KEY=${GEMINI_API_KEY}
     # Mount the locally-produced model artifacts and the Firebase JSON into the container
     volumes:
       - ./Backend:/app:ro

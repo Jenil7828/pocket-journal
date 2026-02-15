@@ -2,6 +2,9 @@
 import os
 import warnings
 
+# Ensure HF opt-out set before any Hugging Face imports
+os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+
 # Suppress TensorFlow warnings
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -15,6 +18,14 @@ import logging
 # Load environment variables
 load_dotenv()
 
+# Lower noisy external loggers early (keep minimal)
+import logging as _logging
+for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3"):
+    try:
+        _logging.getLogger(noisy).setLevel(_logging.WARNING)
+    except Exception:
+        pass
+
 # -------------------- Logging --------------------
 LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
@@ -23,26 +34,9 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pocket_journal")
 
+# Lower specific external loggers
 logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"))
 logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))
-
-# Ensure logs are always emitted to stdout in containerized environments
-import sys
-
-def _ensure_stream_handler(logger_obj):
-    for h in list(logger_obj.handlers):
-        if isinstance(h, logging.StreamHandler):
-            return
-    numeric_level = getattr(logging, LOG_LEVEL, logging.INFO) if isinstance(LOG_LEVEL, str) else LOG_LEVEL
-    stream_handler = logging.StreamHandler(sys.stdout)
-    stream_handler.setLevel(numeric_level)
-    stream_handler.setFormatter(logging.Formatter("[%(asctime)s] %(levelname)s %(name)s: %(message)s"))
-    logger_obj.addHandler(stream_handler)
-
-# Add a stream handler to the app logger and the root logger so both app
-# messages and Werkzeug/Gunicorn logs propagate to container stdout/stderr.
-_ensure_stream_handler(logger)
-_ensure_stream_handler(logging.getLogger())
 
 # -------------------- Firebase --------------------
 import firebase_admin
@@ -89,48 +83,16 @@ from services import (
 )
 
 # New package-backed service imports (keep existing variable names for compatibility)
-from services.export_service import export_data as _export_data
-from services.insights_service import generate_insights as _generate_insights, get_insights as _get_insights, get_single_insight as _get_single_insight, delete_insight as _delete_insight
-from services.stats_service import get_user_stats as _get_user_stats, get_mood_trends as _get_mood_trends
+# Note: export/insights/stats are available via the services package binding below; avoid duplicate imports
 
-# Create facade objects expected by the rest of app.py
-class _ExportServiceFacade:
-    @staticmethod
-    def export_data(uid, start_date, end_date, export_format, db):
-        return _export_data(uid, start_date, end_date, export_format, db)
-
-class _InsightsServiceFacade:
-    @staticmethod
-    def generate_insights(user, data, db, enable_llm=False, enable_insights=True):
-        return _generate_insights(user, data, db, enable_llm=enable_llm, enable_insights=enable_insights)
-
-    @staticmethod
-    def get_insights(uid, limit, offset, db):
-        return _get_insights(uid, limit, offset, db)
-
-    @staticmethod
-    def get_single_insight(insight_id, uid, db):
-        return _get_single_insight(insight_id, uid, db)
-
-    @staticmethod
-    def delete_insight(insight_id, uid, db):
-        return _delete_insight(insight_id, uid, db)
-
-class _StatsServiceFacade:
-    @staticmethod
-    def get_user_stats(uid, db):
-        return _get_user_stats(uid, db)
-
-    @staticmethod
-    def get_mood_trends(uid, days, db):
-        return _get_mood_trends(uid, days, db)
-
-# Bind to the names used in app.py
-insights_service = _InsightsServiceFacade()
-export_service = _ExportServiceFacade()
-stats_service = _StatsServiceFacade()
+# Bind to the names used in app.py directly from services package
+import services as _services_pkg
+insights_service = _services_pkg.insights_service
+export_service = _services_pkg.export_service
+stats_service = _services_pkg.stats_service
 
 from persistence.db_manager import DBManager
+from services.embedding_service import get_embedding_service
 
 from ml.mood_detection.inference.mood_detection.roberta.predictor import SentencePredictor
 from ml.mood_detection.inference.summarization.bart.predictor import SummarizationPredictor
@@ -188,6 +150,13 @@ try:
     # Load models once at process start so they aren't reloaded per-request
     _predictor = get_predictor()
     _summarizer = get_summarizer()
+    # Eagerly initialize embedding service (safe no-op if sentence-transformers missing)
+    try:
+        _embedding_service = get_embedding_service()
+        logger.debug("Eagerly initialized embedding service at startup (device info suppressed)")
+    except Exception as ee:
+        _embedding_service = None
+        logger.warning("Embedding service not available at startup: %s", str(ee))
     logger.info("Eagerly loaded predictor and summarizer at startup")
 except Exception as e:
     # Do not fail startup if models unavailable; keep server running and degrade gracefully
@@ -214,7 +183,7 @@ def login_required(f):
 
         try:
             # Parse Authorization header safely: "Bearer <token>"
-            token = header[len("Bearer "):]
+            token = header[len("Bearer ") :]
             if not token:
                 return jsonify({"error": "Missing or invalid token"}), 401
             decoded_token = auth.verify_id_token(token)
@@ -249,6 +218,7 @@ deps = {
     "SUMMARIZER": SUMMARIZER,
     "get_predictor": get_predictor,
     "get_summarizer": get_summarizer,
+    "get_embedding_service": get_embedding_service,
     "ENABLE_LLM": ENABLE_LLM,
     "ENABLE_INSIGHTS": ENABLE_INSIGHTS,
 }
@@ -260,11 +230,16 @@ register_routes(app, deps)
 
 # -------------------- Run --------------------
 if __name__ == "__main__":
-    FLASK_DEBUG = os.getenv("FLASK_DEBUG", "true").lower() in ("1", "true", "yes")
-    DISABLE_RELOADER = os.getenv("DISABLE_RELOADER", "false").lower() in ("1", "true", "yes")
+    # Default: disable Flask reloader to avoid duplicate model initialization.
+    FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
+    DISABLE_RELOADER = os.getenv("DISABLE_RELOADER", "true").lower() in ("1", "true", "yes")
+    use_reloader = False
+    # Allow enabling reloader only if explicitly requested and in debug mode
+    if FLASK_DEBUG and not DISABLE_RELOADER:
+        use_reloader = True
     app.run(
         host="0.0.0.0",
         port=int(os.getenv("PORT", 5000)),
         debug=FLASK_DEBUG,
-        use_reloader=FLASK_DEBUG and not DISABLE_RELOADER,
+        use_reloader=use_reloader,
     )

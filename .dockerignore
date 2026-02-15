@@ -17,6 +17,11 @@ Backend/venv/
 env/
 ENV/
 .env
+*/venv/
+*/env/
+*/.env
+*.zip
+/ml/mood_detection/*.zip
 # Distribution/build directories
 build/
 dist/
@@ -57,6 +62,7 @@ ml/mood_detection/training/**
 # ================================
 data/
 data/**
+/data/
 
 # ================================
 # ✅ KEEP INFERENCE CODE
