@@ -786,7 +786,7 @@
       "name": "🎬 Media Recommendations",
       "item": [
         {
-          "name": "General Recommendations",
+          "name": "Unified Media Recommendations",
           "request": {
             "method": "GET",
             "header": [
@@ -796,18 +796,23 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/recommend?mood=happy",
+              "raw": "{{baseURL}}/api/media/recommend?media_type=movies&top_k=10",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
                 "api",
+                "media",
                 "recommend"
               ],
               "query": [
                 {
-                  "key": "mood",
-                  "value": "happy"
+                  "key": "media_type",
+                  "value": "movies"
+                },
+                {
+                  "key": "top_k",
+                  "value": "10"
                 }
               ]
             }
@@ -815,7 +820,7 @@
           "response": []
         },
         {
-          "name": "Movie Recommendations",
+          "name": "Movie Recommendations (user-based)",
           "request": {
             "method": "GET",
             "header": [
@@ -844,7 +849,7 @@
           "response": []
         },
         {
-          "name": "Song Recommendations",
+          "name": "Song Recommendations (user-based)",
           "request": {
             "method": "GET",
             "header": [
@@ -877,7 +882,7 @@
           "response": []
         },
         {
-          "name": "Book Recommendations",
+          "name": "Book Recommendations (user-based)",
           "request": {
             "method": "GET",
             "header": [
@@ -887,111 +892,18 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/book/recommend",
+              "raw": "{{baseURL}}/book/recommend?limit=10",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
                 "book",
                 "recommend"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Search Movies",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseURL}}/api/search?query=inception&limit=5",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "search"
               ],
               "query": [
-                {
-                  "key": "query",
-                  "value": "inception"
-                },
-                {
-                  "key": "limit",
-                  "value": "5"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Search Songs",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseURL}}/api/songs?query=happy&limit=10",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "songs"
-              ],
-              "query": [
-                {
-                  "key": "query",
-                  "value": "happy"
-                },
                 {
                   "key": "limit",
                   "value": "10"
-                }
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Search Books",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseURL}}/api/books?query=motivation&limit=5",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "books"
-              ],
-              "query": [
-                {
-                  "key": "query",
-                  "value": "motivation"
-                },
-                {
-                  "key": "limit",
-                  "value": "5"
                 }
               ]
             }

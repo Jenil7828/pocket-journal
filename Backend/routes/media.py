@@ -1,100 +1,104 @@
-from flask import request, jsonify
+from flask import jsonify, request
+
+from services.media_recommender.recommendation import recommend_media
 
 
 def register(app, deps):
     login_required = deps["login_required"]
-    media_recommendations = deps["media_recommendations"]
-    get_db = deps["get_db"]
 
-    @app.route("/api/recommend", methods=["GET"])
+    @app.route("/api/media/recommend", methods=["GET"])
     @login_required
-    def api_recommend():
-        mood = request.args.get("mood")
-        _db = get_db()
-        body, status = media_recommendations.recommend_movies_for_mood(mood)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+    def api_media_recommend():
+        """Unified media recommendation endpoint.
+
+        Query params:
+        - media_type: one of [movies, songs, books, podcasts]
+        - top_k (optional): override number of results (default 10)
+        """
+        uid = request.user["uid"]
+        media_type = (request.args.get("media_type") or "").strip().lower()
+        if not media_type:
+            return jsonify({"error": "Missing media_type parameter"}), 400
+        try:
+            top_k = int(request.args.get("top_k", 10))
+        except ValueError:
+            return jsonify({"error": "Invalid top_k"}), 400
+
+        try:
+            result = recommend_media(uid=uid, media_type=media_type, top_k=top_k)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as exc:
+            return jsonify(
+                {"error": "Failed to generate recommendations", "details": str(exc)}
+            ), 500
+
+        return jsonify(result), 200
 
     @app.route("/movie/recommend", methods=["GET"])
     @login_required
     def movie_recommend():
+        """Backward compatible movie endpoint backed by unified engine."""
         uid = request.user["uid"]
-        _db = get_db()
-        body, status = media_recommendations.recommend_movies_for_user(uid, _db)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        try:
+            top_k = int(request.args.get("limit", 10))
+        except ValueError:
+            return jsonify({"error": "Invalid limit"}), 400
+        try:
+            result = recommend_media(uid=uid, media_type="movies", top_k=top_k)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as exc:
+            return jsonify(
+                {"error": "Failed to generate movie recommendations", "details": str(exc)}
+            ), 500
+        return jsonify(result), 200
 
     @app.route("/song/recommend", methods=["GET"])
     @login_required
     def song_recommend():
+        """Backward compatible song endpoint backed by unified engine.
+
+        Existing `limit` param is treated as the desired top_k.
+        Language parameter is ignored in Phase 2 per embedding-first design.
+        """
         uid = request.user["uid"]
         try:
-            limit = int(request.args.get("limit", 10))
+            top_k = int(request.args.get("limit", 10))
         except ValueError:
             return jsonify({"error": "Invalid limit"}), 400
-        language = request.args.get("language", "both")
-        _db = get_db()
-        body, status = media_recommendations.recommend_songs_for_user(uid, limit, language, _db)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        language = (request.args.get("language", "both") or "both").strip().lower()
+        # Encode language into media_type so the Spotify provider can bias by market
+        media_key = "songs"
+        if language and language not in ("both", "all"):
+            media_key = f"{media_key}:{language}"
+
+        try:
+            result = recommend_media(uid=uid, media_type=media_key, top_k=top_k)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as exc:
+            return jsonify(
+                {"error": "Failed to generate song recommendations", "details": str(exc)}
+            ), 500
+        return jsonify(result), 200
 
     @app.route("/book/recommend", methods=["GET"])
     @login_required
     def book_recommend():
+        """Backward compatible book endpoint backed by unified engine."""
         uid = request.user["uid"]
-        _db = get_db()
-        body, status = media_recommendations.recommend_books_for_user(uid, _db)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-    @app.route("/api/search", methods=["GET"])
-    @login_required
-    def api_search():
-        q = request.args.get("movie")
-        _db = get_db()
-        body, status = media_recommendations.search_movies(q)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-    @app.route("/api/songs", methods=["GET"])
-    @login_required
-    def get_songs():
-        mood = request.args.get("mood", "happy").lower()
-        language = request.args.get("language", "both").lower()
         try:
-            limit = int(request.args.get("limit", 10))
+            top_k = int(request.args.get("limit", 10))
         except ValueError:
             return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.get_songs(mood, language, limit)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-    @app.route("/api/search_song", methods=["GET"])
-    @login_required
-    def api_search_song():
-        query = request.args.get("q")
-        search_type = (request.args.get("type") or "track").lower()
         try:
-            limit = int(request.args.get("limit", 10))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.search_songs(query, search_type, limit)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-    @app.route("/api/books", methods=["GET"])
-    @login_required
-    def get_books_by_emotion():
-        emotion = request.args.get("emotion", "happy").lower()
-        try:
-            limit = int(request.args.get("limit", 5))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.books_by_emotion(emotion, limit)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-    @app.route("/api/search_books", methods=["GET"])
-    @login_required
-    def api_search_books():
-        query = request.args.get("query")
-        search_type = (request.args.get("type") or "both").lower()
-        try:
-            max_results = int(request.args.get("limit", 10))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.search_books(query, search_type, max_results)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+            result = recommend_media(uid=uid, media_type="books", top_k=top_k)
+        except ValueError as ve:
+            return jsonify({"error": str(ve)}), 400
+        except Exception as exc:
+            return jsonify(
+                {"error": "Failed to generate book recommendations", "details": str(exc)}
+            ), 500
+        return jsonify(result), 200
 

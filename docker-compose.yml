@@ -25,7 +25,7 @@ services:
 #      - GEMINI_API_KEY=${GEMINI_API_KEY}
     # Mount the locally-produced model artifacts and the Firebase JSON into the container
     volumes:
-      #- ./Backend:/app:ro
+      - ./Backend:/app:ro
       - ./Backend/ml/mood_detection/models:/app/ml/mood_detection/models:ro
       - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
       # - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro
