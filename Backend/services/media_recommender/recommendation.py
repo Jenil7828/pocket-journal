@@ -10,6 +10,7 @@ from .providers.podcast_provider import PodcastAPIProvider
 from .providers.spotify_provider import SpotifyProvider
 from .providers.tmdb_provider import TMDbProvider
 from .ranking_engine import rank_candidates
+from .response_formatter import format_results
 
 logger = logging.getLogger("pocket_journal.media.recommendation")
 
@@ -101,13 +102,13 @@ def recommend_media(
         top_k=top_k,
     )
 
+    # Format results for frontend (strip internal-only fields)
+    formatted = format_results(media_type, results)
+
     response: Dict[str, object] = {
         "uid": uid,
         "media_type": media_type,
-        "emotional_intensity": float(emotional_intensity),
-        "journal_weight": float(beta),
-        "candidate_count": len(refined_pool),
-        "results": results,
+        "results": formatted,
     }
 
     logger.info(

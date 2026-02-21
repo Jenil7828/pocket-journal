@@ -83,6 +83,32 @@ class SpotifyProvider(BaseHTTPProvider):
         self._access_token = None
         self._access_token_expires_at = None
 
+    def _fetch_track_details(self, track_id: str) -> Optional[dict]:
+        """Fetch full track details for a single track id to retrieve duration_ms if missing."""
+        if not track_id:
+            return None
+        # Ensure token is valid
+        token = self._get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        url = f"https://api.spotify.com/v1/tracks/{track_id}"
+        try:
+            payload = self._request("GET", url, headers=headers)
+            return payload
+        except UnauthorizedError:
+            logger.info("Spotify 401 detected while fetching track details — retrying with refreshed token")
+            self._invalidate_token()
+            try:
+                token = self._get_access_token()
+                headers = {"Authorization": f"Bearer {token}"}
+                payload = self._request("GET", url, headers=headers)
+                return payload
+            except UnauthorizedError:
+                logger.warning("Spotify track details unauthorized after refresh for id=%s", track_id)
+                return None
+        except Exception as exc:
+            logger.warning("Failed to fetch Spotify track details id=%s: %s", track_id, str(exc))
+            return None
+
     def _search_tracks(self, query: str, limit: int, offset: int = 0, market: Optional[str] = None) -> List[dict]:
         # Acquire token (refresh if needed)
         token = self._get_access_token()
@@ -152,18 +178,29 @@ class SpotifyProvider(BaseHTTPProvider):
                 f"Album: {album.get('name', '')}" if album.get("name") else "",
             ]
             description = ". ".join([p for p in description_parts if p]).strip()
+            # If duration_ms missing, attempt to enrich by fetching track details
+            duration_ms_val = t.get("duration_ms")
+            if duration_ms_val is None:
+                details = self._fetch_track_details(t.get("id"))
+                if details:
+                    duration_ms_val = details.get("duration_ms")
             primary.append(
                 {
                     "id": t.get("id"),
                     "title": title,
                     "description": description or "Song on Spotify.",
                     "popularity": t.get("popularity"),
-                    "duration_ms": t.get("duration_ms"),
+                    "duration_ms": duration_ms_val,
+                    # also include 'duration' as ms for tolerant formatters
+                    "duration": duration_ms_val,
                     "album": album,
                     "artists": artists,
                     "external_urls": t.get("external_urls"),
                 }
             )
+            # Debug: log if duration is missing for this track after enrichment
+            if logger.isEnabledFor(logging.DEBUG) and (duration_ms_val is None):
+                logger.debug("Spotify track missing duration_ms after enrichment id=%s title=%s keys=%s", t.get("id"), t.get("name"), list(t.keys()))
         return primary
 
     def _dedupe_by_id(self, items: List[STANDARD_MEDIA_ITEM]) -> List[STANDARD_MEDIA_ITEM]:
@@ -237,8 +274,18 @@ class SpotifyProvider(BaseHTTPProvider):
         primary = self._build_items_from_tracks(tracks)
         normalized = []
         for p in primary:
-            item = dict(p)
-            item["metadata"] = {k: v for k, v in p.items() if k not in ("title", "description")}
+            # Build a flat item: keep id/title/description and lift other provider fields to top-level
+            item: Dict[str, Any] = {}
+            # ensure id first
+            if p.get("id") is not None:
+                item["id"] = p.get("id")
+            item["title"] = p.get("title")
+            item["description"] = p.get("description")
+            # lift remaining fields (duration_ms, album, artists, external_urls, popularity, etc.)
+            for k, v in p.items():
+                if k in ("id", "title", "description"):
+                    continue
+                item[k] = v
             normalized.append(item)
 
         cleaned = self._dedupe_by_id(self._clean_items(normalized))

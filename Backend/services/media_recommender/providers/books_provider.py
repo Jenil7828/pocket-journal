@@ -61,6 +61,12 @@ class GoogleBooksProvider(BaseHTTPProvider):
             info = v.get("volumeInfo") or {}
             title = info.get("title") or ""
             description = info.get("description") or ""
+            # extract thumbnail if present
+            thumb = None
+            il = info.get("imageLinks") or info.get("image_links") or {}
+            if isinstance(il, dict):
+                thumb = il.get("thumbnail") or il.get("smallThumbnail")
+
             primary.append(
                 {
                     "id": v.get("id") or info.get("industryIdentifiers", [{}])[0].get("identifier"),
@@ -73,6 +79,7 @@ class GoogleBooksProvider(BaseHTTPProvider):
                     "averageRating": info.get("averageRating"),
                     "ratingsCount": info.get("ratingsCount"),
                     "infoLink": info.get("infoLink"),
+                    "thumbnail_url": thumb,
                 }
             )
 

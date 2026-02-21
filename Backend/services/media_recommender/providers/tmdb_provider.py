@@ -53,6 +53,21 @@ class TMDbProvider(BaseHTTPProvider):
             items.extend(payload.get("results", []))
         return items
 
+    def _fetch_movie_details(self, movie_id: int) -> Optional[dict]:
+        """Fetch movie details (including runtime and poster_path) from TMDb details endpoint."""
+        try:
+            payload = self._request(
+                "GET",
+                f"https://api.themoviedb.org/3/movie/{movie_id}",
+                params={
+                    "api_key": self.api_key,
+                    "language": "en-US",
+                },
+            )
+            return payload or None
+        except Exception:
+            return None
+
     def fetch_candidates(self, query: Optional[str], filters: Optional[Dict[str, Any]], limit: int) -> List[STANDARD_MEDIA_ITEM]:
         # Determine number of pages to fetch (TMDb usually returns ~20 results per page)
         try:
@@ -63,16 +78,39 @@ class TMDbProvider(BaseHTTPProvider):
         primary_raw = self._fetch_popular(pages=pages)
         primary = []
         for m in primary_raw:
-            primary.append(
-                {
-                    "id": m.get("id"),
-                    "title": m.get("title") or m.get("original_title") or "",
-                    "description": m.get("overview") or "",
-                    "vote_average": m.get("vote_average"),
-                    "release_date": m.get("release_date"),
-                    "popularity": m.get("popularity"),
-                }
-            )
+            # try to enrich with details (runtime, poster_path) from movie details endpoint
+            movie_id = m.get("id")
+            runtime = None
+            poster_path = m.get("poster_path")
+            if movie_id:
+                details = self._fetch_movie_details(movie_id)
+                if details:
+                    # runtime in minutes
+                    try:
+                        runtime = details.get("runtime")
+                    except Exception:
+                        runtime = None
+                    # prefer detailed poster_path if present
+                    poster_path = poster_path or details.get("poster_path")
+
+            candidate = {
+                "id": m.get("id"),
+                "title": m.get("title") or m.get("original_title") or "",
+                "description": m.get("overview") or "",
+                # Preserve poster_path from TMDb raw response for formatting
+                "poster_path": poster_path,
+                "vote_average": m.get("vote_average"),
+                "release_date": m.get("release_date"),
+                "popularity": m.get("popularity"),
+            }
+            # include runtime and duration_ms if we found it
+            if runtime is not None:
+                candidate["runtime"] = runtime
+                try:
+                    candidate["duration_ms"] = int(float(runtime) * 60.0 * 1000.0)
+                except Exception:
+                    pass
+            primary.append(candidate)
 
         cleaned = self._clean_items(primary)
         logger.info("TMDbProvider primary cleaned=%d", len(cleaned))
@@ -82,16 +120,31 @@ class TMDbProvider(BaseHTTPProvider):
             fallback_raw = self._fetch_top_rated(pages=pages)
             fallback = []
             for m in fallback_raw:
-                fallback.append(
-                    {
-                        "id": m.get("id"),
-                        "title": m.get("title") or m.get("original_title") or "",
-                        "description": m.get("overview") or "",
-                        "vote_average": m.get("vote_average"),
-                        "release_date": m.get("release_date"),
-                        "popularity": m.get("popularity"),
-                    }
-                )
+                movie_id = m.get("id")
+                runtime = None
+                poster_path = m.get("poster_path")
+                if movie_id:
+                    details = self._fetch_movie_details(movie_id)
+                    if details:
+                        runtime = details.get("runtime")
+                        poster_path = poster_path or details.get("poster_path")
+
+                cand = {
+                    "id": m.get("id"),
+                    "title": m.get("title") or m.get("original_title") or "",
+                    "description": m.get("overview") or "",
+                    "poster_path": poster_path,
+                    "vote_average": m.get("vote_average"),
+                    "release_date": m.get("release_date"),
+                    "popularity": m.get("popularity"),
+                }
+                if runtime is not None:
+                    cand["runtime"] = runtime
+                    try:
+                        cand["duration_ms"] = int(float(runtime) * 60.0 * 1000.0)
+                    except Exception:
+                        pass
+                fallback.append(cand)
             fallback_cleaned = self._clean_items(fallback)
             logger.info("TMDbProvider fallback cleaned=%d", len(fallback_cleaned))
             existing_ids = {c["id"] for c in cleaned}
