@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional, Dict, Any
 import os
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
@@ -36,21 +36,25 @@ class GoogleBooksProvider(BaseHTTPProvider):
             return []
         return payload.get("items", []) or []
 
-    def fetch_candidates(self, limit: int) -> List[STANDARD_MEDIA_ITEM]:
+    def fetch_candidates(self, query: Optional[str], filters: Optional[Dict[str, Any]], limit: int) -> List[STANDARD_MEDIA_ITEM]:
         raw_items: List[dict] = []
 
-        # Use single-character and common term queries to keep search neutral.
-        queries = ["a", "the", "book"]
-        for q in queries:
-            for start in (0, 40, 80):
-                batch = self._search(q, max_results=40, start_index=start)
-                if not batch:
-                    continue
-                raw_items.extend(batch)
-                if len(raw_items) >= max(limit * 3, 240):
-                    break
-            if len(raw_items) >= max(limit * 3, 240):
+        q = (query or "").strip() or "book"
+        # Google Books allows maxResults up to 40 per request. Page deterministically.
+        remaining = max(0, int(limit))
+        start = 0
+        page_size = 40
+        while remaining > 0:
+            cur = min(page_size, remaining)
+            batch = self._search(q, max_results=cur, start_index=start)
+            if not batch:
                 break
+            raw_items.extend(batch)
+            fetched = len(batch)
+            remaining -= fetched
+            if fetched < cur:
+                break
+            start += fetched
 
         primary: List[dict] = []
         for v in raw_items:
@@ -75,47 +79,8 @@ class GoogleBooksProvider(BaseHTTPProvider):
         cleaned = self._clean_items(primary)
         logger.info("GoogleBooksProvider primary cleaned=%d", len(cleaned))
 
-        # Fallback: if we somehow still have a tiny pool, run an additional query
-        if len(cleaned) < 30:
-            fallback_raw: List[dict] = []
-            for start in (0, 40, 80):
-                batch = self._search("story", max_results=40, start_index=start)
-                if not batch:
-                    continue
-                fallback_raw.extend(batch)
-
-            fallback: List[dict] = []
-            for v in fallback_raw:
-                info = v.get("volumeInfo") or {}
-                fallback.append(
-                    {
-                        "id": v.get("id")
-                        or info.get("industryIdentifiers", [{}])[0].get("identifier"),
-                        "title": info.get("title") or "",
-                        "description": info.get("description") or "",
-                        "authors": info.get("authors"),
-                        "publishedDate": info.get("publishedDate"),
-                        "pageCount": info.get("pageCount"),
-                        "categories": info.get("categories"),
-                        "averageRating": info.get("averageRating"),
-                        "ratingsCount": info.get("ratingsCount"),
-                        "infoLink": info.get("infoLink"),
-                    }
-                )
-
-            fallback_cleaned = self._clean_items(fallback)
-            logger.info("GoogleBooksProvider fallback cleaned=%d", len(fallback_cleaned))
-            existing_ids = {c["id"] for c in cleaned}
-            for item in fallback_cleaned:
-                if item["id"] not in existing_ids:
-                    cleaned.append(item)
-                    existing_ids.add(item["id"])
-
         if len(cleaned) < 10:
-            raise RuntimeError(
-                f"GoogleBooksProvider returned insufficient candidates ({len(cleaned)})"
-            )
+            logger.warning("Low GoogleBooks candidate pool: %d", len(cleaned))
 
         return cleaned[:limit]
-
 

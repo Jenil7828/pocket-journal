@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import List, Optional, Dict, Any
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 
@@ -19,7 +19,7 @@ class TMDbProvider(BaseHTTPProvider):
             raise RuntimeError("TMDB_API_KEY environment variable is required for TMDbProvider")
         self.api_key = api_key
 
-    def _fetch_popular(self, pages: int = 3) -> List[dict]:
+    def _fetch_popular(self, pages: int = 1) -> List[dict]:
         items: List[dict] = []
         for page in range(1, pages + 1):
             payload = self._request(
@@ -36,7 +36,7 @@ class TMDbProvider(BaseHTTPProvider):
             items.extend(payload.get("results", []))
         return items
 
-    def _fetch_top_rated(self, pages: int = 3) -> List[dict]:
+    def _fetch_top_rated(self, pages: int = 1) -> List[dict]:
         items: List[dict] = []
         for page in range(1, pages + 1):
             payload = self._request(
@@ -53,9 +53,14 @@ class TMDbProvider(BaseHTTPProvider):
             items.extend(payload.get("results", []))
         return items
 
-    def fetch_candidates(self, limit: int) -> List[STANDARD_MEDIA_ITEM]:
-        # Primary: popular movies (multiple pages)
-        primary_raw = self._fetch_popular(pages=5)
+    def fetch_candidates(self, query: Optional[str], filters: Optional[Dict[str, Any]], limit: int) -> List[STANDARD_MEDIA_ITEM]:
+        # Determine number of pages to fetch (TMDb usually returns ~20 results per page)
+        try:
+            pages = max(1, min(5, (int(limit) + 19) // 20))
+        except Exception:
+            pages = 1
+
+        primary_raw = self._fetch_popular(pages=pages)
         primary = []
         for m in primary_raw:
             primary.append(
@@ -72,9 +77,9 @@ class TMDbProvider(BaseHTTPProvider):
         cleaned = self._clean_items(primary)
         logger.info("TMDbProvider primary cleaned=%d", len(cleaned))
 
-        # Fallback: top rated movies if we don't reach 30 items
-        if len(cleaned) < 30:
-            fallback_raw = self._fetch_top_rated(pages=5)
+        # If insufficient, fetch top-rated as fallback (limited pages)
+        if len(cleaned) < max(10, limit // 2):
+            fallback_raw = self._fetch_top_rated(pages=pages)
             fallback = []
             for m in fallback_raw:
                 fallback.append(
@@ -89,7 +94,6 @@ class TMDbProvider(BaseHTTPProvider):
                 )
             fallback_cleaned = self._clean_items(fallback)
             logger.info("TMDbProvider fallback cleaned=%d", len(fallback_cleaned))
-            # Extend while avoiding duplicates by id
             existing_ids = {c["id"] for c in cleaned}
             for item in fallback_cleaned:
                 if item["id"] not in existing_ids:
@@ -97,8 +101,7 @@ class TMDbProvider(BaseHTTPProvider):
                     existing_ids.add(item["id"])
 
         if len(cleaned) < 10:
-            raise RuntimeError(f"TMDbProvider returned insufficient candidates ({len(cleaned)})")
+            logger.warning("Low TMDb candidate pool: %d", len(cleaned))
 
         return cleaned[:limit]
-
 

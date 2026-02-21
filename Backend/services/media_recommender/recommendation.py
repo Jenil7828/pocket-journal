@@ -1,10 +1,10 @@
 import logging
-from typing import Dict, Tuple
+from typing import Dict, Optional, Any
 
 import numpy as np
 
-from .candidate_generator import generate_refined_pool
-from .intent_builder import build_intent_vector
+from .candidate_generator import generate_candidates, refine_candidates
+from .intent_builder import build_intent_vector, build_semantic_query
 from .providers.books_provider import GoogleBooksProvider
 from .providers.podcast_provider import PodcastAPIProvider
 from .providers.spotify_provider import SpotifyProvider
@@ -13,11 +13,10 @@ from .ranking_engine import rank_candidates
 
 logger = logging.getLogger("pocket_journal.media.recommendation")
 
-
 _PROVIDER_CACHE: Dict[str, object] = {}
 
 
-def _get_provider(media_type: str, *, language: str | None = None):
+def _get_provider(media_type: str):
     key = media_type.lower()
     if key in _PROVIDER_CACHE:
         return _PROVIDER_CACHE[key]
@@ -25,8 +24,7 @@ def _get_provider(media_type: str, *, language: str | None = None):
     if key in ("movie", "movies", "tmdb"):
         provider = TMDbProvider()
     elif key in ("song", "songs", "spotify"):
-        # Language preference only affects Spotify market; no mood/genre filtering.
-        provider = SpotifyProvider(language=language)
+        provider = SpotifyProvider()
     elif key in ("book", "books", "google_books"):
         provider = GoogleBooksProvider()
     elif key in ("podcast", "podcasts"):
@@ -42,39 +40,59 @@ def recommend_media(
     uid: str,
     media_type: str,
     *,
-    fetch_limit: int = 150,
+    filters: Optional[Dict[str, Any]] = None,
+    fetch_limit: int = 200,
     refine_top: int = 100,
     top_k: int = 10,
 ) -> Dict[str, object]:
-    """Unified entry point for media recommendations.
+    """Unified entry point for Phase 2 media recommendations (frozen).
 
-    Pipeline:
-    - intent_data = build_intent_vector(uid, media_type)
-    - provider = provider_map[media_type]
-    - refined_pool = generate_refined_pool(intent_vector, provider, fetch_limit, refine_top)
-    - results = rank_candidates(intent_vector, refined_pool, top_k)
+    - Intent building (taste + journal + adaptive beta) is unchanged.
+    - Retrieval uses provider.fetch_candidates(query, filters, limit=200).
+    - Cleaning removes empty/junk/duplicates.
+    - Refinement embeds cleaned pool once and keeps top 100 by similarity.
+    - Ranking remains unchanged.
     """
+    # Build intent vector (unchanged)
     intent_vec, emotional_intensity, beta = build_intent_vector(uid, media_type)
     intent_vec = np.asarray(intent_vec, dtype=np.float32).reshape(-1)
 
-    # For songs, allow an optional language hint forwarded via media_type extensions
-    provider_language: str | None = None
-    if media_type.lower() in ("song", "songs", "spotify"):
-        # In Phase 2, language may be encoded as 'songs:en' etc.
-        # This function supports both plain 'songs' and 'songs:<lang>' transparently.
-        if ":" in media_type:
-            _, lang = media_type.split(":", 1)
-            provider_language = lang.strip() or None
-        else:
-            provider_language = None
+    # Log intent observability
+    logger.info(
+        "pocket_journal.media.intent: uid=%s media_type=%s beta=%.4f emotional_intensity=%.4f",
+        uid,
+        media_type,
+        float(beta),
+        float(emotional_intensity),
+    )
 
-    provider = _get_provider(media_type.split(":", 1)[0], language=provider_language)
+    # Build a lightweight semantic query (from journal or fallback)
+    semantic_query = build_semantic_query(uid, media_type)
+    logger.info("pocket_journal.media.filters: semantic_query=%s filters=%s", semantic_query, filters)
 
-    refined_pool = generate_refined_pool(
-        intent_vector=intent_vec,
-        provider=provider,
-        fetch_limit=fetch_limit,
-        refine_top=refine_top,
+    provider = _get_provider(media_type.split(":", 1)[0])
+
+    # Candidate generation (hard constraints via filters) - Phase2 fixed limit
+    raw_candidates = generate_candidates(provider=provider, query=semantic_query, filters=filters, fetch_limit=fetch_limit)
+    if not raw_candidates:
+        logger.warning("No candidates returned for uid=%s media_type=%s filters=%s query=%s", uid, media_type, filters, semantic_query)
+        return {
+            "uid": uid,
+            "media_type": media_type,
+            "results": [],
+            "warning": "No candidates available",
+        }
+
+    # Embedding refinement (unchanged design) - keep top `refine_top`
+    refined_pool = refine_candidates(intent_vector=intent_vec, raw_candidates=raw_candidates, refine_top=refine_top)
+
+    # Log refined pool size (reduce duplication; refine_candidates logs top3 sims)
+    logger.info(
+        "pocket_journal.media.recommendation: uid=%s media_type=%s raw_candidates=%d refined_pool=%d",
+        uid,
+        media_type,
+        len(raw_candidates),
+        len(refined_pool),
     )
 
     results = rank_candidates(
@@ -93,13 +111,15 @@ def recommend_media(
     }
 
     logger.info(
-        "recommend_media completed uid=%s media_type=%s candidates=%d top_k=%d",
+        "pocket_journal.media.recommendation: uid=%s media_type=%s semantic_query=%s filters=%s raw_candidates=%d refined_pool=%d top_k=%d",
         uid,
         media_type,
+        semantic_query,
+        filters,
+        len(raw_candidates),
         len(refined_pool),
         len(results),
     )
 
     return response
-
 

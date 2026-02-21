@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import List, Optional, Dict, Any
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 
@@ -62,8 +62,14 @@ class PodcastAPIProvider(BaseHTTPProvider):
                 items.extend(curated.get("podcasts", []) or [])
         return items
 
-    def fetch_candidates(self, limit: int) -> List[STANDARD_MEDIA_ITEM]:
-        primary_raw = self._fetch_best_podcasts(pages=5)
+    def fetch_candidates(self, query: Optional[str] = None, filters: Optional[Dict[str, Any]] = None, limit: int = 100) -> List[STANDARD_MEDIA_ITEM]:
+        # Determine pages needed (ListenNotes returns ~20-30 podcasts per page)
+        try:
+            pages = max(1, min(5, (int(limit) + 19) // 20))
+        except Exception:
+            pages = 1
+
+        primary_raw = self._fetch_best_podcasts(pages=pages)
         primary = []
         for p in primary_raw:
             primary.append(
@@ -81,35 +87,8 @@ class PodcastAPIProvider(BaseHTTPProvider):
         cleaned = self._clean_items(primary)
         logger.info("PodcastAPIProvider primary cleaned=%d", len(cleaned))
 
-        if len(cleaned) < 30:
-            fallback_raw = self._fetch_curated(pages=5)
-            fallback = []
-            for p in fallback_raw:
-                fallback.append(
-                    {
-                        "id": p.get("id") or p.get("rss") or p.get("listennotes_url"),
-                        "title": p.get("title") or p.get("title_original") or "",
-                        "description": p.get("description") or p.get("description_highlighted") or "",
-                        "publisher": p.get("publisher"),
-                        "language": p.get("language"),
-                        "total_episodes": p.get("total_episodes"),
-                        "listennotes_url": p.get("listennotes_url"),
-                    }
-                )
-
-            fallback_cleaned = self._clean_items(fallback)
-            logger.info("PodcastAPIProvider fallback cleaned=%d", len(fallback_cleaned))
-            existing_ids = {c["id"] for c in cleaned}
-            for item in fallback_cleaned:
-                if item["id"] not in existing_ids:
-                    cleaned.append(item)
-                    existing_ids.add(item["id"])
-
         if len(cleaned) < 10:
-            raise RuntimeError(
-                f"PodcastAPIProvider returned insufficient candidates ({len(cleaned)})"
-            )
+            logger.warning("Low Podcast candidate pool: %d", len(cleaned))
 
         return cleaned[:limit]
-
 

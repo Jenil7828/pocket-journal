@@ -200,3 +200,60 @@ def build_intent_vector(uid: str, media_type: str) -> MediaIntent:
     return intent, float(intensity), float(beta)
 
 
+# New helper: build a short semantic query string from latest journal summary or language hint
+def build_semantic_query(uid: str, media_type: str) -> Optional[str]:
+    """Attempt to build a short semantic query from the user's latest journal summary.
+
+    Logic:
+    - Try to fetch the most recent journal entry and look for a 'summary' or short 'text' field.
+    - If present and reasonably sized, return a short cleaned string (2-6 words).
+    - Otherwise, fallback to language hint extracted from media_type (e.g., 'songs:hi' -> 'hindi songs') or a small default.
+
+    This function is intentionally lightweight and does not depend on external LLMs.
+    """
+    fs = firestore.client()
+    try:
+        entries_q = (
+            fs.collection("journal_entries")
+            .where(filter=firestore.FieldFilter("uid", "==", uid))
+            .order_by("created_at", direction=firestore.Query.DESCENDING)
+            .limit(1)
+        )
+        docs = list(entries_q.stream())
+        if docs:
+            doc = docs[0].to_dict() or {}
+            # Common fields to inspect
+            for key in ("summary", "short_summary", "excerpt", "text", "content"):
+                txt = doc.get(key)
+                if txt and isinstance(txt, str) and len(txt.strip()) >= 10:
+                    # Build a tiny semantic query by taking the first 6 meaningful words
+                    words = [w for w in txt.strip().split() if len(w) > 2]
+                    if not words:
+                        continue
+                    snippet = " ".join(words[:6])
+                    return snippet
+    except Exception:
+        # Be tolerant: any failure here should not stop recommendation flow
+        pass
+
+    # Fallback: use language hint in media_type
+    base = media_type.split(":", 1)[0].lower()
+    lang = None
+    if ":" in media_type:
+        _, l = media_type.split(":", 1)
+        lang = (l or "").strip().lower()
+
+    if base in ("song", "songs", "spotify"):
+        if lang in ("hi", "hindi"):
+            return "hindi songs"
+        if lang in ("en", "english"):
+            return "english songs"
+        return "top hits"
+    if base in ("movie", "movies", "tmdb"):
+        return "popular movies"
+    if base in ("book", "books", "google_books"):
+        return "bestselling books"
+    if base in ("podcast", "podcasts"):
+        return "popular podcasts"
+
+    return None

@@ -14,6 +14,7 @@ def register(app, deps):
         Query params:
         - media_type: one of [movies, songs, books, podcasts]
         - top_k (optional): override number of results (default 10)
+        - Optional filters (language, genre, year_from, year_to)
         """
         uid = request.user["uid"]
         media_type = (request.args.get("media_type") or "").strip().lower()
@@ -24,8 +25,31 @@ def register(app, deps):
         except ValueError:
             return jsonify({"error": "Invalid top_k"}), 400
 
+        # Parse request-scoped filters
+        filters = {}
+        language = request.args.get("language")
+        if language:
+            filters["language"] = language.strip()
+        genre = request.args.get("genre")
+        if genre:
+            filters["genre"] = genre.strip()
+        year_from = request.args.get("year_from")
+        if year_from:
+            try:
+                filters["year_from"] = int(year_from)
+            except ValueError:
+                return jsonify({"error": "Invalid year_from"}), 400
+        year_to = request.args.get("year_to")
+        if year_to:
+            try:
+                filters["year_to"] = int(year_to)
+            except ValueError:
+                return jsonify({"error": "Invalid year_to"}), 400
+
         try:
-            result = recommend_media(uid=uid, media_type=media_type, top_k=top_k)
+            result = recommend_media(
+                uid=uid, media_type=media_type, filters=filters or None, top_k=top_k
+            )
         except ValueError as ve:
             return jsonify({"error": str(ve)}), 400
         except Exception as exc:
@@ -60,21 +84,22 @@ def register(app, deps):
         """Backward compatible song endpoint backed by unified engine.
 
         Existing `limit` param is treated as the desired top_k.
-        Language parameter is ignored in Phase 2 per embedding-first design.
+        Language parameter is forwarded as a request-scoped filter.
         """
         uid = request.user["uid"]
         try:
             top_k = int(request.args.get("limit", 10))
         except ValueError:
             return jsonify({"error": "Invalid limit"}), 400
-        language = (request.args.get("language", "both") or "both").strip().lower()
-        # Encode language into media_type so the Spotify provider can bias by market
-        media_key = "songs"
-        if language and language not in ("both", "all"):
-            media_key = f"{media_key}:{language}"
+        language = (request.args.get("language") or "").strip().lower()
+        filters = {}
+        if language:
+            filters["language"] = language
 
         try:
-            result = recommend_media(uid=uid, media_type=media_key, top_k=top_k)
+            result = recommend_media(
+                uid=uid, media_type="songs", filters=filters or None, top_k=top_k
+            )
         except ValueError as ve:
             return jsonify({"error": str(ve)}), 400
         except Exception as exc:

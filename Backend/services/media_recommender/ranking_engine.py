@@ -17,6 +17,7 @@ def rank_candidates(
     """Rank candidates against the intent vector using matrix multiplication.
 
     - Uses a single matrix multiplication for all candidates
+    - Combines similarity (0.9) with normalized popularity (0.1)
     - Computes basic score statistics and logs them
     - Warns if score std dev is very low (< 0.03)
     """
@@ -26,11 +27,24 @@ def rank_candidates(
     intent_vec = np.asarray(intent_vector, dtype=np.float32).reshape(-1)
 
     embeddings = []
+    pops = []
     for c in refined_candidates:
         emb = c.get("_embedding")
         if emb is None:
             raise ValueError("Refined candidates must include '_embedding' vectors")
         embeddings.append(np.asarray(emb, dtype=np.float32).reshape(-1))
+        # Extract popularity if present (top-level or inside metadata)
+        pop = c.get("popularity")
+        if pop is None:
+            pop = None
+            meta = c.get("metadata") or {}
+            # metadata may be nested (providers sometimes embed original metadata)
+            if isinstance(meta, dict):
+                pop = meta.get("popularity") or meta.get("popularity_score")
+        try:
+            pops.append(float(pop) if pop is not None else 0.0)
+        except Exception:
+            pops.append(0.0)
 
     cand_matrix = np.vstack(embeddings)  # shape: (N, D)
 
@@ -40,7 +54,18 @@ def rank_candidates(
         )
 
     # Vectorized similarity via matrix multiplication
-    scores = cand_matrix @ intent_vec  # shape: (N,)
+    sims = cand_matrix @ intent_vec  # shape: (N,)
+
+    # Normalize popularity to [0,1]
+    pop_arr = np.asarray(pops, dtype=np.float32)
+    max_pop = float(pop_arr.max()) if pop_arr.size > 0 else 0.0
+    if max_pop > 0.0:
+        pop_norm = pop_arr / max_pop
+    else:
+        pop_norm = np.zeros_like(pop_arr)
+
+    # Final score: 0.9 * similarity + 0.1 * normalized_popularity
+    scores = 0.9 * sims + 0.1 * pop_norm
 
     # Stats for observability
     min_score = float(scores.min())
@@ -74,5 +99,4 @@ def rank_candidates(
         ranked.append(base)
 
     return ranked
-
 
