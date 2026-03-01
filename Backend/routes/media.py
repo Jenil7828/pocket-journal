@@ -1,6 +1,6 @@
 from flask import jsonify, request
 import time
-from .logging_utils import log_request, log_response
+from utils.logging_utils import log_request, log_response
 
 from services.media_recommender.recommendation import recommend_media
 

@@ -224,30 +224,27 @@ class SpotifyProvider(BaseHTTPProvider):
             unique.append(item)
         return unique
 
+
     def fetch_candidates(self, query: Optional[str], filters: Optional[Dict[str, Any]], limit: int) -> List[STANDARD_MEDIA_ITEM]:
         """Fetch a pool of candidates from Spotify using a semantic query and request-scoped filters.
 
-        Filters mapping:
-        - language: 'english' -> market='US', 'hindi' -> market='IN', else None
-        - genre: append to query string
-        - year_from/year_to: append "year:YYYY-YYYY" to query
-
-        Query may be None; providers should perform a broad neutral search in that case.
+        Implements language-specific queries and post-fetch language filtering.
         """
         q = (query or "").strip() or "top hits"
-
+        queries = [q]
         market = None
+        lang = None
         if filters:
             lang = (filters.get("language") or "").strip().lower()
-            if lang in ("en", "english"):
-                market = "US"
-            elif lang in ("hi", "hindi"):
+            if lang in ("hi", "hindi"):
+                queries = ["hindi songs", "bollywood hits", "hindi film songs"]
                 market = "IN"
-
+            elif lang in ("en", "english"):
+                queries = ["english pop hits", "top english songs", "english top 40"]
+                market = "US"
             genre = (filters.get("genre") or "").strip()
             if genre:
-                q = f"{q} {genre}"
-
+                queries = [f"{q} {genre}" for q in queries]
             year_from = filters.get("year_from")
             year_to = filters.get("year_to")
             if year_from or year_to:
@@ -255,43 +252,48 @@ class SpotifyProvider(BaseHTTPProvider):
                     yf = int(year_from) if year_from else None
                     yt = int(year_to) if year_to else None
                     if yf and yt:
-                        q = f"{q} year:{yf}-{yt}"
+                        queries = [f"{q} year:{yf}-{yt}" for q in queries]
                     elif yf:
-                        q = f"{q} year:{yf}-"
+                        queries = [f"{q} year:{yf}-" for q in queries]
                     elif yt:
-                        q = f"{q} year:-{yt}"
+                        queries = [f"{q} year:-{yt}" for q in queries]
                 except Exception:
                     pass
 
+        # Divide limit evenly across queries
+        per_query = max(1, limit // len(queries))
         raw_items: List[dict] = []
-        offset = 0
-        page_size = 50
-        remaining = max(0, int(limit))
-        while remaining > 0:
-            cur_page = min(page_size, remaining)
-            batch = self._search_tracks(q, limit=cur_page, offset=offset, market=market)
-            if not batch:
-                break
-            raw_items.extend(batch)
-            fetched = len(batch)
-            remaining -= fetched
-            if fetched < cur_page:
-                break
-            offset += fetched
+        seen_ids = set()
+        for qx in queries:
+            offset = 0
+            remaining = per_query
+            page_size = 50
+            while remaining > 0:
+                cur_page = min(page_size, remaining)
+                batch = self._search_tracks(qx, limit=cur_page, offset=offset, market=market)
+                if not batch:
+                    break
+                # Deduplicate by track id
+                for item in batch:
+                    tid = item.get("id")
+                    if tid and tid not in seen_ids:
+                        raw_items.append(item)
+                        seen_ids.add(tid)
+                fetched = len(batch)
+                remaining -= fetched
+                if fetched < cur_page:
+                    break
+                offset += fetched
 
         tracks = raw_items
-
         primary = self._build_items_from_tracks(tracks)
         normalized = []
         for p in primary:
-            # Build a flat item: keep id/title/description and lift other provider fields to top-level
             item: Dict[str, Any] = {}
-            # ensure id first
             if p.get("id") is not None:
                 item["id"] = p.get("id")
             item["title"] = p.get("title")
             item["description"] = p.get("description")
-            # lift remaining fields (duration_ms, album, artists, external_urls, popularity, etc.)
             for k, v in p.items():
                 if k in ("id", "title", "description"):
                     continue
@@ -300,8 +302,8 @@ class SpotifyProvider(BaseHTTPProvider):
 
         cleaned = self._dedupe_by_id(self._clean_items(normalized))
         logger.info(
-            "SpotifyProvider cleaned candidates (query=%s, market=%s, count=%d)",
-            q,
+            "SpotifyProvider cleaned candidates (queries=%s, market=%s, count=%d)",
+            queries,
             market,
             len(cleaned),
         )
@@ -309,5 +311,33 @@ class SpotifyProvider(BaseHTTPProvider):
         if len(cleaned) < 10:
             logger.warning("Low Spotify candidate pool: %d", len(cleaned))
 
+        # Language post-filter
+        cleaned = self._filter_by_language(cleaned, lang)
         return cleaned[:limit]
+
+    def _filter_by_language(self, items: List[dict], language: Optional[str]) -> List[dict]:
+        def has_devanagari(text: str) -> bool:
+            return any('\u0900' <= c <= '\u097F' for c in text)
+
+        if not language:
+            return items
+        language = language.lower()
+        if language in ("hi", "hindi"):
+            filtered = []
+            for item in items:
+                text = f"{item.get('title','')} {item.get('artist_names','')} {item.get('album_name','')}"
+                if has_devanagari(text):
+                    filtered.append(item)
+            if len(filtered) < 10:
+                return items  # fallback to all if too few
+            return filtered
+        elif language in ("en", "english"):
+            filtered = []
+            for item in items:
+                text = f"{item.get('title','')} {item.get('artist_names','')}"
+                if not has_devanagari(text):
+                    filtered.append(item)
+            return filtered
+        else:
+            return items
 

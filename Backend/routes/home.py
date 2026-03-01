@@ -1,5 +1,5 @@
 import time
-from .logging_utils import log_request, log_response
+from utils.logging_utils import log_request, log_response
 from flask import render_template
 
 

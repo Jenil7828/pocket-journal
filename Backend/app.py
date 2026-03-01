@@ -14,6 +14,7 @@ from flask import Flask, request, jsonify
 from functools import wraps
 from dotenv import load_dotenv
 import logging
+from utils.log_formatter import ColoredFormatter
 
 # Load environment variables
 load_dotenv()
@@ -28,12 +29,16 @@ for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3"):
 
 # -------------------- Logging --------------------
 LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
-)
-logger = logging.getLogger("pocket_journal")
+log_fmt = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
+logging.basicConfig(level=LOG_LEVEL, format=log_fmt)
+logger = logging.getLogger()
 
+# Apply colored formatter to root logger
+handler = logger.handlers[0] if logger.handlers else None
+if handler:
+    handler.setFormatter(ColoredFormatter(log_fmt))
+
+pj_logger = logging.getLogger("pocket_journal")
 # Lower specific external loggers
 logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"))
 logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))

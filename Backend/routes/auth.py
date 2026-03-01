@@ -1,5 +1,5 @@
 import time
-from .logging_utils import log_request, log_response
+from utils.logging_utils import log_request, log_response
 # routes/auth.py
 from flask import request, jsonify
 import os
@@ -30,6 +30,8 @@ def register(app, deps: dict):
         email = (payload.get("email") or "").strip()
         password = payload.get("password")
         name = (payload.get("name") or "").strip()
+        # Identity-aware log for user creation
+        logger.info("AUTH ACTION: action=create_user email=%s name=%s", email, name)
 
         if not email or not password or not name:
             log_response(400, start_time)
@@ -97,6 +99,8 @@ def register(app, deps: dict):
         payload = request.get_json(force=True, silent=True) or {}
         email = (payload.get("email") or "").strip()
         password = payload.get("password")
+        # Identity-aware log for login
+        logger.info("AUTH ACTION: action=login email=%s", email)
 
         if not email or not password:
             log_response(400, start_time)
@@ -157,6 +161,8 @@ def register(app, deps: dict):
         user = getattr(request, "user", None) or {}
         uid = user.get("uid")
         email = user.get("email")
+        # Identity-aware log for password change
+        logger.info("AUTH ACTION: action=change_password uid=%s email=%s", uid, email)
 
         if not uid or not email:
             log_response(401, start_time)

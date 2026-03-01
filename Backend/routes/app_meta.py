@@ -1,5 +1,5 @@
 import time
-from .logging_utils import log_request, log_response
+from utils.logging_utils import log_request, log_response
 # routes/app_meta.py
 from flask import jsonify
 

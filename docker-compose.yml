@@ -7,6 +7,7 @@ services:
       args:
         - APP_USER=app
     image: pocket-journal:prod
+    container_name: pocket-journal
     gpus: all
     ports:
       - "8080:8080"
@@ -17,6 +18,7 @@ services:
       - PORT=8080
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
+      - FORCE_COLOR=1
       # Path inside container where we'll mount the Firebase service account JSON
       - FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
       # GEMINI_API_KEY can be provided via Backend/.env or the host environment
