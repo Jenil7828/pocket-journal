@@ -1,11 +1,11 @@
 {
   "info": {
-    "_postman_id": "73ff73b7-c6f1-4676-af8a-6b7011d2432b",
+    "_postman_id": "4764ef77-8390-47f5-ba98-950df4767f2c",
     "name": "New Pocket Journal API Collection",
     "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, and utility endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
-    "_collection_link": "https://go.postman.co/collection/49178362-73ff73b7-c6f1-4676-af8a-6b7011d2432b?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/49178362-4764ef77-8390-47f5-ba98-950df4767f2c?source=collection_link"
   },
   "item": [
     {
@@ -108,7 +108,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"jenilrathod114@gmail.com\",\n  \"password\": \"Testing_123\"\n}",
+              "raw": "{\n  \"email\": \"jenilrathod114@gmail.com\",\n  \"password\": \"BetterPass123!\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -909,6 +909,43 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Podcast Recommendations (user-based)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/podcast/recommend?limit=10&language=english&genre=technology",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "podcast",
+                "recommend"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "language",
+                  "value": "english"
+                },
+                {
+                  "key": "genre",
+                  "value": "technology"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ]
     },
@@ -963,7 +1000,7 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token_id}}}"
+                "value": "Bearer {{token_id}}"
               }
             ],
             "url": {

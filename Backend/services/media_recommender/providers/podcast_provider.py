@@ -153,7 +153,7 @@ class PodcastAPIProvider(BaseHTTPProvider):
             description = (ep.get("description") or "Podcast episode on Spotify.")[:300]
 
             show = ep.get("show") or {}
-            publisher = show.get("name") or ""
+            publisher = show.get("publisher") if show else None
 
             show_image_url = None
             ep_images = ep.get("images") or []
