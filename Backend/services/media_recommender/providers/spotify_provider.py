@@ -173,6 +173,13 @@ class SpotifyProvider(BaseHTTPProvider):
             album = t.get("album") or {}
             artists = t.get("artists") or []
             artist_names = ", ".join(a.get("name", "") for a in artists if a.get("name"))
+            # Extract album image
+            album_images = album.get("images") or []
+            album_image_url = album_images[0].get("url") if album_images else None
+
+            # Extract external URL
+            external_urls = t.get("external_urls") or {}
+            external_url = external_urls.get("spotify") if isinstance(external_urls, dict) else None
             description_parts = [
                 f"Artist: {artist_names}" if artist_names else "",
                 f"Album: {album.get('name', '')}" if album.get("name") else "",
@@ -194,7 +201,10 @@ class SpotifyProvider(BaseHTTPProvider):
                     # also include 'duration' as ms for tolerant formatters
                     "duration": duration_ms_val,
                     "album": album,
+                    "album_image_url": album_image_url,   # pre-extracted
+                    "artist_names": artist_names,          # pre-flattened string
                     "artists": artists,
+                    "external_url": external_url,          # pre-resolved string
                     "external_urls": t.get("external_urls"),
                 }
             )

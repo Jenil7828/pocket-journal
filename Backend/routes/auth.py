@@ -1,3 +1,5 @@
+import time
+from .logging_utils import log_request, log_response
 # routes/auth.py
 from flask import request, jsonify
 import os
@@ -22,12 +24,15 @@ def register(app, deps: dict):
 
     @app.route("/auth/create-user", methods=["POST"])
     def create_user():
+        start_time = time.time()
+        log_request()
         payload = request.get_json(force=True, silent=True) or {}
         email = (payload.get("email") or "").strip()
         password = payload.get("password")
         name = (payload.get("name") or "").strip()
 
         if not email or not password or not name:
+            log_response(400, start_time)
             return jsonify({"error": "email, password and name are required"}), 400
 
         # Create Firebase Auth user
@@ -35,6 +40,7 @@ def register(app, deps: dict):
             user = firebase_auth.create_user(email=email, password=password, display_name=name)
         except Exception as e:
             logger.exception("Failed to create firebase user: %s", str(e))
+            log_response(500, start_time)
             return jsonify({"error": "failed_to_create_user", "details": str(e)}), 500
 
         uid = user.uid
@@ -78,22 +84,28 @@ def register(app, deps: dict):
                 firebase_auth.delete_user(uid)
             except Exception:
                 logger.exception("Failed to delete auth user after firestore failure: %s", uid)
+            log_response(500, start_time)
             return jsonify({"error": "failed_to_create_user_profile", "details": str(e)}), 500
 
+        log_response(201, start_time)
         return jsonify({"uid": uid, "email": email, "name": name, "message": "user_created"}), 201
 
     @app.route("/auth/login", methods=["POST"])
     def login():
+        start_time = time.time()
+        log_request()
         payload = request.get_json(force=True, silent=True) or {}
         email = (payload.get("email") or "").strip()
         password = payload.get("password")
 
         if not email or not password:
+            log_response(400, start_time)
             return jsonify({"error": "email and password are required"}), 400
 
         # Use Firebase Identity Toolkit REST API to verify password and get tokens
         api_key = os.getenv("FIREBASE_WEB_API_KEY")
         if not api_key:
+            log_response(500, start_time)
             return jsonify({"error": "server_misconfigured", "details": "FIREBASE_WEB_API_KEY not set"}), 500
 
         url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}"
@@ -113,6 +125,7 @@ def register(app, deps: dict):
                 "refresh_token": data.get("refreshToken"),
                 "expires_in": data.get("expiresIn"),
             }
+            log_response(200, start_time)
             return jsonify(result), 200
         except requests.exceptions.HTTPError as he:
             # Try to extract json from response if available
@@ -121,19 +134,24 @@ def register(app, deps: dict):
                 err = resp_obj.json() if resp_obj is not None else {"error": str(he)}
             except Exception:
                 err = {"error": str(he)}
+            log_response(401, start_time)
             return jsonify({"error": "invalid_credentials", "details": err}), 401
         except Exception as e:
             logger.exception("Error calling Firebase REST API: %s", str(e))
+            log_response(500, start_time)
             return jsonify({"error": "login_failed", "details": str(e)}), 500
 
     @app.route("/auth/change-password", methods=["POST"])
     @login_required
     def change_password():
+        start_time = time.time()
+        log_request()
         payload = request.get_json(force=True, silent=True) or {}
         current_password = payload.get("current_password")
         new_password = payload.get("new_password")
 
         if not current_password or not new_password:
+            log_response(400, start_time)
             return jsonify({"error": "current_password and new_password are required"}), 400
 
         user = getattr(request, "user", None) or {}
@@ -141,10 +159,12 @@ def register(app, deps: dict):
         email = user.get("email")
 
         if not uid or not email:
+            log_response(401, start_time)
             return jsonify({"error": "invalid_user"}), 401
 
         api_key = os.getenv("FIREBASE_WEB_API_KEY")
         if not api_key:
+            log_response(500, start_time)
             return jsonify({"error": "server_misconfigured", "details": "FIREBASE_WEB_API_KEY not set"}), 500
 
         # Verify the current password by calling Firebase REST signInWithPassword
@@ -161,15 +181,19 @@ def register(app, deps: dict):
                 err = resp_obj.json() if resp_obj is not None else {"error": str(he)}
             except Exception:
                 err = {"error": str(he)}
+            log_response(401, start_time)
             return jsonify({"error": "invalid_current_password", "details": err}), 401
         except Exception as e:
             logger.exception("Error verifying current password for uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
             return jsonify({"error": "verification_failed", "details": str(e)}), 500
 
         # If verification succeeded, update user's password via Admin SDK
         try:
             firebase_auth.update_user(uid, password=new_password)
+            log_response(200, start_time)
             return jsonify({"message": "password_changed"}), 200
         except Exception as e:
             logger.exception("Failed to update password for uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
             return jsonify({"error": "failed_to_change_password", "details": str(e)}), 500

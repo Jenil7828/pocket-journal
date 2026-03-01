@@ -82,8 +82,13 @@ def _deep_find_key(obj: Any, key: str, max_depth: int = 4):
 def _format_movie(item: Dict[str, Any]) -> Dict[str, Any]:
     metadata = item.get("metadata") or {}
 
-    # Detect poster path in common locations
-    poster = _safe_get(item, "poster_url", "poster") or _safe_get(metadata, "poster_url", "poster", "poster_path") or _get_from_metadata(metadata, "poster_path")
+    # Detect poster path in common locations, prefer top-level poster_url first
+    poster = (
+        item.get("poster_url")
+        or _safe_get(item, "poster_path")
+        or _safe_get(metadata, "poster_url", "poster_path")
+        or _get_from_metadata(metadata, "poster_path")
+    )
     # If poster is a TMDB poster path like '/abc.jpg', build full URL
     if poster and isinstance(poster, str) and poster.startswith("/"):
         poster_url = f"{TMDB_IMAGE_BASE}{poster}"
@@ -121,9 +126,13 @@ def _format_song(item: Dict[str, Any]) -> Dict[str, Any]:
     # Album object may be nested in different places
     album = item.get("album") or _get_from_metadata(metadata, "album") or metadata.get("album") or metadata.get("albums") or {}
     album_name = None
-    album_image_url = None
     if isinstance(album, dict):
         album_name = album.get("name") or album.get("title")
+    album_image_url = (
+        item.get("album_image_url")
+        or _get_from_metadata(metadata, "album_image_url")
+    )
+    if not album_image_url and isinstance(album, dict):
         images = album.get("images") or album.get("image") or album.get("pictures")
         album_image_url = _first_image_url_from_images(images)
 
@@ -132,13 +141,17 @@ def _format_song(item: Dict[str, Any]) -> Dict[str, Any]:
         album_image_url = _first_image_url_from_images(item.get("images") or _get_from_metadata(metadata, "images") or metadata.get("images") or metadata.get("album_images"))
 
     # External URLs
-    external = _safe_get(item, "external_urls", "external_url") or _get_from_metadata(metadata, "external_url") or metadata.get("external_url") or _get_from_metadata(metadata, "external_urls") or metadata.get("external_urls")
-    external_url = None
-    if isinstance(external, dict):
-        # prefer spotify key if present
-        external_url = external.get("spotify") or next((v for v in external.values() if isinstance(v, str)), None)
-    elif isinstance(external, str):
-        external_url = external
+    external_url = (
+        item.get("external_url")
+        or _get_from_metadata(metadata, "external_url")
+    )
+    if not external_url:
+        external = _safe_get(item, "external_urls") or _get_from_metadata(metadata, "external_urls") or metadata.get("external_urls")
+        if isinstance(external, dict):
+            # prefer spotify key if present
+            external_url = external.get("spotify") or next((v for v in external.values() if isinstance(v, str)), None)
+        elif isinstance(external, str):
+            external_url = external
 
     # Resolve duration_ms from multiple potential locations
     duration_ms_val = item.get("duration_ms") or _get_from_metadata(metadata, "duration_ms") or metadata.get("duration_ms") or item.get("duration") or _get_from_metadata(metadata, "duration") or metadata.get("duration") or _deep_find_key(metadata, "duration_ms") or _deep_find_key(metadata, "duration")

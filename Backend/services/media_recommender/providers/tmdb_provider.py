@@ -99,6 +99,7 @@ class TMDbProvider(BaseHTTPProvider):
                 "description": m.get("overview") or "",
                 # Preserve poster_path from TMDb raw response for formatting
                 "poster_path": poster_path,
+                "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
                 "vote_average": m.get("vote_average"),
                 "release_date": m.get("release_date"),
                 "popularity": m.get("popularity"),
@@ -134,6 +135,7 @@ class TMDbProvider(BaseHTTPProvider):
                     "title": m.get("title") or m.get("original_title") or "",
                     "description": m.get("overview") or "",
                     "poster_path": poster_path,
+                        "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
                     "vote_average": m.get("vote_average"),
                     "release_date": m.get("release_date"),
                     "popularity": m.get("popularity"),

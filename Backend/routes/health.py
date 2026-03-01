@@ -1,3 +1,5 @@
+import time
+from .logging_utils import log_request, log_response
 from flask import jsonify
 
 
@@ -7,7 +9,10 @@ def register(app, deps):
 
     @app.route("/health", methods=["GET"])
     def health_check():
+        start_time = time.time()
+        log_request()
         _db = get_db()
         body, status = health_service.health_check(_db)
+        log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 

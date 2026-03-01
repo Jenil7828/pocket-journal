@@ -1,5 +1,3 @@
-# version: "3.8"
-
 services:
   pocket-journal:
     # Build from the production Dockerfile in Backend

@@ -66,6 +66,9 @@ class GoogleBooksProvider(BaseHTTPProvider):
             il = info.get("imageLinks") or info.get("image_links") or {}
             if isinstance(il, dict):
                 thumb = il.get("thumbnail") or il.get("smallThumbnail")
+                # Upgrade http thumbnails to https
+                if thumb and thumb.startswith("http://"):
+                    thumb = "https://" + thumb[7:]
 
             primary.append(
                 {
