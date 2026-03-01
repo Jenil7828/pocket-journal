@@ -8,13 +8,12 @@ from services.media_recommender.recommendation import recommend_media
 def register(app, deps):
     login_required = deps["login_required"]
 
-    
     @app.route("/api/media/debug_verify", methods=["GET"])
     @login_required
     def api_media_debug_verify():
         start_time = time.time()
         log_request()
-        """Temporary debug endpoint to verify image fields in recommendations."""
+        """Temporary debug endpoint to verify image fields are non-null."""
         uid = request.user["uid"]
         results = {}
         types = ["movies", "songs", "books"]
@@ -36,19 +35,13 @@ def register(app, deps):
                     "percent_non_null": percent,
                     "first_result": items[0] if items else None,
                 }
-                # Log first result at INFO level
-                if items:
-                    import logging
-                    logger = logging.getLogger("pocket_journal.media.debug_verify")
-                    logger.info(f"{media_type} first result: %s", items[0])
             except Exception as exc:
                 results[media_type] = {"error": str(exc)}
-        # Assert at least 80% non-null for each type
         assertions = {mt: (res.get("percent_non_null", 0) >= 80) for mt, res in results.items() if "percent_non_null" in res}
         results["assertions"] = assertions
         log_response(200, start_time)
         return jsonify(results), 200
-    
+
     @app.route("/api/media/recommend", methods=["GET"])
     @login_required
     def api_media_recommend():
@@ -73,7 +66,6 @@ def register(app, deps):
             log_response(400, start_time)
             return jsonify({"error": "Invalid top_k"}), 400
 
-        # Parse request-scoped filters
         filters = {}
         language = request.args.get("language")
         if language:
@@ -142,11 +134,7 @@ def register(app, deps):
     def song_recommend():
         start_time = time.time()
         log_request()
-        """Backward compatible song endpoint backed by unified engine.
-
-        Existing `limit` param is treated as the desired top_k.
-        Language parameter is forwarded as a request-scoped filter.
-        """
+        """Backward compatible song endpoint backed by unified engine."""
         uid = request.user["uid"]
         try:
             top_k = int(request.args.get("limit", 10))
@@ -169,6 +157,40 @@ def register(app, deps):
             log_response(500, start_time)
             return jsonify(
                 {"error": "Failed to generate song recommendations", "details": str(exc)}
+            ), 500
+        log_response(200, start_time)
+        return jsonify(result), 200
+
+    @app.route("/podcast/recommend", methods=["GET"])
+    @login_required
+    def podcast_recommend():
+        start_time = time.time()
+        log_request()
+        """Backward compatible podcast endpoint backed by unified engine."""
+        uid = request.user["uid"]
+        try:
+            top_k = int(request.args.get("limit", 10))
+        except ValueError:
+            log_response(400, start_time)
+            return jsonify({"error": "Invalid limit"}), 400
+        language = (request.args.get("language") or "").strip().lower()
+        genre = (request.args.get("genre") or "").strip()
+        filters = {}
+        if language:
+            filters["language"] = language
+        if genre:
+            filters["genre"] = genre
+        try:
+            result = recommend_media(
+                uid=uid, media_type="podcasts", filters=filters or None, top_k=top_k
+            )
+        except ValueError as ve:
+            log_response(400, start_time)
+            return jsonify({"error": str(ve)}), 400
+        except Exception as exc:
+            log_response(500, start_time)
+            return jsonify(
+                {"error": "Failed to generate podcast recommendations", "details": str(exc)}
             ), 500
         log_response(200, start_time)
         return jsonify(result), 200
@@ -197,4 +219,4 @@ def register(app, deps):
             ), 500
         log_response(200, start_time)
         return jsonify(result), 200
-
+    

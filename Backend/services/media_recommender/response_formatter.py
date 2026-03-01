@@ -214,19 +214,23 @@ def _format_book(item: Dict[str, Any]) -> Dict[str, Any]:
 
 def _format_podcast(item: Dict[str, Any]) -> Dict[str, Any]:
     metadata = item.get("metadata") or {}
-    image_url = item.get("image_url") or metadata.get("image") or metadata.get("thumbnail") or _first_image_url_from_images(metadata.get("images"))
+    image_url = item.get("show_image_url") or item.get("image_url") or metadata.get("image") or metadata.get("thumbnail") or _first_image_url_from_images(metadata.get("images"))
     external = item.get("external_url") or item.get("listennotes_url") or metadata.get("external_url") or metadata.get("listennotes_url")
-    # If external is dict, pick a string value
     if isinstance(external, dict):
         external = next((v for v in external.values() if isinstance(v, str)), None)
+    duration_ms = item.get("duration_ms")
+    duration_seconds = (duration_ms // 1000) if isinstance(duration_ms, int) and duration_ms is not None else 0
     return {
-        "id": item.get("id"),
-        "title": item.get("title"),
-        "description": item.get("description"),
-        "publisher": item.get("publisher"),
-        "image_url": image_url,
+        "id": item.get("id", None),
+        "title": item.get("title", None),
+        "publisher": item.get("publisher", None),
+        "description": item.get("description", None),
+        "show_image_url": image_url,
         "external_url": external,
-        "score": item.get("score"),
+        "duration_ms": duration_ms if duration_ms is not None else 0,
+        "duration_seconds": duration_seconds,
+        "release_date": item.get("release_date", None),
+        "score": item.get("score", None),
     }
 
 
