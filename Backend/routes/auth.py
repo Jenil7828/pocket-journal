@@ -22,7 +22,7 @@ def register(app, deps: dict):
     get_db = deps.get("get_db")
     login_required = deps.get("login_required")
 
-    @app.route("/auth/create-user", methods=["POST"])
+    @app.route("/api/v1/auth/create-user", methods=["POST"])
     def create_user():
         start_time = time.time()
         log_request()
@@ -92,7 +92,7 @@ def register(app, deps: dict):
         log_response(201, start_time)
         return jsonify({"uid": uid, "email": email, "name": name, "message": "user_created"}), 201
 
-    @app.route("/auth/login", methods=["POST"])
+    @app.route("/api/v1/auth/login", methods=["POST"])
     def login():
         start_time = time.time()
         log_request()
@@ -145,7 +145,7 @@ def register(app, deps: dict):
             log_response(500, start_time)
             return jsonify({"error": "login_failed", "details": str(e)}), 500
 
-    @app.route("/auth/change-password", methods=["POST"])
+    @app.route("/api/v1/auth/change-password", methods=["POST"])
     @login_required
     def change_password():
         start_time = time.time()

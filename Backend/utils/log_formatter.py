@@ -28,9 +28,15 @@ class ColoredFormatter(logging.Formatter):
         return msg
 
     def _supports_color(self):
-        # Force color if FORCE_COLOR is set
-        if os.getenv('FORCE_COLOR'):
-            return True
+        # Force color if configured in config.yml
+        try:
+            from config_loader import get_config
+            if get_config().get("app", {}).get("force_color"):
+                return True
+        except Exception:
+            # If config not available, fall through to other checks
+            pass
+
         # Check TERM for color support
         term = os.getenv('TERM', '')
         if term in ('xterm', 'xterm-256color', 'screen', 'screen-256color'):

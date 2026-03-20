@@ -8,7 +8,7 @@ def register(app, deps):
     PREDICTOR = deps.get("PREDICTOR")
     SUMMARIZER = deps.get("SUMMARIZER")
 
-    @app.route("/process_entry", methods=["POST"])
+    @app.route("/api/v1/process_entry", methods=["POST"])
     @login_required
     def process_entry_route():
         data = request.get_json()
@@ -20,4 +20,3 @@ def register(app, deps):
             SUMMARIZER or deps["get_summarizer"](),
         )
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-

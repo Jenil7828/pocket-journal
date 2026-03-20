@@ -5,10 +5,12 @@ from typing import Dict, Optional, Tuple
 import numpy as np
 from firebase_admin import firestore
 
+from config_loader import get_config
 from services.embedding_service import EmbeddingService
 
 logger = logging.getLogger("pocket_journal.media.intent")
 
+_CFG = get_config()
 
 MediaIntent = Tuple[np.ndarray, float, float]
 
@@ -167,8 +169,12 @@ def build_intent_vector(uid: str, media_type: str) -> MediaIntent:
     except Exception:
         intensity = 0.0
 
-    beta = min(0.15 + 0.35 * intensity, 0.4)
-    beta = float(max(0.0, min(beta, 0.4)))  # defensive clamp
+    beta_min = float(_CFG["recommendation"]["intent"]["beta_min"])
+    beta_boost = float(_CFG["recommendation"]["intent"]["beta_boost"])
+    beta_max = float(_CFG["recommendation"]["intent"]["beta_max"])
+
+    beta = min(beta_min + beta_boost * intensity, beta_max)
+    beta = float(max(0.0, min(beta, beta_max)))  # defensive clamp
     alpha = 1.0 - beta
 
     taste_n = _normalize(taste_vec) if taste_vec is not None else None

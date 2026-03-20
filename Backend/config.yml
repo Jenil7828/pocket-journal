@@ -1,0 +1,99 @@
+recommendation:
+  fetch_limit: 200               # RECOMMENDATION_FETCH_LIMIT
+  refine_top: 100                # RECOMMENDATION_REFINE_TOP
+  top_k: 10                      # RECOMMENDATION_TOP_K
+  ranking:
+    similarity_weight: 0.9       # RANKING_SIMILARITY_WEIGHT
+    popularity_weight: 0.1       # RANKING_POPULARITY_WEIGHT
+    low_std_threshold: 0.03      # RANKING_LOW_STD_THRESHOLD
+  intent:
+    beta_min: 0.15               # INTENT_BETA_MIN
+    beta_boost: 0.35             # INTENT_BETA_BOOST
+    beta_max: 0.40               # INTENT_BETA_MAX
+  candidate:
+    min_title_length: 3          # CANDIDATE_MIN_TITLE_LENGTH
+    min_popularity: 1.0          # CANDIDATE_MIN_POPULARITY
+
+embedding:
+  model_name: "all-mpnet-base-v2"   # EMBEDDING_MODEL_NAME
+  journal_blend_weight: 0.05         # JOURNAL_BLEND_WEIGHT
+  taste_blend_weight: 0.95           # TASTE_BLEND_WEIGHT
+
+ml:
+  mood_detection:
+    model_name: "roberta-base"              # MOOD_MODEL_NAME
+    max_length: 128                         # MOOD_MAX_LENGTH
+    prediction_threshold: 0.35              # MOOD_PREDICTION_THRESHOLD
+    labels: ["anger", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
+  summarization:
+    model_name: "facebook/bart-large-cnn"  # SUMMARIZATION_MODEL_NAME
+    max_input_length: 1024                 # SUMMARIZATION_MAX_INPUT_LENGTH
+    max_summary_length: 128                # SUMMARIZATION_MAX_SUMMARY_LENGTH
+    min_summary_length: 20                 # SUMMARIZATION_MIN_SUMMARY_LENGTH
+    num_beams: 4                           # SUMMARIZATION_NUM_BEAMS
+
+api:
+  default_limit: 10              # API_DEFAULT_LIMIT
+  max_limit: 100                 # API_MAX_LIMIT
+  request_timeout: 10            # API_REQUEST_TIMEOUT
+
+app:
+  enable_llm: true              # ENABLE_LLM
+  enable_insights: true         # ENABLE_INSIGHTS
+  force_color: true              # FORCE_COLOR
+  hf_hub_disable_xet: true       # HF_HUB_DISABLE_XET
+  tf_cpp_min_log_level: "2"      # TF_CPP_MIN_LOG_LEVEL
+
+server:
+  port: 5000                     # PORT
+  flask_debug: true             # FLASK_DEBUG
+  disable_reloader: true         # DISABLE_RELOADER
+
+logging:
+  app_level: "INFO"              # APP_LOG_LEVEL
+  werkzeug_level: "WARNING"      # WERKZEUG_LOG_LEVEL
+  firebase_level: "WARNING"      # FIREBASE_LOG_LEVEL
+
+cache:
+  max_age_hours: 24              # MEDIA_CACHE_MAX_AGE_HOURS
+  fetch_limit: 500               # MEDIA_CACHE_FETCH_LIMIT
+  batch_size: 400                # MEDIA_CACHE_BATCH_SIZE
+  schema_version: "v1"           # MEDIA_CACHE_SCHEMA_VERSION
+  supported_media_types:
+    - movies
+    - songs
+    - books
+    - podcasts
+  language_buckets:
+    songs:
+      - language: hindi
+        queries: ["hindi songs", "bollywood hits", "hindi film songs"]
+        market: IN
+      - language: english
+        queries: ["english pop hits", "top english songs", "english top 40"]
+        market: US
+      - language: neutral
+        queries: ["top hits", "popular songs"]
+        market: null
+    podcasts:
+      - language: hindi
+        queries: ["hindi podcast", "bollywood podcast"]
+        market: IN
+      - language: english
+        queries: ["popular podcast", "top podcast episodes"]
+        market: US
+      - language: neutral
+        queries: ["top podcast episodes"]
+        market: null
+    movies:
+      - language: neutral
+        queries: null
+        market: null
+    books:
+      - language: neutral
+        queries: null
+        market: null
+
+jobs:
+  cache_refresh: {}
+

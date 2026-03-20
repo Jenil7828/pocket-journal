@@ -3,8 +3,11 @@ from typing import Any, Dict, List
 
 import numpy as np
 
+from config_loader import get_config
+
 logger = logging.getLogger("pocket_journal.media.ranking")
 
+_CFG = get_config()
 
 RankedCandidate = Dict[str, Any]
 
@@ -64,8 +67,10 @@ def rank_candidates(
     else:
         pop_norm = np.zeros_like(pop_arr)
 
-    # Final score: 0.9 * similarity + 0.1 * normalized_popularity
-    scores = 0.9 * sims + 0.1 * pop_norm
+    # Final score: configured similarity_weight * similarity + popularity_weight * normalized_popularity
+    similarity_weight = float(_CFG["recommendation"]["ranking"]["similarity_weight"])
+    popularity_weight = float(_CFG["recommendation"]["ranking"]["popularity_weight"])
+    scores = similarity_weight * sims + popularity_weight * pop_norm
 
     # Stats for observability
     min_score = float(scores.min())
@@ -82,7 +87,8 @@ def rank_candidates(
         scores.shape[0],
     )
 
-    if std_score < 0.03:
+    low_std_threshold = float(_CFG["recommendation"]["ranking"]["low_std_threshold"])
+    if std_score < low_std_threshold:
         logger.warning("Low similarity std deviation detected (std=%.4f)", std_score)
 
     # Select top_k

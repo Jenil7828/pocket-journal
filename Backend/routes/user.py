@@ -18,7 +18,7 @@ def register(app, deps: dict):
     # embedding service dependency (optional; embedder will be created lazily in app if available)
     get_embedding_service = deps.get("get_embedding_service")
 
-    @app.route("/me", methods=["GET"])
+    @app.route("/api/v1/me", methods=["GET"])
     @login_required
     def get_profile():
         user = getattr(request, "user", None) or {}
@@ -46,7 +46,7 @@ def register(app, deps: dict):
             logger.exception("Failed to fetch user profile uid=%s: %s", uid, str(e))
             return jsonify({"error": "failed_to_fetch_profile", "details": str(e)}), 500
 
-    @app.route("/me/preferences", methods=["PUT"])
+    @app.route("/api/v1/me/preferences", methods=["PUT"])
     @login_required
     def update_preferences():
         user = getattr(request, "user", None) or {}
@@ -141,7 +141,7 @@ def register(app, deps: dict):
             logger.exception("Failed to update preferences for uid=%s: %s", uid, str(e))
             return jsonify({"error": "failed_to_update_preferences", "details": str(e)}), 500
 
-    @app.route("/me/settings", methods=["PUT"])
+    @app.route("/api/v1/me/settings", methods=["PUT"])
     @login_required
     def update_settings():
         user = getattr(request, "user", None) or {}

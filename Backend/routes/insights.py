@@ -8,7 +8,7 @@ def register(app, deps):
     insights_service = deps["insights_service"]
     get_db = deps["get_db"]
 
-    @app.route("/generate_insights", methods=["POST"])
+    @app.route("/api/v1/generate_insights", methods=["POST"])
     @login_required
     def generate_insights():
         start_time = time.time()
@@ -24,7 +24,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/insights", methods=["GET"])
+    @app.route("/api/v1/insights", methods=["GET"])
     @login_required
     def get_insights():
         start_time = time.time()
@@ -41,7 +41,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/insights/<insight_id>", methods=["GET"])
+    @app.route("/api/v1/insights/<insight_id>", methods=["GET"])
     @login_required
     def get_single_insight(insight_id):
         start_time = time.time()
@@ -55,7 +55,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/insights/<insight_id>", methods=["DELETE"])
+    @app.route("/api/v1/insights/<insight_id>", methods=["DELETE"])
     @login_required
     def delete_insight(insight_id):
         start_time = time.time()
@@ -68,4 +68,3 @@ def register(app, deps):
         body, status = insights_service.delete_insight(insight_id, uid, _db)
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-

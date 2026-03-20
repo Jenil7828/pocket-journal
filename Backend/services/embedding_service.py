@@ -9,9 +9,12 @@ import numpy as np
 # Ensure HF opt-out set before any HF-related imports
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
+from config_loader import get_config
 from services.suppression import suppress_hf
 
 logger = logging.getLogger("pocket_journal.embedding_service")
+
+_CFG = get_config()
 
 
 # Lazy import heavy deps inside the class to avoid import-time side-effects
@@ -30,7 +33,10 @@ class EmbeddingService:
     - Provides helpers to embed text(s), normalize vectors and compute cosine similarity.
     """
 
-    def __init__(self, model_name: str = "all-mpnet-base-v2"):
+    def __init__(self, model_name: Optional[str] = None):
+        if model_name is None:
+            model_name = str(_CFG["embedding"]["model_name"])
+
         # Import SentenceTransformer lazily inside constructor so HF env flags are effective
         try:
             with suppress_hf():

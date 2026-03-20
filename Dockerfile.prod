@@ -1,7 +1,7 @@
 # Production Dockerfile (inference-only)
 # - Two-stage build: deps (wheel cache) + runtime
 # - Does NOT run training or download models
-# - Models must already exist at Backend/Mood_Detection/outputs/models
+# - Models must already exist at Backend/ml/mood_detection/models/
 
 ############################
 # Stage 1: deps - build wheels for caching
@@ -52,7 +52,7 @@ RUN python -m pip install --upgrade pip setuptools wheel && \
 # Copy only runtime application files. .dockerignore controls what is excluded.
 COPY ./Backend /app
 
-# Model artifacts must be present locally under Backend/Mood_Detection/outputs/models
+# Model artifacts must be present locally under Backend/ml/mood_detection/models/
 # They are included when copying `Backend` (see .dockerignore which re-includes
 # the `outputs/models` directory). Do NOT download or train models in the image.
 

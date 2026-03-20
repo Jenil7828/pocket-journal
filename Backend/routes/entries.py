@@ -12,7 +12,7 @@ def register(app, deps):
     PREDICTOR = deps.get("PREDICTOR")
     SUMMARIZER = deps.get("SUMMARIZER")
 
-    @app.route("/entries/<entry_id>", methods=["DELETE"])
+    @app.route("/api/v1/entries/<entry_id>", methods=["DELETE"])
     @login_required
     def delete_entry(entry_id):
         start_time = time.time()
@@ -26,7 +26,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/entries/batch", methods=["DELETE"])
+    @app.route("/api/v1/entries/batch", methods=["DELETE"])
     @login_required
     def delete_entries_batch():
         start_time = time.time()
@@ -45,7 +45,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/entries/<entry_id>", methods=["PUT"])
+    @app.route("/api/v1/entries/<entry_id>", methods=["PUT"])
     @login_required
     def update_entry(entry_id):
         start_time = time.time()
@@ -59,7 +59,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/entries/<entry_id>/reanalyze", methods=["POST"])
+    @app.route("/api/v1/entries/<entry_id>/reanalyze", methods=["POST"])
     @login_required
     def reanalyze_entry(entry_id):
         start_time = time.time()
@@ -72,7 +72,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/entries/<entry_id>", methods=["GET"])
+    @app.route("/api/v1/entries/<entry_id>", methods=["GET"])
     @login_required
     def get_single_entry(entry_id):
         start_time = time.time()
@@ -83,7 +83,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/entries/<entry_id>/analysis", methods=["GET"])
+    @app.route("/api/v1/entries/<entry_id>/analysis", methods=["GET"])
     @login_required
     def get_entry_analysis(entry_id):
         start_time = time.time()
@@ -94,7 +94,7 @@ def register(app, deps):
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 
-    @app.route("/entries", methods=["GET"])
+    @app.route("/api/v1/entries", methods=["GET"])
     @login_required
     def get_entries_filtered():
         start_time = time.time()
@@ -112,4 +112,3 @@ def register(app, deps):
         body, status = journal_entries.get_entries_filtered(uid, params, _db)
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-

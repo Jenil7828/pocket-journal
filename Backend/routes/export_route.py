@@ -8,7 +8,7 @@ def register(app, deps):
     export_service = deps["export_service"]
     get_db = deps["get_db"]
 
-    @app.route("/export", methods=["GET"])
+    @app.route("/api/v1/export", methods=["GET"])
     @login_required
     def export_data():
         start_time = time.time()
@@ -26,4 +26,3 @@ def register(app, deps):
         body, status = result
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-

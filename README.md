@@ -37,15 +37,6 @@ pocket-journal/
 │   │   │   └── (label subfolders...)
 │   │   └── summarization_data/
 │   │       └── summary.csv
-│   ├── Media_Recommendation/
-│   │   ├── app.py
-│   │   ├── books_recommendation.py
-│   │   ├── mood_recommend.py
-│   │   ├── movie_search.py
-│   │   ├── search_books.py
-│   │   ├── search_song.py
-│   │   ├── song_recommend.py
-│   │   └── song_history.json
 │   ├── ml/
 │   │   └── mood_detection/
 │   │       ├── inference/
@@ -54,10 +45,6 @@ pocket-journal/
 │   │       │   ├── mood_detection/roberta/   # train.py, trainer
 │   │       │   └── summarization/bart/       # train.py, trainer
 │   │       └── models/                       # model artifacts
-│   ├── Mood_Detection/   # legacy/other inference helpers and outputs
-│   │   ├── outputs/
-│   │   │   └── models/
-│   │   └── app.py
 │   ├── persistence/
 │   │   ├── __init__.py
 │   │   ├── database_schema.py

@@ -3,11 +3,13 @@ from typing import Any, Dict, List, Optional
 
 import numpy as np
 
+from config_loader import get_config
 from services.embedding_service import get_embedding_service
 from .providers.base_provider import MediaProvider, STANDARD_MEDIA_ITEM
 
 logger = logging.getLogger("pocket_journal.media.candidates")
 
+_CFG = get_config()
 
 RefinedCandidate = Dict[str, Any]
 
@@ -34,6 +36,9 @@ def generate_candidates(
 
     cleaned: List[STANDARD_MEDIA_ITEM] = []
     seen_ids = set()
+    min_title_length = int(_CFG["recommendation"]["candidate"]["min_title_length"])
+    min_popularity_threshold = float(_CFG["recommendation"]["candidate"]["min_popularity"])
+
     for item in raw_candidates:
         try:
             mid = item.get("id")
@@ -41,13 +46,13 @@ def generate_candidates(
             desc = (item.get("description") or "").strip()
             if not mid or not title or not desc:
                 continue
-            if len(title) < 3:
+            if len(title) < min_title_length:
                 continue
             # Low popularity filter (if provider gives a popularity score 0-100)
             pop = item.get("popularity")
             if pop is not None:
                 try:
-                    if float(pop) < 1.0:
+                    if float(pop) < min_popularity_threshold:
                         # Skip extremely low popularity items
                         continue
                 except Exception:

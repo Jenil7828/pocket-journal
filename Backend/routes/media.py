@@ -1,222 +1,195 @@
-from flask import jsonify, request
 import time
+from flask import request, jsonify
+from config_loader import get_config
 from utils.logging_utils import log_request, log_response
-
 from services.media_recommender.recommendation import recommend_media
+
+_CFG = get_config()
 
 
 def register(app, deps):
     login_required = deps["login_required"]
 
-    @app.route("/api/media/debug_verify", methods=["GET"])
+    @app.route("/api/v1/media/debug_verify", methods=["GET"])
     @login_required
-    def api_media_debug_verify():
+    def media_debug_verify():
+        """Test cache hit rates across media types."""
         start_time = time.time()
         log_request()
-        """Temporary debug endpoint to verify image fields are non-null."""
-        uid = request.user["uid"]
-        results = {}
-        types = ["movies", "songs", "books"]
-        fields = {
-            "movies": "poster_url",
-            "songs": "album_image_url",
-            "books": "thumbnail_url",
-        }
-        for media_type in types:
-            try:
-                rec = recommend_media(uid=uid, media_type=media_type, top_k=10)
-                items = rec.get("results") or rec.get("items") or []
-                field = fields[media_type]
-                non_null = [item for item in items if item.get(field)]
-                percent = (len(non_null) / max(1, len(items))) * 100
-                results[media_type] = {
-                    "total": len(items),
-                    "non_null_count": len(non_null),
-                    "percent_non_null": percent,
-                    "first_result": items[0] if items else None,
-                }
-            except Exception as exc:
-                results[media_type] = {"error": str(exc)}
-        assertions = {mt: (res.get("percent_non_null", 0) >= 80) for mt, res in results.items() if "percent_non_null" in res}
-        results["assertions"] = assertions
-        log_response(200, start_time)
-        return jsonify(results), 200
-
-    @app.route("/api/media/recommend", methods=["GET"])
-    @login_required
-    def api_media_recommend():
-        start_time = time.time()
-        log_request()
-        """
-        Unified media recommendation endpoint.
-
-        Query params:
-        - media_type: one of [movies, songs, books, podcasts]
-        - top_k (optional): override number of results (default 10)
-        - Optional filters (language, genre, year_from, year_to)
-        """
-        uid = request.user["uid"]
-        media_type = (request.args.get("media_type") or "").strip().lower()
-        if not media_type:
-            log_response(400, start_time)
-            return jsonify({"error": "Missing media_type parameter"}), 400
-        try:
-            top_k = int(request.args.get("top_k", 10))
-        except ValueError:
-            log_response(400, start_time)
-            return jsonify({"error": "Invalid top_k"}), 400
-
-        filters = {}
-        language = request.args.get("language")
-        if language:
-            filters["language"] = language.strip()
-        genre = request.args.get("genre")
-        if genre:
-            filters["genre"] = genre.strip()
-        year_from = request.args.get("year_from")
-        if year_from:
-            try:
-                filters["year_from"] = int(year_from)
-            except ValueError:
-                log_response(400, start_time)
-                return jsonify({"error": "Invalid year_from"}), 400
-        year_to = request.args.get("year_to")
-        if year_to:
-            try:
-                filters["year_to"] = int(year_to)
-            except ValueError:
-                log_response(400, start_time)
-                return jsonify({"error": "Invalid year_to"}), 400
 
         try:
-            result = recommend_media(
-                uid=uid, media_type=media_type, filters=filters or None, top_k=top_k
-            )
-        except ValueError as ve:
-            log_response(400, start_time)
-            return jsonify({"error": str(ve)}), 400
-        except Exception as exc:
+            uid = request.user["uid"]
+            stats = {}
+
+            for media_type in ["movies", "songs", "books"]:
+                try:
+                    result = recommend_media(uid=uid, media_type=media_type, top_k=5)
+                    results = result.get("results", [])
+                    non_null_count = len([r for r in results if r])
+                    stats[media_type] = {
+                        "total": len(results),
+                        "non_null": non_null_count,
+                        "percentage": (non_null_count / len(results) * 100) if results else 0,
+                        "source": result.get("source", "unknown"),
+                    }
+                except Exception as e:
+                    stats[media_type] = {"error": str(e)}
+
+            log_response(200, start_time)
+            return jsonify({"status": "ok", "stats": stats}), 200
+        except Exception as e:
             log_response(500, start_time)
-            return jsonify(
-                {"error": "Failed to generate recommendations", "details": str(exc)}
-            ), 500
+            return jsonify({"error": str(e)}), 500
 
-        log_response(200, start_time)
-        return jsonify(result), 200
+    @app.route("/api/v1/media/recommend", methods=["GET"])
+    @login_required
+    def api_recommend():
+        """Unified media recommendation endpoint."""
+        start_time = time.time()
+        log_request()
 
-    @app.route("/movie/recommend", methods=["GET"])
+        try:
+            uid = request.user["uid"]
+            media_type = request.args.get("media_type", "movies")
+            default_top_k = int(_CFG["recommendation"]["top_k"])
+            top_k = request.args.get("top_k", default_top_k, type=int)
+            language = request.args.get("language")
+            genre = request.args.get("genre")
+            year_from = request.args.get("year_from")
+            year_to = request.args.get("year_to")
+
+            filters = {}
+            if language:
+                filters["language"] = language
+            if genre:
+                filters["genre"] = genre
+            if year_from:
+                filters["year_from"] = year_from
+            if year_to:
+                filters["year_to"] = year_to
+
+            result = recommend_media(
+                uid=uid,
+                media_type=media_type,
+                filters=filters or None,
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/movie/recommend", methods=["GET"])
     @login_required
     def movie_recommend():
+        """Movie recommendation endpoint."""
         start_time = time.time()
         log_request()
-        """Backward compatible movie endpoint backed by unified engine."""
-        uid = request.user["uid"]
-        try:
-            top_k = int(request.args.get("limit", 10))
-        except ValueError:
-            log_response(400, start_time)
-            return jsonify({"error": "Invalid limit"}), 400
-        try:
-            result = recommend_media(uid=uid, media_type="movies", top_k=top_k)
-        except ValueError as ve:
-            log_response(400, start_time)
-            return jsonify({"error": str(ve)}), 400
-        except Exception as exc:
-            log_response(500, start_time)
-            return jsonify(
-                {"error": "Failed to generate movie recommendations", "details": str(exc)}
-            ), 500
-        log_response(200, start_time)
-        return jsonify(result), 200
 
-    @app.route("/song/recommend", methods=["GET"])
+        try:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+
+            result = recommend_media(
+                uid=uid,
+                media_type="movies",
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/song/recommend", methods=["GET"])
     @login_required
     def song_recommend():
+        """Song recommendation endpoint."""
         start_time = time.time()
         log_request()
-        """Backward compatible song endpoint backed by unified engine."""
-        uid = request.user["uid"]
-        try:
-            top_k = int(request.args.get("limit", 10))
-        except ValueError:
-            log_response(400, start_time)
-            return jsonify({"error": "Invalid limit"}), 400
-        language = (request.args.get("language") or "").strip().lower()
-        filters = {}
-        if language:
-            filters["language"] = language
 
         try:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+            language = request.args.get("language")
+
+            filters = None
+            if language:
+                filters = {"language": language}
+
             result = recommend_media(
-                uid=uid, media_type="songs", filters=filters or None, top_k=top_k
+                uid=uid,
+                media_type="songs",
+                filters=filters,
+                top_k=top_k,
             )
-        except ValueError as ve:
-            log_response(400, start_time)
-            return jsonify({"error": str(ve)}), 400
-        except Exception as exc:
-            log_response(500, start_time)
-            return jsonify(
-                {"error": "Failed to generate song recommendations", "details": str(exc)}
-            ), 500
-        log_response(200, start_time)
-        return jsonify(result), 200
 
-    @app.route("/podcast/recommend", methods=["GET"])
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/podcast/recommend", methods=["GET"])
     @login_required
     def podcast_recommend():
+        """Podcast recommendation endpoint."""
         start_time = time.time()
         log_request()
-        """Backward compatible podcast endpoint backed by unified engine."""
-        uid = request.user["uid"]
-        try:
-            top_k = int(request.args.get("limit", 10))
-        except ValueError:
-            log_response(400, start_time)
-            return jsonify({"error": "Invalid limit"}), 400
-        language = (request.args.get("language") or "").strip().lower()
-        genre = (request.args.get("genre") or "").strip()
-        filters = {}
-        if language:
-            filters["language"] = language
-        if genre:
-            filters["genre"] = genre
-        try:
-            result = recommend_media(
-                uid=uid, media_type="podcasts", filters=filters or None, top_k=top_k
-            )
-        except ValueError as ve:
-            log_response(400, start_time)
-            return jsonify({"error": str(ve)}), 400
-        except Exception as exc:
-            log_response(500, start_time)
-            return jsonify(
-                {"error": "Failed to generate podcast recommendations", "details": str(exc)}
-            ), 500
-        log_response(200, start_time)
-        return jsonify(result), 200
 
-    @app.route("/book/recommend", methods=["GET"])
+        try:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+            language = request.args.get("language")
+            genre = request.args.get("genre")
+
+            filters = {}
+            if language:
+                filters["language"] = language
+            if genre:
+                filters["genre"] = genre
+
+            result = recommend_media(
+                uid=uid,
+                media_type="podcasts",
+                filters=filters or None,
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/book/recommend", methods=["GET"])
     @login_required
     def book_recommend():
+        """Book recommendation endpoint."""
         start_time = time.time()
         log_request()
-        """Backward compatible book endpoint backed by unified engine."""
-        uid = request.user["uid"]
+
         try:
-            top_k = int(request.args.get("limit", 10))
-        except ValueError:
-            log_response(400, start_time)
-            return jsonify({"error": "Invalid limit"}), 400
-        try:
-            result = recommend_media(uid=uid, media_type="books", top_k=top_k)
-        except ValueError as ve:
-            log_response(400, start_time)
-            return jsonify({"error": str(ve)}), 400
-        except Exception as exc:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+
+            result = recommend_media(
+                uid=uid,
+                media_type="books",
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
             log_response(500, start_time)
-            return jsonify(
-                {"error": "Failed to generate book recommendations", "details": str(exc)}
-            ), 500
-        log_response(200, start_time)
-        return jsonify(result), 200
-    
+            return jsonify({"error": str(e)}), 500
+
+

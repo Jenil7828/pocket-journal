@@ -2,7 +2,11 @@ from firebase_admin import firestore
 import logging
 import numpy as np
 
+from config_loader import get_config
+
 logger = logging.getLogger("pocket_journal.journal_entries")
+
+_CFG = get_config()
 
 
 def process_entry(user, data, db, predictor, summarizer):
@@ -120,8 +124,10 @@ def process_entry(user, data, db, predictor, summarizer):
                             if existing_vec.size == 0 or getattr(journal_vec, "size", 0) == 0:
                                 # nothing to blend
                                 continue
-                            # Blend: 95% existing + 5% journal embedding
-                            blended = existing_vec * 0.95 + journal_vec * 0.05
+                            # Blend: configured taste_blend_weight * existing + journal_blend_weight * journal embedding
+                            taste_blend_weight = float(_CFG["embedding"]["taste_blend_weight"])
+                            journal_blend_weight = float(_CFG["embedding"]["journal_blend_weight"])
+                            blended = existing_vec * taste_blend_weight + journal_vec * journal_blend_weight
                             # Normalize
                             normed = (blended / (np.linalg.norm(blended) + 1e-12)).astype(np.float32)
                             updates[key] = normed.tolist()

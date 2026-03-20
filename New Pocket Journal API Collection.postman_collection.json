@@ -1,11 +1,11 @@
 {
   "info": {
-    "_postman_id": "4764ef77-8390-47f5-ba98-950df4767f2c",
+    "_postman_id": "73ff73b7-c6f1-4676-af8a-6b7011d2432b",
     "name": "New Pocket Journal API Collection",
     "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, and utility endpoints",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
-    "_collection_link": "https://go.postman.co/collection/49178362-4764ef77-8390-47f5-ba98-950df4767f2c?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/49178362-73ff73b7-c6f1-4676-af8a-6b7011d2432b?source=collection_link"
   },
   "item": [
     {
@@ -84,11 +84,13 @@
               }
             },
             "url": {
-              "raw": "{{baseURL}}/auth/create-user",
+              "raw": "{{baseURL}}/api/v1/auth/create-user",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "auth",
                 "create-user"
               ]
@@ -108,7 +110,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"jenilrathod114@gmail.com\",\n  \"password\": \"BetterPass123!\"\n}",
+              "raw": "{\n  \"email\": \"jenilrathod114@gmail.com\",\n  \"password\": \"Testing_123\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -116,11 +118,13 @@
               }
             },
             "url": {
-              "raw": "{{baseURL}}/auth/login",
+              "raw": "{{baseURL}}/api/v1/auth/login",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "auth",
                 "login"
               ]
@@ -152,11 +156,13 @@
               }
             },
             "url": {
-              "raw": "{{baseURL}}/auth/change-password",
+              "raw": "{{baseURL}}/api/v1/auth/change-password",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "auth",
                 "change-password"
               ]
@@ -205,11 +211,13 @@
               "raw": "{\n  \"entry_text\": \"I had a wonderful day today! The weather was perfect and I accomplished all my goals. Feeling very positive and motivated for tomorrow.\"\n}"
             },
             "url": {
-              "raw": "{{baseURL}}/process_entry",
+              "raw": "{{baseURL}}/api/v1/process_entry",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "process_entry"
               ]
             }
@@ -227,11 +235,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/entries",
+              "raw": "{{baseURL}}/api/v1/entries",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries"
               ]
             }
@@ -249,11 +259,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/entries?mood=happy&search=wonderful&limit=10&offset=0",
+              "raw": "{{baseURL}}/api/v1/entries?mood=happy&search=wonderful&limit=10&offset=0",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries"
               ],
               "query": [
@@ -299,11 +311,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/entries/{{entry_id}}",
+              "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "{{entry_id}}"
               ]
@@ -322,11 +336,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/entries/{{entry_id}}/analysis",
+              "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}/analysis",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "{{entry_id}}",
                 "analysis"
@@ -354,11 +370,13 @@
               "raw": "{\n  \"entry_text\": \"I had an absolutely amazing day today! The weather was perfect, I accomplished all my goals, and I'm feeling incredibly positive and motivated for tomorrow. This has been one of the best days in recent memory.\",\n  \"regenerate_analysis\": true\n}"
             },
             "url": {
-              "raw": "{{baseURL}}/entries/{{entry_id}}",
+              "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "{{entry_id}}"
               ]
@@ -385,11 +403,13 @@
               "raw": "{\n  \"entry_text\": \"Just a small text correction\",\n  \"regenerate_analysis\": false\n}"
             },
             "url": {
-              "raw": "{{baseURL}}/entries/{{entry_id}}",
+              "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "{{entry_id}}"
               ]
@@ -408,11 +428,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/entries/{{entry_id}}/reanalyze",
+              "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}/reanalyze",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "{{entry_id}}",
                 "reanalyze"
@@ -432,11 +454,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/entries/{{entry_id}}",
+              "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "{{entry_id}}"
               ]
@@ -463,11 +487,13 @@
               "raw": "{\n  \"entry_ids\": [\"entry_id_1\", \"entry_id_2\", \"entry_id_3\"]\n}"
             },
             "url": {
-              "raw": "{{baseURL}}/entries/batch",
+              "raw": "{{baseURL}}/api/v1/entries/batch",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "entries",
                 "batch"
               ]
@@ -514,11 +540,13 @@
               "raw": "{\n  \"start_date\": \"2025-01-01\",\n  \"end_date\": \"2025-01-31\"\n}"
             },
             "url": {
-              "raw": "{{baseURL}}/generate_insights",
+              "raw": "{{baseURL}}/api/v1/generate_insights",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "generate_insights"
               ]
             }
@@ -536,11 +564,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/insights?limit=50&offset=0",
+              "raw": "{{baseURL}}/api/v1/insights?limit=50&offset=0",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "insights"
               ],
               "query": [
@@ -568,11 +598,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/insights/{{insight_id}}",
+              "raw": "{{baseURL}}/api/v1/insights/{{insight_id}}",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "insights",
                 "{{insight_id}}"
               ]
@@ -591,11 +623,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/insights/{{insight_id}}",
+              "raw": "{{baseURL}}/api/v1/insights/{{insight_id}}",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "insights",
                 "{{insight_id}}"
               ]
@@ -619,11 +653,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/stats",
+              "raw": "{{baseURL}}/api/v1/stats",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "stats"
               ]
             }
@@ -641,11 +677,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/mood-trends?days=30",
+              "raw": "{{baseURL}}/api/v1/mood-trends?days=30",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "mood-trends"
               ],
               "query": [
@@ -669,11 +707,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/mood-trends?days=7",
+              "raw": "{{baseURL}}/api/v1/mood-trends?days=7",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "mood-trends"
               ],
               "query": [
@@ -697,11 +737,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseURL}}/health",
+              "raw": "{{baseURL}}/api/v1/health",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "health"
               ]
             }
@@ -719,11 +761,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/export?start_date=2025-09-01&end_date=2025-09-30&format=json",
+              "raw": "{{baseURL}}/api/v1/export?start_date=2025-09-01&end_date=2025-09-30&format=json",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "export"
               ],
               "query": [
@@ -755,11 +799,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/export?start_date=2025-09-01&end_date=2025-09-30&format=csv",
+              "raw": "{{baseURL}}/api/v1/export?start_date=2025-09-01&end_date=2025-09-30&format=csv",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "export"
               ],
               "query": [
@@ -786,7 +832,7 @@
       "name": "🎬 Media Recommendations",
       "item": [
         {
-          "name": "Unified Media Recommendations",
+          "name": "General Recommendations",
           "request": {
             "method": "GET",
             "header": [
@@ -796,12 +842,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/media/recommend?media_type=movies&top_k=10",
+              "raw": "{{baseURL}}/api/v1/media/recommend?media_type=movies&top_k=10",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
                 "api",
+                "v1",
                 "media",
                 "recommend"
               ],
@@ -820,7 +867,7 @@
           "response": []
         },
         {
-          "name": "Movie Recommendations (user-based)",
+          "name": "Movie Recommendations",
           "request": {
             "method": "GET",
             "header": [
@@ -830,11 +877,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/movie/recommend?limit=10",
+              "raw": "{{baseURL}}/api/v1/movie/recommend?limit=10",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "movie",
                 "recommend"
               ],
@@ -849,7 +898,7 @@
           "response": []
         },
         {
-          "name": "Song Recommendations (user-based)",
+          "name": "Song Recommendations",
           "request": {
             "method": "GET",
             "header": [
@@ -859,11 +908,13 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/song/recommend?limit=10&language=both",
+              "raw": "{{baseURL}}/api/v1/song/recommend?limit=10&language=both",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "song",
                 "recommend"
               ],
@@ -882,7 +933,7 @@
           "response": []
         },
         {
-          "name": "Book Recommendations (user-based)",
+          "name": "Book Recommendations",
           "request": {
             "method": "GET",
             "header": [
@@ -892,12 +943,39 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/book/recommend?limit=10",
+              "raw": "{{baseURL}}/api/v1/book/recommend",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "book",
+                "recommend"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Podcast Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/podcast/recommend?limit=10",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "podcast",
                 "recommend"
               ],
               "query": [
@@ -911,7 +989,7 @@
           "response": []
         },
         {
-          "name": "Podcast Recommendations (user-based)",
+          "name": "Search Movies",
           "request": {
             "method": "GET",
             "header": [
@@ -921,26 +999,99 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/podcast/recommend?limit=10&language=english&genre=technology",
+              "raw": "{{baseURL}}/api/v1/search?movie=inception&limit=5",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
-                "podcast",
-                "recommend"
+                "api",
+                "v1",
+                "search"
               ],
               "query": [
                 {
+                  "key": "movie",
+                  "value": "inception"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Songs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/search_song?q=happy&type=track&limit=10",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search_song"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "happy"
+                },
+                {
+                  "key": "type",
+                  "value": "track"
+                },
+                {
                   "key": "limit",
                   "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Books",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/search_books?query=motivation&type=both&limit=5",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "search_books"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "motivation"
                 },
                 {
-                  "key": "language",
-                  "value": "english"
+                  "key": "type",
+                  "value": "both"
                 },
                 {
-                  "key": "genre",
-                  "value": "technology"
+                  "key": "limit",
+                  "value": "5"
                 }
               ]
             }
@@ -958,11 +1109,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseURL}}/app/about",
+              "raw": "{{baseURL}}/api/v1/app/about",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "app",
                 "about"
               ]
@@ -976,11 +1129,13 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseURL}}/app/terms",
+              "raw": "{{baseURL}}/api/v1/app/terms",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "app",
                 "terms"
               ]
@@ -1000,15 +1155,17 @@
             "header": [
               {
                 "key": "Authorization",
-                "value": "Bearer {{token_id}}"
+                "value": "Bearer {{token_id}}}"
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/me",
+              "raw": "{{baseURL}}/api/v1/me",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "me"
               ]
             }
@@ -1039,11 +1196,13 @@
               }
             },
             "url": {
-              "raw": "{{baseURL}}}/me/preferences",
+              "raw": "{{baseURL}}/api/v1/me/preferences",
               "host": [
-                "{{baseURL}}}"
+                "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "me",
                 "preferences"
               ]
@@ -1075,13 +1234,229 @@
               }
             },
             "url": {
-              "raw": "{{baseURL}}/me/settings",
+              "raw": "{{baseURL}}/api/v1/me/settings",
               "host": [
                 "{{baseURL}}"
               ],
               "path": [
+                "api",
+                "v1",
                 "me",
                 "settings"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+    ,
+    {
+      "name": "🕒 Jobs & Cache Management",
+      "item": [
+        {
+          "name": "POST /job/v1/cache/refresh (all)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /job/v1/cache/refresh/movies",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/movies",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /job/v1/cache/refresh/songs",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/songs",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "songs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /job/v1/cache/refresh/books",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/books",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "books"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "POST /job/v1/cache/refresh/podcasts",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/podcasts",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "podcasts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /job/v1/cache/status (all)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/status",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /job/v1/cache/status/movies",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/status/movies",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "status",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /job/v1/cache/status/songs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/status/songs",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "status",
+                "songs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /job/v1/cache/status/books",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/status/books",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "status",
+                "books"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /job/v1/cache/status/podcasts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/status/podcasts",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "status",
+                "podcasts"
               ]
             }
           },

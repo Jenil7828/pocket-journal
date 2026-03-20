@@ -1,9 +1,20 @@
 import os
+import sys
+
+# Add Backend to path for config access
+_HERE = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR = os.path.join(_HERE, "..", "..", "..", "..")
+if _BACKEND_DIR not in sys.path:
+    sys.path.insert(0, _BACKEND_DIR)
+
+from config_loader import get_config
+
+_CFG = get_config()
 
 class Config:
-    # Model settings
-    MODEL_NAME = "roberta-base"
-    MAX_LENGTH = 128
+    # Model settings (from config)
+    MODEL_NAME = str(_CFG["ml"]["mood_detection"]["model_name"])
+    MAX_LENGTH = int(_CFG["ml"]["mood_detection"]["max_length"])
 
     # Base directory = Backend/
     BASE_DIR = os.path.dirname(
@@ -25,9 +36,10 @@ class Config:
         "v1"
     )
 
-    # Prediction config
-    PREDICTION_THRESHOLD = 0.35
+    # Prediction config (from config)
+    PREDICTION_THRESHOLD = float(_CFG["ml"]["mood_detection"]["prediction_threshold"])
 
-    # Labels
-    LABELS = ["anger", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
+    # Labels (from config)
+    LABELS = list(_CFG["ml"]["mood_detection"]["labels"])
     NUM_LABELS = len(LABELS)
+
