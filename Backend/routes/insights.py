@@ -20,6 +20,7 @@ def register(app, deps):
             get_db(),
             enable_llm=deps.get("ENABLE_LLM", False),
             enable_insights=deps.get("ENABLE_INSIGHTS", True),
+            insights_predictor=deps.get("INSIGHTS_PREDICTOR"),
         )
         log_response(status, start_time)
         return (jsonify(body), status) if isinstance(body, dict) else (body, status)

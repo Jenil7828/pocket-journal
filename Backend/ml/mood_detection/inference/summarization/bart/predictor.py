@@ -33,6 +33,8 @@ class SummarizationPredictor:
                 self.tokenizer = AutoTokenizer.from_pretrained(Config.MODEL_NAME)
                 self.model = AutoModelForSeq2SeqLM.from_pretrained(Config.MODEL_NAME)
 
+        if self.device == "cuda":
+            self.model = self.model.half()
         self.model.to(self.device)
         self.model.eval()
         # ---- HARDEN GENERATION CONFIG (HF v4/v5 safe) ----

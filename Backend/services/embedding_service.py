@@ -63,6 +63,9 @@ class EmbeddingService:
             with suppress_hf():
                 # SentenceTransformer accepts a device string like 'cpu' or 'cuda'
                 self.model = SentenceTransformer(model_name, device=self.device)
+                if self.device == "cuda":
+                    self.model = self.model.half()
+                    logger.info("EmbeddingService cast to float16 on CUDA")
         except Exception as e:
             logger.warning("Failed to load embedding model: %s", str(e))
             logger.debug(traceback.format_exc())

@@ -3,6 +3,8 @@ from typing import List, Optional, Dict, Any
 import os
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
+from config_loader import get_config
+_API = get_config()["api"]
 
 logger = logging.getLogger("pocket_journal.media.providers.books")
 
@@ -29,7 +31,7 @@ class GoogleBooksProvider(BaseHTTPProvider):
 
         payload = self._request(
             "GET",
-            "https://www.googleapis.com/books/v1/volumes",
+            _API["google_books_endpoint"],
             params=params,
         )
         if not payload:
@@ -43,7 +45,7 @@ class GoogleBooksProvider(BaseHTTPProvider):
         # Google Books allows maxResults up to 40 per request. Page deterministically.
         remaining = max(0, int(limit))
         start = 0
-        page_size = 40
+        page_size = int(_API["google_books_page_size"])
         while remaining > 0:
             cur = min(page_size, remaining)
             batch = self._search(q, max_results=cur, start_index=start)
@@ -93,4 +95,3 @@ class GoogleBooksProvider(BaseHTTPProvider):
             logger.warning("Low GoogleBooks candidate pool: %d", len(cleaned))
 
         return cleaned[:limit]
-

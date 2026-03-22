@@ -1,16 +1,20 @@
 import os
 import torch
 import numpy as np
+import logging
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from services.suppression import suppress_hf
 from .config import Config
+
+logger = logging.getLogger("pocket_journal.roberta.predictor")
 
 
 class SentencePredictor:
     def __init__(self, model_path: str = Config.OUTPUT_DIR):
         self.labels = Config.LABELS
         self.threshold = Config.PREDICTION_THRESHOLD
-        self.device = "cpu"  # force CPU for prod stability
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        logger.info("RoBERTa mood predictor using device=%s", self.device)
 
         if os.path.exists(model_path) and os.path.exists(os.path.join(model_path, "config.json")):
             # suppress materialization output during local model load
@@ -27,6 +31,8 @@ class SentencePredictor:
                     problem_type="multi_label_classification",
                 )
 
+        if self.device == "cuda":
+            self.model = self.model.half()
         self.model.to(self.device)
         self.model.eval()
 

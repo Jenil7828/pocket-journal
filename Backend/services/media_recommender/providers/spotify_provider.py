@@ -5,6 +5,8 @@ import time
 from typing import Dict, List, Optional, Any
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM, UnauthorizedError
+from config_loader import get_config
+_API = get_config()["api"]
 
 logger = logging.getLogger("pocket_journal.media.providers.spotify")
 
@@ -19,7 +21,7 @@ class SpotifyProvider(BaseHTTPProvider):
     requests must handle 401 by invalidating and refreshing the token once.
     """
 
-    token_url = "https://accounts.spotify.com/api/token"
+    token_url = _API["spotify_token_endpoint"]
 
     def __init__(self) -> None:
         client_id = os.getenv("SONG_ID")
@@ -56,7 +58,7 @@ class SpotifyProvider(BaseHTTPProvider):
         # Use requests directly for token fetch; raise clean errors on failure
         import requests
 
-        resp = requests.post(self.token_url, headers=headers, data=data, timeout=10)
+        resp = requests.post(self.token_url, headers=headers, data=data, timeout=int(_API["request_timeout"]))
         try:
             payload = resp.json()
         except Exception:
@@ -90,7 +92,7 @@ class SpotifyProvider(BaseHTTPProvider):
         # Ensure token is valid
         token = self._get_access_token()
         headers = {"Authorization": f"Bearer {token}"}
-        url = f"https://api.spotify.com/v1/tracks/{track_id}"
+        url = f'{_API["spotify_track_endpoint"]}/{track_id}'
         try:
             payload = self._request("GET", url, headers=headers)
             return payload
@@ -126,7 +128,7 @@ class SpotifyProvider(BaseHTTPProvider):
         try:
             payload = self._request(
                 "GET",
-                "https://api.spotify.com/v1/search",
+                _API["spotify_search_endpoint"],
                 headers=headers,
                 params=params,
             )
@@ -140,7 +142,7 @@ class SpotifyProvider(BaseHTTPProvider):
                 new_headers = {"Authorization": f"Bearer {new_token}"}
                 payload = self._request(
                     "GET",
-                    "https://api.spotify.com/v1/search",
+                    _API["spotify_search_endpoint"],
                     headers=new_headers,
                     params=params,
                 )

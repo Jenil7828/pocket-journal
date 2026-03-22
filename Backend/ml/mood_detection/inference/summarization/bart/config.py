@@ -1,5 +1,6 @@
 import os
 import sys
+import torch
 
 # Add Backend to path for config access
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -42,4 +43,4 @@ class Config:
     NUM_BEAMS = int(_CFG["ml"]["summarization"]["num_beams"])
 
     # Device policy (hard-safe for prod)
-    DEVICE = "cpu"
+    DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

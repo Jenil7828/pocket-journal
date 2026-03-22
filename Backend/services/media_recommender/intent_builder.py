@@ -1,5 +1,6 @@
 import logging
 import math
+from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, Optional, Tuple
 
 import numpy as np
@@ -11,6 +12,8 @@ from services.embedding_service import EmbeddingService
 logger = logging.getLogger("pocket_journal.media.intent")
 
 _CFG = get_config()
+_COLS = _CFG["firestore"]["collections"]
+_CONC = _CFG["concurrency"]
 
 MediaIntent = Tuple[np.ndarray, float, float]
 
@@ -147,8 +150,14 @@ def build_intent_vector(uid: str, media_type: str) -> MediaIntent:
     if media_key not in _MEDIA_KEY_MAP:
         raise ValueError(f"Unsupported media_type: {media_type}")
 
-    taste_vec = _fetch_taste_vector(uid, media_key)
-    journal_vec = _fetch_latest_journal_embedding(uid)
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        f_taste   = executor.submit(_fetch_taste_vector, uid, media_key)
+        f_journal = executor.submit(_fetch_latest_journal_embedding, uid)
+        f_emotion = executor.submit(_fetch_latest_emotional_state, uid)
+
+    taste_vec   = f_taste.result()
+    journal_vec = f_journal.result()
+    emo         = f_emotion.result()
 
     if taste_vec is None and journal_vec is None:
         raise ValueError(f"No vectors available for uid={uid} media_type={media_type}")
@@ -160,8 +169,6 @@ def build_intent_vector(uid: str, media_type: str) -> MediaIntent:
                 f"Dimension mismatch between taste ({taste_vec.shape}) and journal ({journal_vec.shape})"
             )
 
-    # Fetch emotional state and compute intensity
-    emo = _fetch_latest_emotional_state(uid)
     valence = emo.get("valence", 0.0) or 0.0
     arousal = emo.get("arousal", 0.0) or 0.0
     try:

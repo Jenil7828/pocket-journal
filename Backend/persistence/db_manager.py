@@ -8,9 +8,14 @@ from firebase_admin import credentials, firestore
 from firebase_admin import firestore as _fa_firestore
 import pytz
 
+from config_loader import get_config
 from utils import extract_dominant_mood
 
 logger = logging.getLogger("pocket_journal.db_manager")
+
+_CFG = get_config()
+_COLS = _CFG["firestore"]["collections"]
+_TZ = _CFG["app"]["timezone"]
 
 
 class DBManager:
@@ -21,11 +26,11 @@ class DBManager:
             firebase_admin.initialize_app(cred)
 
         self.db = firestore.client()
-        self.tz = pytz.timezone("Asia/Kolkata")
+        self.tz = pytz.timezone(_TZ)
 
     # -------------------- Journal Entries --------------------
     def insert_entry(self, uid: str, entry_text: str) -> str:
-        doc_ref = self.db.collection("journal_entries").document()
+        doc_ref = self.db.collection(_COLS["journal_entries"]).document()
         now = datetime.now(self.tz)
 
         doc_ref.set({
@@ -77,7 +82,7 @@ class DBManager:
             if mood is not None:
                 doc["mood"] = mood
 
-        self.db.collection("entry_analysis").document().set(doc)
+        self.db.collection(_COLS["entry_analysis"]).document().set(doc)
 
     def insert_insights(
         self,
@@ -93,7 +98,7 @@ class DBManager:
         raw_response: str,
         entry_ids: list = None,
     ):
-        doc_ref = self.db.collection("insights").document()
+        doc_ref = self.db.collection(_COLS["insights"]).document()
         doc_ref.set({
             "uid": uid,
             "start_date": start_date,
@@ -110,14 +115,14 @@ class DBManager:
 
         if entry_ids:
             for entry_id in entry_ids:
-                self.db.collection("insight_entry_mapping").add({
+                self.db.collection(_COLS["insight_entry_mapping"]).add({
                     "insight_id": doc_ref.id,
                     "entry_id": entry_id
                 })
 
     # -------------------- Fetch Entries --------------------
     def fetch_entries_with_analysis(self, uid: str, start_date: str = None, end_date: str = None):
-        query = self.db.collection("journal_entries").where(
+        query = self.db.collection(_COLS["journal_entries"]).where(
             filter=_fa_firestore.FieldFilter("uid", "==", uid)
         )
 
@@ -145,7 +150,7 @@ class DBManager:
             data["id"] = doc.id
 
             analysis = (
-                self.db.collection("entry_analysis")
+                self.db.collection(_COLS["entry_analysis"])
                 .where(filter=_fa_firestore.FieldFilter("entry_id", "==", doc.id))
                 .limit(1)
                 .get()
@@ -162,7 +167,7 @@ class DBManager:
         end_dt = self.tz.localize(datetime.combine(today, time.max))
 
         query = (
-            self.db.collection("journal_entries")
+            self.db.collection(_COLS["journal_entries"])
             .where(filter=_fa_firestore.FieldFilter("uid", "==", uid))
             .where(filter=_fa_firestore.FieldFilter("created_at", ">=", start_dt))
             .where(filter=_fa_firestore.FieldFilter("created_at", "<=", end_dt))
@@ -177,7 +182,7 @@ class DBManager:
             data["id"] = doc.id
 
             analysis = (
-                self.db.collection("entry_analysis")
+                self.db.collection(_COLS["entry_analysis"])
                 .where(filter=_fa_firestore.FieldFilter("entry_id", "==", doc.id))
                 .limit(1)
                 .get()
@@ -212,7 +217,7 @@ class DBManager:
     # -------------------- Delete Entries --------------------
     def delete_entry(self, entry_id: str, uid: str) -> dict:
         try:
-            entry_ref = self.db.collection("journal_entries").document(entry_id)
+            entry_ref = self.db.collection(_COLS["journal_entries"]).document(entry_id)
             entry_doc = entry_ref.get()
 
             if not entry_doc.exists:
@@ -224,7 +229,7 @@ class DBManager:
             entry_ref.delete()
 
             analysis_docs = (
-                self.db.collection("entry_analysis")
+                self.db.collection(_COLS["entry_analysis"])
                 .where(filter=_fa_firestore.FieldFilter("entry_id", "==", entry_id))
                 .get()
             )
@@ -235,7 +240,7 @@ class DBManager:
                 doc.reference.delete()
 
             mapping_docs = (
-                self.db.collection("insight_entry_mapping")
+                self.db.collection(_COLS["insight_entry_mapping"])
                 .where(filter=_fa_firestore.FieldFilter("entry_id", "==", entry_id))
                 .get()
             )
@@ -281,7 +286,7 @@ class DBManager:
     # -------------------- Update Entries --------------------
     def update_entry(self, entry_id: str, uid: str, new_entry_text: str) -> dict:
         try:
-            ref = self.db.collection("journal_entries").document(entry_id)
+            ref = self.db.collection(_COLS["journal_entries"]).document(entry_id)
             doc = ref.get()
 
             if not doc.exists:
@@ -296,7 +301,7 @@ class DBManager:
             })
 
             analysis_docs = (
-                self.db.collection("entry_analysis")
+                self.db.collection(_COLS["entry_analysis"])
                 .where(filter=_fa_firestore.FieldFilter("entry_id", "==", entry_id))
                 .get()
             )

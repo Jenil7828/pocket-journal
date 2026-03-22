@@ -1,8 +1,12 @@
 from rapidfuzz import process
 
+from config_loader import get_config
 from services.media_recommender.providers.tmdb_provider import TMDbProvider
 from services.media_recommender.providers.spotify_provider import SpotifyProvider
 from services.media_recommender.providers.books_provider import GoogleBooksProvider
+
+_CFG = get_config()
+_API = _CFG["api"]
 
 # Minimal mood -> TMDb genre mapping kept for compatibility with previous behavior
 MOOD_GENRE_MAP = {
@@ -17,7 +21,7 @@ MOOD_GENRE_MAP = {
 }
 
 
-def _format_tmdb_results(raw_list, max_results=10):
+def _format_tmdb_results(raw_list, max_results=int(_API["tmdb_default_max_results"])):
     out = []
     for m in raw_list[:max_results]:
         out.append(
@@ -31,7 +35,7 @@ def _format_tmdb_results(raw_list, max_results=10):
     return out
 
 
-def _fetch_movies_by_genres(genre_ids, max_results=10):
+def _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb_default_max_results"])):
     # TMDbProvider doesn't expose a discover with genres on the provider interface,
     # so call TMDb API directly using the provider's internal helper pattern.
     provider = TMDbProvider()
@@ -56,7 +60,7 @@ def recommend_movies_for_mood(mood):
     else:
         genre_ids = MOOD_GENRE_MAP.get(mood, [])
 
-    movies = _fetch_movies_by_genres(genre_ids, max_results=12)
+    movies = _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb_mood_movies_limit"]))
     return {"mood": mood, "recommendations": movies}, 200
 
 
@@ -81,7 +85,7 @@ def recommend_movies_for_user(uid, db):
     if not genre_ids:
         genre_ids = MOOD_GENRE_MAP.get("happy", []) or next(iter(MOOD_GENRE_MAP.values()), [])
 
-    movies = _fetch_movies_by_genres(genre_ids, max_results=12)
+    movies = _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb_mood_movies_limit"]))
     return {"mood": dominant, "recommendations": movies}, 200
 
 
@@ -115,7 +119,7 @@ def search_movies(query):
     # Best-effort: fetch popular pool and filter by query in title
     pool = provider._fetch_popular(pages=3)
     filtered = [m for m in pool if q.lower() in (m.get("title", "") or "").lower() or q.lower() in (m.get("overview", "") or "").lower()]
-    results = _format_tmdb_results(filtered, max_results=6)
+    results = _format_tmdb_results(filtered, max_results=int(_API["tmdb_filtered_limit"]))
     return {"searched": q, "results": results}, 200
 
 

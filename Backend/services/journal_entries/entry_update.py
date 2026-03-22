@@ -4,7 +4,12 @@ from firebase_admin import firestore
 from utils import extract_dominant_mood
 import logging
 
+from config_loader import get_config
+
 logger = logging.getLogger("pocket_journal.journal_entries")
+
+_CFG = get_config()
+_PROC = _CFG["processing"]
 
 
 def update_entry(entry_id, uid, data, db, predictor, summarizer):
@@ -26,7 +31,7 @@ def update_entry(entry_id, uid, data, db, predictor, summarizer):
             return {"error": result.get("error", "Failed to update entry")}, 400
 
         # Perform analysis deterministically on the NEW text
-        summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:200] + "..."
+        summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:int(_PROC["summary_fallback_length"])] + "..."
         mood_result = predictor.predict(new_entry_text) if predictor else {}
         mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
 

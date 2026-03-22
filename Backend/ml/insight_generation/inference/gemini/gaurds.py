@@ -1,3 +1,7 @@
+# Gemini API key setup for the Gemini insights backend
+# This file is only needed when using Gemini as the LLM backend.
+# Handles secure API key configuration from environment variables.
+
 import os
 
 def setup_gemini_env():
@@ -13,3 +17,4 @@ def setup_gemini_env():
         "api_key": os.getenv("GEMINI_API_KEY"),
         "enabled": bool(os.getenv("GEMINI_API_KEY"))
     }
+

@@ -8,12 +8,17 @@ from datetime import datetime
 from typing import Dict, List, Any, Optional
 import pytz
 
+from config_loader import get_config
+
+_TZ = get_config()["app"]["timezone"]
+
+
 class DatabaseSchema:
     """
     Defines the proper database schema for Pocket Journal Firebase collections
     """
     
-    IST = pytz.timezone("Asia/Kolkata")
+    IST = pytz.timezone(_TZ)
     
     @staticmethod
     def get_journal_entry_schema(uid: str, entry_text: str) -> Dict[str, Any]:

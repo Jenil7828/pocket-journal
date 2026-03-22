@@ -2,6 +2,9 @@ import abc
 import logging
 from typing import Dict, List, Optional, Any
 
+from config_loader import get_config
+_CFG = get_config()
+
 import requests
 
 logger = logging.getLogger("pocket_journal.media.providers")
@@ -39,7 +42,7 @@ class MediaProvider(abc.ABC):
 class BaseHTTPProvider(MediaProvider):
     """Helper base-class with HTTP + retry utilities."""
 
-    max_retries: int = 1  # allow one retry for server errors
+    max_retries: int = int(get_config()["api"]["request_max_retries"])  # allow one retry for server errors
 
     def _request(
         self,
@@ -62,7 +65,7 @@ class BaseHTTPProvider(MediaProvider):
         last_resp = None
         while attempt <= self.max_retries:
             try:
-                resp = requests.request(method, url, headers=headers, params=params, timeout=10)
+                resp = requests.request(method, url, headers=headers, params=params, timeout=int(_CFG["api"]["request_timeout"]))
                 status = resp.status_code
                 text_snippet = (resp.text or "")[:500]
 

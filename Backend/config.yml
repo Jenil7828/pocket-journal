@@ -32,17 +32,64 @@ ml:
     min_summary_length: 20                 # SUMMARIZATION_MIN_SUMMARY_LENGTH
     num_beams: 4                           # SUMMARIZATION_NUM_BEAMS
 
+insights:
+  use_gemini: false                                   # INSIGHTS_USE_GEMINI — true=Gemini, false=local Qwen2
+  backend: "huggingface"                              # INSIGHTS_BACKEND
+  ollama_model: "qwen2:1.5b"                         # INSIGHTS_OLLAMA_MODEL
+  ollama_base_url: "http://localhost:11434"           # INSIGHTS_OLLAMA_BASE_URL
+  hf_model_name: "Qwen/Qwen2-1.5B-Instruct"         # INSIGHTS_HF_MODEL_NAME
+  hf_model_dir: "ml/insight_generation/models/qwen2/v1"  # INSIGHTS_HF_MODEL_DIR
+  temperature: 0.7                                    # INSIGHTS_TEMPERATURE
+  batch_size: 5                                       # INSIGHTS_BATCH_SIZE
+  max_new_tokens: 4096                                # INSIGHTS_MAX_NEW_TOKENS
+  gemini_model_name: "gemini-2.0-flash"              # INSIGHTS_GEMINI_MODEL_NAME
+  gemini_max_retries: 2                              # INSIGHTS_GEMINI_MAX_RETRIES
+
 api:
   default_limit: 10              # API_DEFAULT_LIMIT
   max_limit: 100                 # API_MAX_LIMIT
   request_timeout: 10            # API_REQUEST_TIMEOUT
+  request_max_retries: 1         # API_REQUEST_MAX_RETRIES
+  google_books_page_size: 40     # API_GOOGLE_BOOKS_PAGE_SIZE
+  google_books_endpoint: "https://www.googleapis.com/books/v1/volumes"  # API_GOOGLE_BOOKS_ENDPOINT
+  spotify_token_endpoint: "https://accounts.spotify.com/api/token"     # API_SPOTIFY_TOKEN_ENDPOINT
+  spotify_track_endpoint: "https://api.spotify.com/v1/tracks"          # API_SPOTIFY_TRACK_ENDPOINT
+  spotify_search_endpoint: "https://api.spotify.com/v1/search"         # API_SPOTIFY_SEARCH_ENDPOINT
+  tmdb_popular_endpoint: "https://api.themoviedb.org/3/movie/popular"  # API_TMDB_POPULAR_ENDPOINT
+  tmdb_toprated_endpoint: "https://api.themoviedb.org/3/movie/top_rated"  # API_TMDB_TOPRATED_ENDPOINT
+  tmdb_details_endpoint: "https://api.themoviedb.org/3/movie"          # API_TMDB_DETAILS_ENDPOINT
+  tmdb_max_pages: 5             # API_TMDB_MAX_PAGES
+  tmdb_results_per_page: 20     # API_TMDB_RESULTS_PER_PAGE
+  tmdb_default_max_results: 10  # API_TMDB_DEFAULT_MAX_RESULTS
+  tmdb_mood_movies_limit: 12    # API_TMDB_MOOD_MOVIES_LIMIT
+  tmdb_filtered_limit: 6        # API_TMDB_FILTERED_LIMIT
 
 app:
+  timezone: "Asia/Kolkata"       # APP_TIMEZONE
   enable_llm: true              # ENABLE_LLM
   enable_insights: true         # ENABLE_INSIGHTS
   force_color: true              # FORCE_COLOR
   hf_hub_disable_xet: true       # HF_HUB_DISABLE_XET
   tf_cpp_min_log_level: "2"      # TF_CPP_MIN_LOG_LEVEL
+
+processing:
+  summary_fallback_length: 200   # PROCESSING_SUMMARY_FALLBACK_LENGTH
+
+features:
+  mood_tracking_enabled_default: true  # FEATURES_MOOD_TRACKING_ENABLED_DEFAULT
+
+firestore:
+  collections:
+    journal_entries: "journal_entries"              # FIRESTORE_COLLECTIONS_JOURNAL_ENTRIES
+    entry_analysis: "entry_analysis"                # FIRESTORE_COLLECTIONS_ENTRY_ANALYSIS
+    insights: "insights"                            # FIRESTORE_COLLECTIONS_INSIGHTS
+    insight_entry_mapping: "insight_entry_mapping"  # FIRESTORE_COLLECTIONS_INSIGHT_ENTRY_MAPPING
+    users: "users"                                  # FIRESTORE_COLLECTIONS_USERS
+    journal_embeddings: "journal_embeddings"        # FIRESTORE_COLLECTIONS_JOURNAL_EMBEDDINGS
+    user_vectors: "user_vectors"                    # FIRESTORE_COLLECTIONS_USER_VECTORS
+
+concurrency:
+  intent_builder_max_workers: 3  # CONCURRENCY_INTENT_BUILDER_MAX_WORKERS
 
 server:
   port: 5000                     # PORT

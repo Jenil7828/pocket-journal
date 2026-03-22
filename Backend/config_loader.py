@@ -71,7 +71,15 @@ def _load_config_once() -> Dict[str, Any]:
         (["api", "default_limit"], "API_DEFAULT_LIMIT", "int"),
         (["api", "max_limit"], "API_MAX_LIMIT", "int"),
         (["api", "request_timeout"], "API_REQUEST_TIMEOUT", "int"),
+        (["api", "request_max_retries"], "API_REQUEST_MAX_RETRIES", "int"),
+        (["api", "google_books_page_size"], "API_GOOGLE_BOOKS_PAGE_SIZE", "int"),
+        (["api", "tmdb_max_pages"], "API_TMDB_MAX_PAGES", "int"),
+        (["api", "tmdb_results_per_page"], "API_TMDB_RESULTS_PER_PAGE", "int"),
+        (["api", "tmdb_default_max_results"], "API_TMDB_DEFAULT_MAX_RESULTS", "int"),
+        (["api", "tmdb_mood_movies_limit"], "API_TMDB_MOOD_MOVIES_LIMIT", "int"),
+        (["api", "tmdb_filtered_limit"], "API_TMDB_FILTERED_LIMIT", "int"),
         # App/Server/Logging settings (from previous step)
+        (["app", "timezone"], "APP_TIMEZONE", "str"),
         (["app", "enable_llm"], "ENABLE_LLM", "bool"),
         (["app", "enable_insights"], "ENABLE_INSIGHTS", "bool"),
         (["app", "force_color"], "FORCE_COLOR", "bool"),
@@ -83,11 +91,29 @@ def _load_config_once() -> Dict[str, Any]:
         (["logging", "app_level"], "APP_LOG_LEVEL", "str"),
         (["logging", "werkzeug_level"], "WERKZEUG_LOG_LEVEL", "str"),
         (["logging", "firebase_level"], "FIREBASE_LOG_LEVEL", "str"),
+        # Processing settings
+        (["processing", "summary_fallback_length"], "PROCESSING_SUMMARY_FALLBACK_LENGTH", "int"),
+        # Features settings
+        (["features", "mood_tracking_enabled_default"], "FEATURES_MOOD_TRACKING_ENABLED_DEFAULT", "bool"),
+        # Concurrency settings
+        (["concurrency", "intent_builder_max_workers"], "CONCURRENCY_INTENT_BUILDER_MAX_WORKERS", "int"),
         # Cache settings
         (["cache", "max_age_hours"], "MEDIA_CACHE_MAX_AGE_HOURS", "int"),
         (["cache", "fetch_limit"], "MEDIA_CACHE_FETCH_LIMIT", "int"),
         (["cache", "batch_size"], "MEDIA_CACHE_BATCH_SIZE", "int"),
         (["cache", "schema_version"], "MEDIA_CACHE_SCHEMA_VERSION", "str"),
+        # Insights settings
+        (["insights", "use_gemini"], "INSIGHTS_USE_GEMINI", "bool"),
+        (["insights", "gemini_model_name"], "INSIGHTS_GEMINI_MODEL_NAME", "str"),
+        (["insights", "gemini_max_retries"], "INSIGHTS_GEMINI_MAX_RETRIES", "int"),
+        (["insights", "backend"], "INSIGHTS_BACKEND", "str"),
+        (["insights", "ollama_model"], "INSIGHTS_OLLAMA_MODEL", "str"),
+        (["insights", "ollama_base_url"], "INSIGHTS_OLLAMA_BASE_URL", "str"),
+        (["insights", "hf_model_name"], "INSIGHTS_HF_MODEL_NAME", "str"),
+        (["insights", "hf_model_dir"], "INSIGHTS_HF_MODEL_DIR", "str"),
+        (["insights", "temperature"], "INSIGHTS_TEMPERATURE", "float"),
+        (["insights", "batch_size"], "INSIGHTS_BATCH_SIZE", "int"),
+        (["insights", "max_new_tokens"], "INSIGHTS_MAX_NEW_TOKENS", "int"),
     ]
 
     for path, env_name, cast in overrides:

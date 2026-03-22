@@ -7,6 +7,8 @@ from typing import Dict, List, Optional, Any
 import requests
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM, UnauthorizedError
+from config_loader import get_config
+_API = get_config()["api"]
 
 logger = logging.getLogger("pocket_journal.media.providers.podcast")
 
@@ -14,7 +16,7 @@ logger = logging.getLogger("pocket_journal.media.providers.podcast")
 class PodcastAPIProvider(BaseHTTPProvider):
     """Podcast provider backed by Spotify episode search API."""
 
-    token_url = "https://accounts.spotify.com/api/token"
+    token_url = _API["spotify_token_endpoint"]
 
     def __init__(self) -> None:
         client_id = os.getenv("SONG_ID")
@@ -44,7 +46,7 @@ class PodcastAPIProvider(BaseHTTPProvider):
             "Content-Type": "application/x-www-form-urlencoded",
         }
         data = {"grant_type": "client_credentials"}
-        resp = requests.post(self.token_url, headers=headers, data=data, timeout=10)
+        resp = requests.post(self.token_url, headers=headers, data=data, timeout=int(_API["request_timeout"]))
         try:
             resp.raise_for_status()
             payload = resp.json()
@@ -111,7 +113,7 @@ class PodcastAPIProvider(BaseHTTPProvider):
                         "https://api.spotify.com/v1/search",
                         headers=headers,
                         params=params,
-                        timeout=10,
+                        timeout=int(_API["request_timeout"]),
                     )
                     if resp.status_code == 401:
                         self._invalidate_token()
@@ -121,7 +123,7 @@ class PodcastAPIProvider(BaseHTTPProvider):
                             "https://api.spotify.com/v1/search",
                             headers=headers,
                             params=params,
-                            timeout=10,
+                            timeout=int(_API["request_timeout"]),
                         )
                     resp.raise_for_status()
                     payload = resp.json()
