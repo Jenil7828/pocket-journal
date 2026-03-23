@@ -59,9 +59,11 @@ def _load_config_once() -> Dict[str, Any]:
         (["embedding", "journal_blend_weight"], "JOURNAL_BLEND_WEIGHT", "float"),
         (["embedding", "taste_blend_weight"], "TASTE_BLEND_WEIGHT", "float"),
         # ML settings
+        (["ml", "mood_detection", "model_version"], "MOOD_MODEL_VERSION", "str"),
         (["ml", "mood_detection", "model_name"], "MOOD_MODEL_NAME", "str"),
         (["ml", "mood_detection", "max_length"], "MOOD_MAX_LENGTH", "int"),
         (["ml", "mood_detection", "prediction_threshold"], "MOOD_PREDICTION_THRESHOLD", "float"),
+        (["ml", "summarization", "model_version"], "SUMMARIZATION_MODEL_VERSION", "str"),
         (["ml", "summarization", "model_name"], "SUMMARIZATION_MODEL_NAME", "str"),
         (["ml", "summarization", "max_input_length"], "SUMMARIZATION_MAX_INPUT_LENGTH", "int"),
         (["ml", "summarization", "max_summary_length"], "SUMMARIZATION_MAX_SUMMARY_LENGTH", "int"),

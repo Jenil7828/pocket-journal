@@ -12,27 +12,47 @@ class SummarizationPredictor:
     def __init__(self, model_path: str | None = None):
         self.model_path = model_path or Config.OUTPUT_DIR
         self.device = Config.DEVICE
+        self._use_onnx = False
 
         self._load_model()
 
     def _load_model(self):
-        if os.path.exists(self.model_path) and os.path.exists(
-            os.path.join(self.model_path, "config.json")
-        ):
-            logger.info("Loading fine-tuned BART summarizer from %s", self.model_path)
-            with suppress_hf():
-                self.tokenizer = AutoTokenizer.from_pretrained(self.model_path)
-                self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_path)
-        else:
-            logger.warning(
-                "Fine-tuned summarizer not found at %s, using base model %s",
-                self.model_path,
-                Config.MODEL_NAME,
-            )
-            with suppress_hf():
-                self.tokenizer = AutoTokenizer.from_pretrained(Config.MODEL_NAME)
-                self.model = AutoModelForSeq2SeqLM.from_pretrained(Config.MODEL_NAME)
+        model_exists = (
+            os.path.exists(self.model_path)
+            and os.path.exists(os.path.join(self.model_path, "config.json"))
+        )
+        onnx_exists = model_exists and os.path.exists(
+            os.path.join(self.model_path, "encoder_model.onnx")
+        )
+        load_from = self.model_path if model_exists else Config.MODEL_NAME
 
+        if onnx_exists:
+            logger.info("Loading BART via ONNX Runtime from %s", self.model_path)
+            try:
+                from optimum.onnxruntime import ORTModelForSeq2SeqLM
+                with suppress_hf():
+                    self.tokenizer = AutoTokenizer.from_pretrained(load_from)
+                    self.model = ORTModelForSeq2SeqLM.from_pretrained(
+                        load_from,
+                        provider="CUDAExecutionProvider" if self.device == "cuda" else "CPUExecutionProvider",
+                    )
+                self._use_onnx = True
+                logger.info("BART ONNX Runtime loaded successfully provider=%s",
+                            "CUDA" if self.device == "cuda" else "CPU")
+                return
+            except Exception as e:
+                logger.warning("ONNX load failed (%s) — falling back to PyTorch", str(e))
+
+        # Standard PyTorch path
+        self._use_onnx = False
+        if model_exists:
+            logger.info("Loading fine-tuned BART summarizer from %s", self.model_path)
+        else:
+            logger.warning("Fine-tuned summarizer not found at %s — using base model %s",
+                           self.model_path, Config.MODEL_NAME)
+        with suppress_hf():
+            self.tokenizer = AutoTokenizer.from_pretrained(load_from)
+            self.model = AutoModelForSeq2SeqLM.from_pretrained(load_from)
         if self.device == "cuda":
             self.model = self.model.half()
         self.model.to(self.device)
@@ -72,7 +92,10 @@ class SummarizationPredictor:
             truncation=True,
             padding="max_length",
             return_tensors="pt",
-        ).to(self.device)
+        )
+        
+        if not self._use_onnx:
+            inputs = inputs.to(self.device)
 
         with torch.no_grad():
             output_ids = self.model.generate(

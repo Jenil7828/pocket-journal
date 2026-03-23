@@ -26,6 +26,7 @@ class Config:
     )
 
     # Inference-only model path (mounted or baked explicitly)
+    _version = _CFG["ml"]["mood_detection"].get("model_version", "v1")
     OUTPUT_DIR = os.path.join(
         BASE_DIR,
         "ml",
@@ -33,7 +34,7 @@ class Config:
         "models",
         "mood_detection",
         "roberta",
-        "v1"
+        _version
     )
 
     # Prediction config (from config)

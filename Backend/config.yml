@@ -21,11 +21,13 @@ embedding:
 
 ml:
   mood_detection:
+    model_version: "v2"    # MOOD_MODEL_VERSION — set to v2 after running conversion script
     model_name: "roberta-base"              # MOOD_MODEL_NAME
     max_length: 128                         # MOOD_MAX_LENGTH
     prediction_threshold: 0.35              # MOOD_PREDICTION_THRESHOLD
     labels: ["anger", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
   summarization:
+    model_version: "v2"    # SUMMARIZATION_MODEL_VERSION — set to v2 after running conversion script
     model_name: "facebook/bart-large-cnn"  # SUMMARIZATION_MODEL_NAME
     max_input_length: 1024                 # SUMMARIZATION_MAX_INPUT_LENGTH
     max_summary_length: 128                # SUMMARIZATION_MAX_SUMMARY_LENGTH

@@ -26,6 +26,7 @@ class Config:
     )
 
     # Inference-only model directory
+    _version = _CFG["ml"]["summarization"].get("model_version", "v1")
     OUTPUT_DIR = os.path.join(
         BASE_DIR,
         "ml",
@@ -33,7 +34,7 @@ class Config:
         "models",
         "summarization",
         "bart",
-        "v1"
+        _version
     )
 
     # Generation defaults (from config)
