@@ -30,6 +30,7 @@ def register_all(app, deps: dict):
     from . import auth as _auth
     from . import user as _user
     from . import app_meta as _app_meta
+    from . import jobs as _jobs
 
     _process_entry.register(app, deps)
     _entries.register(app, deps)
@@ -42,3 +43,4 @@ def register_all(app, deps: dict):
     _auth.register(app, deps)
     _user.register(app, deps)
     _app_meta.register(app, deps)
+    _jobs.register(app, deps)

@@ -2,7 +2,12 @@ from firebase_admin import firestore
 import logging
 import numpy as np
 
+from config_loader import get_config
+
 logger = logging.getLogger("pocket_journal.journal_entries")
+
+_CFG = get_config()
+_COLS = _CFG["firestore"]["collections"]
 
 
 def process_entry(user, data, db, predictor, summarizer):
@@ -16,22 +21,22 @@ def process_entry(user, data, db, predictor, summarizer):
     entry_id = db.insert_entry(uid, text)
 
     # Summarize (optional)
-    summary = summarizer.summarize(text) if summarizer else text[:200] + "..."
+    summary = summarizer.summarize(text) if summarizer else text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
 
-    # Determine whether mood detection is enabled for the user (default: True)
-    mood_enabled = True
+    # Determine whether mood detection is enabled for the user (default from config)
+    mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
     try:
         if uid:
             fs = getattr(db, "db", None) or None
             if fs is not None:
-                user_doc = fs.collection("users").document(uid).get()
+                user_doc = fs.collection(_COLS["users"]).document(uid).get()
                 if user_doc.exists:
                     user_data = user_doc.to_dict() or {}
                     settings = user_data.get("settings", {}) or {}
-                    mood_enabled = settings.get("mood_tracking_enabled", True)
+                    mood_enabled = settings.get("mood_tracking_enabled", mood_enabled)
     except Exception:
-        # If anything goes wrong while reading settings, default to enabled
-        mood_enabled = True
+        # If anything goes wrong while reading settings, default to config value
+        mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
     # Use original entry text for mood detection per design
     if mood_enabled:
@@ -87,7 +92,7 @@ def process_entry(user, data, db, predictor, summarizer):
             try:
                 journal_vec = embedder.embed_text(summary)
                 # Persist as list of floats (or empty list if embedding missing). Use Firestore server timestamp.
-                fs.collection("journal_embeddings").add({
+                fs.collection(_COLS["journal_embeddings"]).add({
                     "uid": uid,
                     "entry_id": entry_id,
                     "embedding": journal_vec.tolist() if getattr(journal_vec, "size", 0) else [],
@@ -102,7 +107,7 @@ def process_entry(user, data, db, predictor, summarizer):
 
             # Apply light identity update for each domain if existing
             try:
-                uv_ref = fs.collection("user_vectors").document(uid)
+                uv_ref = fs.collection(_COLS["user_vectors"]).document(uid)
                 uv_doc = uv_ref.get()
                 if uv_doc.exists:
                     uv = uv_doc.to_dict() or {}
@@ -120,8 +125,10 @@ def process_entry(user, data, db, predictor, summarizer):
                             if existing_vec.size == 0 or getattr(journal_vec, "size", 0) == 0:
                                 # nothing to blend
                                 continue
-                            # Blend: 95% existing + 5% journal embedding
-                            blended = existing_vec * 0.95 + journal_vec * 0.05
+                            # Blend: configured taste_blend_weight * existing + journal_blend_weight * journal embedding
+                            taste_blend_weight = float(_CFG["ml"]["embedding"]["taste_blend_weight"])
+                            journal_blend_weight = float(_CFG["ml"]["embedding"]["journal_blend_weight"])
+                            blended = existing_vec * taste_blend_weight + journal_vec * journal_blend_weight
                             # Normalize
                             normed = (blended / (np.linalg.norm(blended) + 1e-12)).astype(np.float32)
                             updates[key] = normed.tolist()

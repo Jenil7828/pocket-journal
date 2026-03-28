@@ -4,11 +4,16 @@ from firebase_admin import firestore
 from utils import extract_dominant_mood
 import logging
 
+from config_loader import get_config
+
 logger = logging.getLogger("pocket_journal.journal_entries")
+
+_CFG = get_config()
+_COLS = _CFG["firestore"]["collections"]
 
 
 def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
-    entry_doc = db.db.collection("journal_entries").document(entry_id).get()
+    entry_doc = db.db.collection(_COLS["journal_entries"]).document(entry_id).get()
     if not entry_doc.exists:
         return {"error": "Entry not found"}, 404
 
@@ -18,24 +23,24 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
 
     entry_text = entry_data["entry_text"]
 
-    analysis_query = db.db.collection("entry_analysis").where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
+    analysis_query = db.db.collection(_COLS["entry_analysis"]).where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
     old_analysis_ids = []
     for analysis_doc in analysis_query:
         analysis_doc.reference.delete()
         old_analysis_ids.append(analysis_doc.id)
 
-    summary = summarizer.summarize(entry_text) if summarizer else entry_text[:200] + "..."
+    summary = summarizer.summarize(entry_text) if summarizer else entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
 
     # Check user's mood tracking setting; default True
-    mood_enabled = True
+    mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
     try:
-        user_doc = db.db.collection("users").document(uid).get()
+        user_doc = db.db.collection(_COLS["users"]).document(uid).get()
         if user_doc.exists:
             user_data = user_doc.to_dict() or {}
             settings = user_data.get("settings", {}) or {}
             mood_enabled = settings.get("mood_tracking_enabled", True)
     except Exception:
-        mood_enabled = True
+        mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
     if mood_enabled:
         mood_result = predictor.predict(entry_text) if predictor else {}
@@ -76,7 +81,7 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
 
 
 def get_single_entry(entry_id, uid, db):
-    entry_doc = db.db.collection("journal_entries").document(entry_id).get()
+    entry_doc = db.db.collection(_COLS["journal_entries"]).document(entry_id).get()
     if not entry_doc.exists:
         return {"error": "Entry not found"}, 404
 
@@ -84,7 +89,7 @@ def get_single_entry(entry_id, uid, db):
     if entry_data.get("uid") != uid:
         return {"error": "Unauthorized: Entry does not belong to user"}, 403
 
-    analysis_query = db.db.collection("entry_analysis").where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
+    analysis_query = db.db.collection(_COLS["entry_analysis"]).where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
     analysis_data = None
     for analysis_doc in analysis_query:
         analysis_data = analysis_doc.to_dict()
@@ -101,7 +106,7 @@ def get_single_entry(entry_id, uid, db):
 
 
 def get_entry_analysis(entry_id, uid, db):
-    entry_doc = db.db.collection("journal_entries").document(entry_id).get()
+    entry_doc = db.db.collection(_COLS["journal_entries"]).document(entry_id).get()
     if not entry_doc.exists:
         return {"error": "Entry not found"}, 404
 
@@ -109,7 +114,7 @@ def get_entry_analysis(entry_id, uid, db):
     if entry_data.get("uid") != uid:
         return {"error": "Unauthorized: Entry does not belong to user"}, 403
 
-    analysis_query = db.db.collection("entry_analysis").where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
+    analysis_query = db.db.collection(_COLS["entry_analysis"]).where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
     analysis_data = None
     for analysis_doc in analysis_query:
         analysis_data = analysis_doc.to_dict()
@@ -131,18 +136,18 @@ def get_entries_filtered(uid, params, db):
     except ValueError:
         return {"error": "Invalid limit or offset parameter"}, 400
 
-    if limit < 1 or limit > 100:
+    if limit < 1 or limit > int(_CFG["api"]["max_limit"]):
         return {"error": "Limit must be between 1 and 100"}, 400
     if offset < 0:
         return {"error": "Offset must be non-negative"}, 400
 
-    query = db.db.collection("journal_entries").where(filter=firestore.FieldFilter("uid", "==", uid))
+    query = db.db.collection(_COLS["journal_entries"]).where(filter=firestore.FieldFilter("uid", "==", uid))
 
     if start_date and start_date.strip():
         try:
             start_date_str = str(start_date).strip()
             start_datetime_naive = datetime.strptime(start_date_str, "%Y-%m-%d")
-            IST = pytz.timezone("Asia/Kolkata")
+            IST = pytz.timezone(_CFG["app"]["timezone"])
             start_datetime = IST.localize(start_datetime_naive)
             query = query.where(filter=firestore.FieldFilter("created_at", ">=", start_datetime))
         except ValueError:
@@ -152,7 +157,7 @@ def get_entries_filtered(uid, params, db):
         try:
             end_date_str = str(end_date).strip()
             end_datetime_naive = datetime.strptime(end_date_str, "%Y-%m-%d")
-            IST = pytz.timezone("Asia/Kolkata")
+            IST = pytz.timezone(_CFG["app"]["timezone"])
             end_datetime = IST.localize(end_datetime_naive.replace(hour=23, minute=59, second=59))
             query = query.where(filter=firestore.FieldFilter("created_at", "<=", end_datetime))
         except ValueError:
@@ -174,7 +179,7 @@ def get_entries_filtered(uid, params, db):
 
             if mood_filter:
                 try:
-                    analysis_query = db.db.collection("entry_analysis").where(filter=firestore.FieldFilter("entry_id", "==", entry_data["entry_id"])).get()
+                    analysis_query = db.db.collection(_COLS["entry_analysis"]).where(filter=firestore.FieldFilter("entry_id", "==", entry_data["entry_id"])).get()
                     has_matching_mood = False
                     for analysis_doc in analysis_query:
                         analysis_data = analysis_doc.to_dict()

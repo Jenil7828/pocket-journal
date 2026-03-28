@@ -9,9 +9,12 @@ import numpy as np
 # Ensure HF opt-out set before any HF-related imports
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
+from config_loader import get_config
 from services.suppression import suppress_hf
 
 logger = logging.getLogger("pocket_journal.embedding_service")
+
+_CFG = get_config()
 
 
 # Lazy import heavy deps inside the class to avoid import-time side-effects
@@ -30,7 +33,10 @@ class EmbeddingService:
     - Provides helpers to embed text(s), normalize vectors and compute cosine similarity.
     """
 
-    def __init__(self, model_name: str = "all-mpnet-base-v2"):
+    def __init__(self, model_name: Optional[str] = None):
+        if model_name is None:
+            model_name = str(_CFG["ml"]["embedding"]["model_name"])
+
         # Import SentenceTransformer lazily inside constructor so HF env flags are effective
         try:
             with suppress_hf():
@@ -57,6 +63,9 @@ class EmbeddingService:
             with suppress_hf():
                 # SentenceTransformer accepts a device string like 'cpu' or 'cuda'
                 self.model = SentenceTransformer(model_name, device=self.device)
+                if self.device == "cuda":
+                    self.model = self.model.half()
+                    logger.info("EmbeddingService cast to float16 on CUDA")
         except Exception as e:
             logger.warning("Failed to load embedding model: %s", str(e))
             logger.debug(traceback.format_exc())

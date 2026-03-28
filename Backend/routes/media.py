@@ -1,100 +1,270 @@
+import time
 from flask import request, jsonify
+from config_loader import get_config
+from utils.logging_utils import log_request, log_response
+from services.media_recommender.recommendation import recommend_media
+from services.search_service import SearchService
+
+_CFG = get_config()
 
 
 def register(app, deps):
     login_required = deps["login_required"]
-    media_recommendations = deps["media_recommendations"]
-    get_db = deps["get_db"]
+    db = deps.get("db")
 
-    @app.route("/api/recommend", methods=["GET"])
+    # Initialize search service
+    search_service = SearchService(db) if db else None
+
+    @app.route("/api/v1/<media_type>/search", methods=["GET"])
+    @login_required
+    def api_search(media_type):
+        """
+        Unified media search endpoint with hybrid cache-first strategy.
+
+        Path parameter:
+        - media_type: songs | movies | books | podcasts
+
+        Query parameters:
+        - query: search string (required)
+        - language: hindi | english | neutral (optional, for songs/podcasts only)
+        - limit: int (default=20, max=50)
+
+        Returns:
+        {
+            "results": [media_item1, media_item2, ...],
+            "metrics": {
+                "cache_hit_count": int,
+                "fallback_triggered": bool,
+                "cache_latency_ms": float,
+                "provider_latency_ms": float,
+                "final_result_count": int,
+                "deduplication_count": int
+            }
+        }
+        """
+        start_time = time.time()
+        log_request()
+
+        try:
+            if not search_service:
+                log_response(500, start_time)
+                return jsonify({"error": "Search service not initialized"}), 500
+
+            # Normalize media_type from path
+            media_type = media_type.strip().lower()
+            
+            # Get query parameters
+            query = request.args.get("query", "").strip()
+            language = request.args.get("language", "").strip().lower() or None
+            limit = request.args.get("limit", 20, type=int)
+
+            # Validate required parameters
+            if not query:
+                log_response(400, start_time)
+                return jsonify({"error": "query parameter is required"}), 400
+
+            if media_type not in {"songs", "movies", "books", "podcasts"}:
+                log_response(400, start_time)
+                return jsonify({"error": f"Invalid media_type: {media_type}. Must be one of: songs, movies, books, podcasts"}), 400
+
+            # Perform search
+            result = search_service.search(
+                media_type=media_type,
+                query=query,
+                language=language,
+                limit=limit,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+
+        except ValueError as e:
+            log_response(400, start_time)
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/media/debug_verify", methods=["GET"])
+    @login_required
+    def media_debug_verify():
+        """Test cache hit rates across media types."""
+        start_time = time.time()
+        log_request()
+
+        try:
+            uid = request.user["uid"]
+            stats = {}
+
+            for media_type in ["movies", "songs", "books"]:
+                try:
+                    result = recommend_media(uid=uid, media_type=media_type, top_k=5)
+                    results = result.get("results", [])
+                    non_null_count = len([r for r in results if r])
+                    stats[media_type] = {
+                        "total": len(results),
+                        "non_null": non_null_count,
+                        "percentage": (non_null_count / len(results) * 100) if results else 0,
+                        "source": result.get("source", "unknown"),
+                    }
+                except Exception as e:
+                    stats[media_type] = {"error": str(e)}
+
+            log_response(200, start_time)
+            return jsonify({"status": "ok", "stats": stats}), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/media/recommend", methods=["GET"])
     @login_required
     def api_recommend():
-        mood = request.args.get("mood")
-        _db = get_db()
-        body, status = media_recommendations.recommend_movies_for_mood(mood)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        """Unified media recommendation endpoint."""
+        start_time = time.time()
+        log_request()
 
-    @app.route("/movie/recommend", methods=["GET"])
+        try:
+            uid = request.user["uid"]
+            media_type = request.args.get("media_type", "movies")
+            default_top_k = int(_CFG["recommendation"]["top_k"])
+            top_k = request.args.get("top_k", default_top_k, type=int)
+            language = request.args.get("language")
+            genre = request.args.get("genre")
+            year_from = request.args.get("year_from")
+            year_to = request.args.get("year_to")
+
+            filters = {}
+            if language:
+                filters["language"] = language
+            if genre:
+                filters["genre"] = genre
+            if year_from:
+                filters["year_from"] = year_from
+            if year_to:
+                filters["year_to"] = year_to
+
+            result = recommend_media(
+                uid=uid,
+                media_type=media_type,
+                filters=filters or None,
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/movie/recommend", methods=["GET"])
     @login_required
     def movie_recommend():
-        uid = request.user["uid"]
-        _db = get_db()
-        body, status = media_recommendations.recommend_movies_for_user(uid, _db)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        """Movie recommendation endpoint."""
+        start_time = time.time()
+        log_request()
 
-    @app.route("/song/recommend", methods=["GET"])
+        try:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+
+            result = recommend_media(
+                uid=uid,
+                media_type="movies",
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/song/recommend", methods=["GET"])
     @login_required
     def song_recommend():
-        uid = request.user["uid"]
-        try:
-            limit = int(request.args.get("limit", 10))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        language = request.args.get("language", "both")
-        _db = get_db()
-        body, status = media_recommendations.recommend_songs_for_user(uid, limit, language, _db)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        """Song recommendation endpoint."""
+        start_time = time.time()
+        log_request()
 
-    @app.route("/book/recommend", methods=["GET"])
+        try:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+            language = request.args.get("language")
+
+            filters = None
+            if language:
+                filters = {"language": language}
+
+            result = recommend_media(
+                uid=uid,
+                media_type="songs",
+                filters=filters,
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/podcast/recommend", methods=["GET"])
+    @login_required
+    def podcast_recommend():
+        """Podcast recommendation endpoint."""
+        start_time = time.time()
+        log_request()
+
+        try:
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
+            language = request.args.get("language")
+            genre = request.args.get("genre")
+
+            filters = {}
+            if language:
+                filters["language"] = language
+            if genre:
+                filters["genre"] = genre
+
+            result = recommend_media(
+                uid=uid,
+                media_type="podcasts",
+                filters=filters or None,
+                top_k=top_k,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    @app.route("/api/v1/book/recommend", methods=["GET"])
     @login_required
     def book_recommend():
-        uid = request.user["uid"]
-        _db = get_db()
-        body, status = media_recommendations.recommend_books_for_user(uid, _db)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        """Book recommendation endpoint."""
+        start_time = time.time()
+        log_request()
 
-    @app.route("/api/search", methods=["GET"])
-    @login_required
-    def api_search():
-        q = request.args.get("movie")
-        _db = get_db()
-        body, status = media_recommendations.search_movies(q)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
-
-    @app.route("/api/songs", methods=["GET"])
-    @login_required
-    def get_songs():
-        mood = request.args.get("mood", "happy").lower()
-        language = request.args.get("language", "both").lower()
         try:
-            limit = int(request.args.get("limit", 10))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.get_songs(mood, language, limit)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+            uid = request.user["uid"]
+            default_limit = int(_CFG["api"]["default_limit"])
+            top_k = request.args.get("limit", default_limit, type=int)
 
-    @app.route("/api/search_song", methods=["GET"])
-    @login_required
-    def api_search_song():
-        query = request.args.get("q")
-        search_type = (request.args.get("type") or "track").lower()
-        try:
-            limit = int(request.args.get("limit", 10))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.search_songs(query, search_type, limit)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+            result = recommend_media(
+                uid=uid,
+                media_type="books",
+                top_k=top_k,
+            )
 
-    @app.route("/api/books", methods=["GET"])
-    @login_required
-    def get_books_by_emotion():
-        emotion = request.args.get("emotion", "happy").lower()
-        try:
-            limit = int(request.args.get("limit", 5))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.books_by_emotion(emotion, limit)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+            log_response(200, start_time)
+            return jsonify(result), 200
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
 
-    @app.route("/api/search_books", methods=["GET"])
-    @login_required
-    def api_search_books():
-        query = request.args.get("query")
-        search_type = (request.args.get("type") or "both").lower()
-        try:
-            max_results = int(request.args.get("limit", 10))
-        except ValueError:
-            return jsonify({"error": "Invalid limit"}), 400
-        body, status = media_recommendations.search_books(query, search_type, max_results)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
 

@@ -2,21 +2,42 @@
 import os
 import warnings
 
+# Load environment variables first
+from dotenv import load_dotenv
+load_dotenv()
+
+# Load configuration
+from config_loader import get_config
+_CFG = get_config()
+
 # Ensure HF opt-out set before any Hugging Face imports
-os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
+os.environ.setdefault("HF_HUB_DISABLE_XET", str(int(_CFG["app"]["hf_hub_disable_xet"])))
 
 # Suppress TensorFlow warnings
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = str(_CFG["app"]["tf_cpp_min_log_level"])
 warnings.filterwarnings("ignore", category=FutureWarning)
 warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
 
 from flask import Flask, request, jsonify
 from functools import wraps
-from dotenv import load_dotenv
 import logging
+from utils.log_formatter import ColoredFormatter
 
-# Load environment variables
-load_dotenv()
+# -------------------- Logging --------------------
+LOG_LEVEL = _CFG["logging"]["app_level"].upper()
+log_fmt = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
+logging.basicConfig(level=LOG_LEVEL, format=log_fmt)
+logger = logging.getLogger()
+
+# Apply colored formatter to root logger
+handler = logger.handlers[0] if logger.handlers else None
+if handler:
+    handler.setFormatter(ColoredFormatter(log_fmt))
+
+pj_logger = logging.getLogger("pocket_journal")
+# Lower specific external loggers
+logging.getLogger("werkzeug").setLevel(_CFG["logging"]["werkzeug_level"])
+logging.getLogger("firebase_admin").setLevel(_CFG["logging"]["firebase_level"])
 
 # Lower noisy external loggers early (keep minimal)
 import logging as _logging
@@ -25,18 +46,6 @@ for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3"):
         _logging.getLogger(noisy).setLevel(_logging.WARNING)
     except Exception:
         pass
-
-# -------------------- Logging --------------------
-LOG_LEVEL = os.getenv("APP_LOG_LEVEL", "INFO").upper()
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
-)
-logger = logging.getLogger("pocket_journal")
-
-# Lower specific external loggers
-logging.getLogger("werkzeug").setLevel(os.getenv("WERKZEUG_LOG_LEVEL", "WARNING"))
-logging.getLogger("firebase_admin").setLevel(os.getenv("FIREBASE_LOG_LEVEL", "WARNING"))
 
 # -------------------- Firebase --------------------
 import firebase_admin
@@ -93,14 +102,19 @@ stats_service = _services_pkg.stats_service
 
 from persistence.db_manager import DBManager
 from services.embedding_service import get_embedding_service
+from services.media_recommender.cache_store import MediaCacheStore
+from ml.utils.model_loader import resolve_model_path
 
-from ml.mood_detection.inference.mood_detection.roberta.predictor import SentencePredictor
-from ml.mood_detection.inference.summarization.bart.predictor import SummarizationPredictor
+from ml.inference.mood_detection.roberta.predictor import SentencePredictor
+from ml.inference.summarization.bart.predictor import SummarizationPredictor
+from ml.inference.insight_generation.qwen2.predictor import InsightsPredictor
+
 
 # -------------------- Lazy singletons --------------------
 _db = None
 _predictor = None
 _summarizer = None
+_insights_predictor = None
 
 
 def get_db():
@@ -111,18 +125,14 @@ def get_db():
     return _db
 
 
+# Initialize cache store once after Firebase is initialized (via DBManager).
+cache_store = MediaCacheStore(get_db().db)
+
+
 def get_predictor():
     global _predictor
     if _predictor is None:
-        model_dir = os.path.join(
-            os.path.dirname(__file__),
-            "ml",
-            "mood_detection",
-            "models",
-            "mood_detection",
-            "roberta",
-            "v1",
-        )
+        model_dir = resolve_model_path("mood_detection", "roberta", "v2")
         _predictor = SentencePredictor(model_dir)
     return _predictor
 
@@ -131,19 +141,19 @@ def get_summarizer():
     global _summarizer
     if _summarizer is None:
         try:
-            model_dir = os.path.join(
-                os.path.dirname(__file__),
-                "ml",
-                "mood_detection",
-                "models",
-                "summarization",
-                "bart",
-                "v1",
-            )
+            model_dir = resolve_model_path("summarization", "bart", "v2")
             _summarizer = SummarizationPredictor(model_path=model_dir)
         except Exception:
             _summarizer = None
     return _summarizer
+
+
+def get_insights_predictor():
+    global _insights_predictor
+    if _insights_predictor is None:
+        model_dir = resolve_model_path("insight_generation", "qwen2", "v1")
+        _insights_predictor = InsightsPredictor(model_path=model_dir)
+    return _insights_predictor
 
 # -------------------- Eager model loading at startup --------------------
 try:
@@ -162,15 +172,31 @@ except Exception as e:
     # Do not fail startup if models unavailable; keep server running and degrade gracefully
     logger.warning("Failed to eagerly load models at startup: %s", str(e))
 
+# Only eagerly load insights predictor if NOT using Gemini backend
+# If use_gemini=true, the predictor will be lazily loaded on-demand (if ever needed)
+use_gemini = bool(_CFG["ml"]["insight_generation"].get("use_gemini", False))
+
+_insights_predictor = None
+if not use_gemini:
+    try:
+        _insights_predictor = get_insights_predictor()
+        logger.info("Eagerly loaded insights predictor at startup (Gemini disabled)")
+    except Exception as e:
+        logger.warning("Failed to load insights predictor at startup: %s", str(e))
+        _insights_predictor = None
+else:
+    logger.info("Skipping eager load of insights predictor (Gemini enabled)")
+
 # NEW: expose module-level cached references for route handlers to use
 PREDICTOR = _predictor
 SUMMARIZER = _summarizer
+INSIGHTS_PREDICTOR = _insights_predictor
 
 # -------------------- Flask App --------------------
 app = Flask(__name__)
 
-ENABLE_LLM = os.getenv("ENABLE_LLM", "false").lower() in ("1", "true", "yes")
-ENABLE_INSIGHTS = os.getenv("ENABLE_INSIGHTS", str(ENABLE_LLM)).lower() in ("1", "true", "yes")
+ENABLE_LLM = bool(_CFG["app"]["enable_llm"])
+ENABLE_INSIGHTS = bool(_CFG["app"]["enable_insights"])
 
 
 # -------------------- Auth Decorator --------------------
@@ -208,6 +234,8 @@ from routes import register_all as register_routes
 deps = {
     "login_required": login_required,
     "get_db": get_db,
+    "db": get_db(),  # Direct reference for services that need DBManager instance
+    "cache_store": cache_store,
     "journal_entries": journal_entries,
     "insights_service": insights_service,
     "export_service": export_service,
@@ -216,8 +244,10 @@ deps = {
     "health_service": health_service,
     "PREDICTOR": PREDICTOR,
     "SUMMARIZER": SUMMARIZER,
+    "INSIGHTS_PREDICTOR": INSIGHTS_PREDICTOR,
     "get_predictor": get_predictor,
     "get_summarizer": get_summarizer,
+    "get_insights_predictor": get_insights_predictor,
     "get_embedding_service": get_embedding_service,
     "ENABLE_LLM": ENABLE_LLM,
     "ENABLE_INSIGHTS": ENABLE_INSIGHTS,
@@ -225,21 +255,22 @@ deps = {
 
 register_routes(app, deps)
 
+
 # -------------------- Home Page --------------------
 # Home route is registered via routes.home
 
 # -------------------- Run --------------------
 if __name__ == "__main__":
     # Default: disable Flask reloader to avoid duplicate model initialization.
-    FLASK_DEBUG = os.getenv("FLASK_DEBUG", "false").lower() in ("1", "true", "yes")
-    DISABLE_RELOADER = os.getenv("DISABLE_RELOADER", "true").lower() in ("1", "true", "yes")
+    FLASK_DEBUG = bool(_CFG["server"]["flask_debug"])
+    DISABLE_RELOADER = bool(_CFG["server"]["disable_reloader"])
     use_reloader = False
     # Allow enabling reloader only if explicitly requested and in debug mode
     if FLASK_DEBUG and not DISABLE_RELOADER:
         use_reloader = True
     app.run(
         host="0.0.0.0",
-        port=int(os.getenv("PORT", 5000)),
+        port=int(_CFG["server"]["port"]),
         debug=FLASK_DEBUG,
         use_reloader=use_reloader,
     )

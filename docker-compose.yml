@@ -1,5 +1,6 @@
-# version: "3.8"
-
+# - To start: `docker compose up --build -d`
+# - The Firebase JSON file is bind-mounted read-only into /app/secrets/firebase.json
+#   and the app will read the path from FIREBASE_CREDENTIALS_PATH.
 services:
   pocket-journal:
     # Build from the production Dockerfile in Backend
@@ -8,7 +9,7 @@ services:
       dockerfile: Dockerfile
       args:
         - APP_USER=app
-    image: pocket-journal:prod
+    container_name: pocket-journal-api
     gpus: all
     ports:
       - "8080:8080"
@@ -19,21 +20,52 @@ services:
       - PORT=8080
       - PYTHONDONTWRITEBYTECODE=1
       - PYTHONUNBUFFERED=1
+      - FORCE_COLOR=1
       # Path inside container where we'll mount the Firebase service account JSON
       - FIREBASE_CREDENTIALS_PATH=/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json
-      # GEMINI_API_KEY can be provided via Backend/.env or the host environment
-#      - GEMINI_API_KEY=${GEMINI_API_KEY}
-    # Mount the locally-produced model artifacts and the Firebase JSON into the container
+      # Gunicorn worker temporary directory (must be writable)
+      - TMPDIR=/tmp/gunicorn
+      # Model store configuration
+      - MODEL_SOURCE=local
+      - MODEL_STORE_PATH=/models
+      - MODEL_CACHE_DIR=/tmp/models
+      - MODEL_DOWNLOAD_ON_STARTUP=true
+      # Model versions
+      - MODEL_ROBERTA_VERSION=v2
+      - MODEL_BART_VERSION=v2
+      - MODEL_QWEN2_VERSION=v1
+    # Mount volumes for models, secrets, and cache
     volumes:
-      #- ./Backend:/app:ro
-      - ./Backend/ml/mood_detection/models:/app/ml/mood_detection/models:ro
+      - ./Backend:/app:ro
       - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
-      # - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro
+      # Mount external models folder into container at /models
+      - D:/Pocket Journal/models:/models:ro
+      # Persistent cache so models are not re-copied on every restart
+      - model-cache:/tmp/models
+      # Writable volume for gunicorn worker sockets
+      - gunicorn-tmp:/tmp/gunicorn
+      # HuggingFace cache for downloaded models
+      - hf-cache:/root/.cache/huggingface
     restart: unless-stopped
+
+volumes:
+  model-cache:
+    # Named volume for persistent model cache across restarts
+  gunicorn-tmp:
+    # Named volume for gunicorn worker temporary files (sockets)
+  hf-cache:
+    # Named volume for HuggingFace model cache
 
 # Notes:
 # - Create a host-side `Backend/.env` (do NOT commit it). Example contents below.
-# - The Firebase JSON file is bind-mounted read-only into /app/secrets/firebase.json
-#   and the app will read the path from FIREBASE_CREDENTIALS_PATH.
+# - The Firebase JSON file is bind-mounted read-only into /app/secrets/
 # - You can also export GEMINI_API_KEY on the host or add it to Backend/.env.
-# - To start: `docker compose -f Backend/docker-compose.prod.yml up --build -d`
+# 
+# To start with LOCAL models:
+#   docker compose up --build -d
+#
+# To start with GCS models:
+#   docker compose -e MODEL_SOURCE=gcs -e MODEL_GCS_BUCKET=your-bucket up --build -d
+#
+# To start with S3 models:
+#   docker compose -e MODEL_SOURCE=s3 -e MODEL_S3_BUCKET=your-bucket -e MODEL_S3_REGION=us-east-1 up --build -d

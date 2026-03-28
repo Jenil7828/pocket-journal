@@ -54,8 +54,9 @@ secrets/
 # the inference models directory which must be present locally and included in 
 # the runtime image). The `!` lines re-include the models directory.
 Backend/ml/mood_detection/models/
+Backend/ml/insight_generation/models/
 song_history.json
-
+Backend/ml/mood_detection/models.zip
 
 build/
 .dart_tool/
