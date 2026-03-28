@@ -1,4 +1,4 @@
-# - To start: `docker compose -f Backend/docker-compose.prod.yml up --build -d`
+# - To start: `docker compose up --build -d`
 # - The Firebase JSON file is bind-mounted read-only into /app/secrets/firebase.json
 #   and the app will read the path from FIREBASE_CREDENTIALS_PATH.
 services:
