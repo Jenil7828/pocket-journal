@@ -3,12 +3,87 @@ from flask import request, jsonify
 from config_loader import get_config
 from utils.logging_utils import log_request, log_response
 from services.media_recommender.recommendation import recommend_media
+from services.search_service import SearchService
 
 _CFG = get_config()
 
 
 def register(app, deps):
     login_required = deps["login_required"]
+    db = deps.get("db")
+
+    # Initialize search service
+    search_service = SearchService(db) if db else None
+
+    @app.route("/api/v1/<media_type>/search", methods=["GET"])
+    @login_required
+    def api_search(media_type):
+        """
+        Unified media search endpoint with hybrid cache-first strategy.
+
+        Path parameter:
+        - media_type: songs | movies | books | podcasts
+
+        Query parameters:
+        - query: search string (required)
+        - language: hindi | english | neutral (optional, for songs/podcasts only)
+        - limit: int (default=20, max=50)
+
+        Returns:
+        {
+            "results": [media_item1, media_item2, ...],
+            "metrics": {
+                "cache_hit_count": int,
+                "fallback_triggered": bool,
+                "cache_latency_ms": float,
+                "provider_latency_ms": float,
+                "final_result_count": int,
+                "deduplication_count": int
+            }
+        }
+        """
+        start_time = time.time()
+        log_request()
+
+        try:
+            if not search_service:
+                log_response(500, start_time)
+                return jsonify({"error": "Search service not initialized"}), 500
+
+            # Normalize media_type from path
+            media_type = media_type.strip().lower()
+            
+            # Get query parameters
+            query = request.args.get("query", "").strip()
+            language = request.args.get("language", "").strip().lower() or None
+            limit = request.args.get("limit", 20, type=int)
+
+            # Validate required parameters
+            if not query:
+                log_response(400, start_time)
+                return jsonify({"error": "query parameter is required"}), 400
+
+            if media_type not in {"songs", "movies", "books", "podcasts"}:
+                log_response(400, start_time)
+                return jsonify({"error": f"Invalid media_type: {media_type}. Must be one of: songs, movies, books, podcasts"}), 400
+
+            # Perform search
+            result = search_service.search(
+                media_type=media_type,
+                query=query,
+                language=language,
+                limit=limit,
+            )
+
+            log_response(200, start_time)
+            return jsonify(result), 200
+
+        except ValueError as e:
+            log_response(400, start_time)
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
 
     @app.route("/api/v1/media/debug_verify", methods=["GET"])
     @login_required

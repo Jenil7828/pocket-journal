@@ -234,6 +234,7 @@ from routes import register_all as register_routes
 deps = {
     "login_required": login_required,
     "get_db": get_db,
+    "db": get_db(),  # Direct reference for services that need DBManager instance
     "cache_store": cache_store,
     "journal_entries": journal_entries,
     "insights_service": insights_service,

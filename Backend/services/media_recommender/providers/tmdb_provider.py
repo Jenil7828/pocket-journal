@@ -44,6 +44,28 @@ class TMDbProvider(BaseHTTPProvider):
     def _fetch_top_rated(self, pages: int = 1) -> List[dict]:
         return self._fetch_endpoint(_API["tmdb"]["toprated_endpoint"], pages=pages)
 
+    def _search_movies(self, query: str, pages: int = 3) -> List[dict]:
+        """Search movies by title using TMDb search endpoint."""
+        items: List[dict] = []
+        for page in range(1, pages + 1):
+            payload = self._request(
+                "GET",
+                "https://api.themoviedb.org/3/search/movie",
+                params={
+                    "api_key": self.api_key,
+                    "language": "en-US",
+                    "query": query,
+                    "page": page,
+                },
+            )
+            if not payload:
+                break
+            results = payload.get("results", [])
+            if not results:
+                break
+            items.extend(results)
+        return items
+
     def _fetch_now_playing(self, pages: int = 1) -> List[dict]:
         endpoint = _API["tmdb"].get("now_playing_endpoint", "https://api.themoviedb.org/3/movie/now_playing")
         return self._fetch_endpoint(endpoint, pages=pages)
@@ -70,14 +92,16 @@ class TMDbProvider(BaseHTTPProvider):
                 poster_path = poster_path or details.get("poster_path")
 
         candidate = {
-            "id": m.get("id"),
+            "id": str(m.get("id", "")),
             "title": m.get("title") or m.get("original_title") or "",
             "description": m.get("overview") or "",
             "poster_path": poster_path,
-            "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
-            "vote_average": m.get("vote_average"),
-            "release_date": m.get("release_date"),
-            "popularity": m.get("popularity"),
+            "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else "",
+            "rating": float(m.get("vote_average") or 0),
+            "vote_average": float(m.get("vote_average") or 0),
+            "release_date": m.get("release_date") or "",
+            "popularity": float(m.get("popularity") or 0),
+            "language": "neutral",
         }
         if runtime is not None:
             candidate["runtime"] = runtime
@@ -109,11 +133,16 @@ class TMDbProvider(BaseHTTPProvider):
         except Exception:
             pages = 1
 
-        primary_raw: List[dict] = []
-        primary_raw.extend(self._fetch_trending(pages=max(1, pages)))
-        primary_raw.extend(self._fetch_now_playing(pages=max(1, pages)))
-        primary_raw.extend(self._fetch_upcoming(pages=max(1, pages)))
-        primary_raw.extend(self._fetch_popular(pages=max(1, pages)))
+        # Use search endpoint if query provided, otherwise fetch popular
+        if query and query.strip():
+            primary_raw = self._search_movies(query=query.strip(), pages=pages)
+        else:
+            primary_raw: List[dict] = []
+            primary_raw.extend(self._fetch_trending(pages=max(1, pages)))
+            primary_raw.extend(self._fetch_now_playing(pages=max(1, pages)))
+            primary_raw.extend(self._fetch_upcoming(pages=max(1, pages)))
+            primary_raw.extend(self._fetch_popular(pages=max(1, pages)))
+        
         primary = [self._build_candidate(m) for m in primary_raw]
 
         cleaned = self._clean_items(primary)
