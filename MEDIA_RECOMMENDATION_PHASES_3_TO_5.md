@@ -55,6 +55,15 @@
 
 ### Problem
 
+### Completion Update
+
+- Phase 3 implementation is complete and verified through the working cache refresh, cache status, and recommendation endpoints
+- Cache-first recommendation flow is active for movies, songs, books, and podcasts
+- Cache refresh jobs, forced refresh support, and background stale-cache refresh are implemented
+- Cache writes now use incremental add-only behavior across all four media types
+- Newly cached media entries now store an `added_at` timestamp
+- This document section should be treated as the completed Phase 3 baseline for moving into Phase 4
+
 Every recommendation request hits live external APIs and re-embeds 200 candidates from scratch. This is:
 - Slow (8–12 seconds)
 - Wasteful (same popular Bollywood songs embedded 1000x per day)
@@ -740,7 +749,7 @@ media_cache_books/{google_books_id | "_metadata"}
 media_cache_podcasts/{spotify_episode_id | "_metadata"}
 ```
 
-Each item doc: `{id, title, description, [media fields], language, embedding, cached_at}`  
+Each item doc: `{id, title, description, [media fields], language, embedding, added_at}`  
 Each `_metadata` doc: `{last_refreshed, item_count, item_count_by_language, schema_version}`
 
 ### Phase 4 Additions
@@ -760,10 +769,10 @@ user_interactions/{uid}/events/{auto_id}
 **Phase 3:**
 ```
 Collection: media_cache_songs
-  Composite index: language ASC, cached_at DESC
+  Composite index: language ASC, added_at DESC
   
 Collection: media_cache_podcasts
-  Composite index: language ASC, cached_at DESC
+  Composite index: language ASC, added_at DESC
 ```
 
 **Phase 4:**
@@ -809,7 +818,7 @@ Collection: user_interactions/{uid}/events
 - Code that knows about collection naming by language
 
 **Single collection with field** requires:
-- Firestore composite index on `(language, cached_at)`
+- Firestore composite index on `(language, added_at)`
 - Two queries for "hindi OR neutral" (Firestore doesn't support OR)
 - Merging two result sets in Python
 

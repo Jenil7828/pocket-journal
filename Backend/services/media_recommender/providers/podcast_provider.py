@@ -5,8 +5,9 @@ import time
 from typing import Dict, List, Optional, Any
 
 import requests
+from requests import HTTPError
 
-from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM, UnauthorizedError
+from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 from config_loader import get_config
 _API = get_config()["api"]
 
@@ -62,6 +63,105 @@ class PodcastAPIProvider(BaseHTTPProvider):
         self._access_token = None
         self._access_token_expires_at = None
 
+    def _spotify_search(
+        self,
+        query: str,
+        search_type: str,
+        limit: int,
+        offset: int = 0,
+        market: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        token = self._get_access_token()
+        headers = {"Authorization": f"Bearer {token}"}
+        params: Dict[str, object] = {
+            "q": query,
+            "type": search_type,
+            "limit": limit,
+            "offset": offset,
+        }
+        if market:
+            params["market"] = market
+
+        resp = requests.get(
+            "https://api.spotify.com/v1/search",
+            headers=headers,
+            params=params,
+            timeout=int(_API["request_timeout"]),
+        )
+        if resp.status_code == 401:
+            self._invalidate_token()
+            token = self._get_access_token()
+            headers = {"Authorization": f"Bearer {token}"}
+            resp = requests.get(
+                "https://api.spotify.com/v1/search",
+                headers=headers,
+                params=params,
+                timeout=int(_API["request_timeout"]),
+            )
+        resp.raise_for_status()
+        return resp.json()
+
+    def _build_episode_items(self, episodes: List[dict]) -> List[dict]:
+        items = []
+        for ep in episodes:
+            if not ep:
+                continue
+
+            title = (ep.get("name") or "").strip()
+            if not title:
+                continue
+
+            description = (ep.get("description") or "Podcast episode on Spotify.")[:300]
+            show = ep.get("show") or {}
+            publisher = show.get("publisher") if show else None
+
+            show_image_url = None
+            ep_images = ep.get("images") or []
+            show_images = show.get("images") or []
+            if ep_images:
+                show_image_url = ep_images[0].get("url")
+            elif show_images:
+                show_image_url = show_images[0].get("url")
+
+            items.append({
+                "id": ep.get("id"),
+                "title": title,
+                "description": description,
+                "publisher": publisher,
+                "show_image_url": show_image_url,
+                "external_url": (ep.get("external_urls") or {}).get("spotify"),
+                "duration_ms": ep.get("duration_ms"),
+                "release_date": ep.get("release_date"),
+            })
+        return items
+
+    def _build_show_items(self, shows: List[dict]) -> List[dict]:
+        items = []
+        for show in shows:
+            if not show:
+                continue
+
+            show_id = show.get("id")
+            title = (show.get("name") or "").strip()
+            if not show_id or not title:
+                continue
+
+            images = show.get("images") or []
+            show_image_url = images[0].get("url") if images else None
+            description = (show.get("description") or show.get("publisher") or "Podcast show on Spotify.")[:300]
+
+            items.append({
+                "id": show_id,
+                "title": title,
+                "description": description,
+                "publisher": show.get("publisher"),
+                "show_image_url": show_image_url,
+                "external_url": (show.get("external_urls") or {}).get("spotify"),
+                "duration_ms": None,
+                "release_date": None,
+            })
+        return items
+
     def fetch_candidates(
         self,
         query: Optional[str],
@@ -97,90 +197,62 @@ class PodcastAPIProvider(BaseHTTPProvider):
 
             while remaining > 0:
                 cur_page = min(page_size, remaining)
-                token = self._get_access_token()
-                headers = {"Authorization": f"Bearer {token}"}
-                params: Dict[str, object] = {
-                    "q": qx,
-                    "type": "episode",
-                    "limit": cur_page,
-                    "offset": offset,
-                }
-                if market:
-                    params["market"] = market
-
                 try:
-                    resp = requests.get(
-                        "https://api.spotify.com/v1/search",
-                        headers=headers,
-                        params=params,
-                        timeout=int(_API["request_timeout"]),
+                    payload = self._spotify_search(
+                        query=qx,
+                        search_type="episode",
+                        limit=cur_page,
+                        offset=offset,
+                        market=market,
                     )
-                    if resp.status_code == 401:
-                        self._invalidate_token()
-                        token = self._get_access_token()
-                        headers = {"Authorization": f"Bearer {token}"}
-                        resp = requests.get(
-                            "https://api.spotify.com/v1/search",
-                            headers=headers,
-                            params=params,
-                            timeout=int(_API["request_timeout"]),
+                    batch_items = self._build_episode_items(
+                        payload.get("episodes", {}).get("items", []) or []
+                    )
+                except HTTPError as e:
+                    status_code = getattr(e.response, "status_code", None)
+                    if status_code == 403:
+                        logger.warning(
+                            "Spotify episode search forbidden for query=%s; falling back to show search",
+                            qx,
                         )
-                    resp.raise_for_status()
-                    payload = resp.json()
+                        try:
+                            payload = self._spotify_search(
+                                query=qx,
+                                search_type="show",
+                                limit=cur_page,
+                                offset=offset,
+                                market=market,
+                            )
+                            batch_items = self._build_show_items(
+                                payload.get("shows", {}).get("items", []) or []
+                            )
+                        except Exception as show_exc:
+                            logger.error(
+                                "Spotify podcast fallback show search failed query=%s: %s",
+                                qx,
+                                str(show_exc),
+                            )
+                            break
+                    else:
+                        logger.error("Spotify podcast search failed query=%s: %s", qx, str(e))
+                        break
                 except Exception as e:
                     logger.error("Spotify podcast search failed query=%s: %s", qx, str(e))
                     break
 
-                episodes = payload.get("episodes", {}).get("items", []) or []
-                for ep in episodes:
-                    if not ep:
-                        continue
-                    eid = ep.get("id")
-                    if eid and eid not in seen_ids:
-                        raw_items.append(ep)
-                        seen_ids.add(eid)
+                for item in batch_items:
+                    item_id = item.get("id")
+                    if item_id and item_id not in seen_ids:
+                        raw_items.append(item)
+                        seen_ids.add(item_id)
 
-                fetched = len(episodes)
+                fetched = len(batch_items)
                 remaining -= fetched
                 if fetched < cur_page:
                     break
                 offset += fetched
 
-        items = []
-        for ep in raw_items:
-            title = (ep.get("name") or "").strip()
-            if not title:
-                continue
-
-            description = (ep.get("description") or "Podcast episode on Spotify.")[:300]
-
-            show = ep.get("show") or {}
-            publisher = show.get("publisher") if show else None
-
-            show_image_url = None
-            ep_images = ep.get("images") or []
-            show_images = show.get("images") or []
-            if ep_images:
-                show_image_url = ep_images[0].get("url")
-            elif show_images:
-                show_image_url = show_images[0].get("url")
-
-            external_url = (ep.get("external_urls") or {}).get("spotify")
-            duration_ms = ep.get("duration_ms")
-            release_date = ep.get("release_date")
-
-            items.append({
-                "id": ep.get("id"),
-                "title": title,
-                "description": description,
-                "publisher": publisher,
-                "show_image_url": show_image_url,
-                "external_url": external_url,
-                "duration_ms": duration_ms,
-                "release_date": release_date,
-            })
-
-        items = self._filter_by_language(items, lang)
+        items = self._filter_by_language(raw_items, lang)
         logger.info("PodcastAPIProvider cleaned candidates count=%d", len(items))
         return items[:limit]
 

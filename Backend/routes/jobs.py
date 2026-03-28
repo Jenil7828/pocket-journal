@@ -5,7 +5,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Dict
 
-from flask import jsonify
+from flask import jsonify, request
 
 from config_loader import get_config
 
@@ -21,6 +21,16 @@ def _valid_media_types() -> set[str]:
     return set(cfg["cache"]["supported_media_types"])
 
 
+def _request_force_flag() -> bool:
+    raw = (
+        request.args.get("force")
+        or (request.get_json(silent=True) or {}).get("force")
+    )
+    if raw is None:
+        return False
+    return str(raw).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
 def register(app, deps: dict):
     cache_store = deps.get("cache_store")
     if cache_store is None:
@@ -34,12 +44,13 @@ def register(app, deps: dict):
         triggered_at = _utc_now_iso()
         job = "cache_refresh_all"
         start_time = time.time()
+        force = _request_force_flag()
 
-        logger.info("Job started: job=%s triggered_at=%s", job, triggered_at)
+        logger.info("Job started: job=%s triggered_at=%s force=%s", job, triggered_at, force)
 
         try:
             from scripts.cache_media import refresh_all
-            refresh_all(force=False)
+            refresh_all(force=force)
 
             duration_ms = int((time.time() - start_time) * 1000)
             logger.info("Job completed: job=%s duration_ms=%d", job, duration_ms)
@@ -49,6 +60,7 @@ def register(app, deps: dict):
                     {
                         "status": "completed",
                         "job": "cache_refresh_all",
+                        "force": force,
                         "message": "Cache refresh completed successfully",
                         "completed_at": _utc_now_iso(),
                     }
@@ -80,12 +92,13 @@ def register(app, deps: dict):
         triggered_at = _utc_now_iso()
         job = "cache_refresh"
         start_time = time.time()
+        force = _request_force_flag()
 
-        logger.info("Job started: job=%s triggered_at=%s", job, triggered_at)
+        logger.info("Job started: job=%s triggered_at=%s force=%s", job, triggered_at, force)
 
         try:
             from scripts.cache_media import refresh_cache
-            refresh_cache(mt, force=False)
+            refresh_cache(mt, force=force)
 
             duration_ms = int((time.time() - start_time) * 1000)
             logger.info("Job completed: job=%s duration_ms=%d", job, duration_ms)
@@ -96,6 +109,7 @@ def register(app, deps: dict):
                         "status": "completed",
                         "job": "cache_refresh",
                         "media_type": mt,
+                        "force": force,
                         "message": f"Cache refresh for {mt} completed successfully",
                         "completed_at": _utc_now_iso(),
                     }

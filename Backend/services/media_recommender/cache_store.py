@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Optional
 from firebase_admin import firestore
 
 from config_loader import get_config
+from utils.firestore_serializer import serialize_for_firestore, FirestoreSerializationError
 
 logger = logging.getLogger("pocket_journal.media_cache_store")
 
@@ -86,11 +87,26 @@ class MediaCacheStore:
         items_lang.update(items_neutral)  # neutral is already deduped by doc id
         return list(items_lang.values())
 
+    def get_existing_ids(self, media_type: str) -> set[str]:
+        """Return cached document ids for a media type, excluding metadata."""
+        col_ref = self.db.collection(self.collection_name(media_type))
+        out: set[str] = set()
+        for doc in col_ref.stream():
+            doc_id = str(getattr(doc, "id", ""))
+            if doc_id and doc_id != "_metadata":
+                out.add(doc_id)
+        return out
+
     def write_cache(self, media_type: str, items: List[Dict[str, Any]]) -> None:
         """
         Batch write items to cache collection.
 
         Each item must have: id, title, description, embedding, language.
+        
+        IMPORTANT: All items are sanitized for Firestore compatibility:
+        - numpy.ndarray → list
+        - numpy scalars → Python scalars
+        - Nested structures are validated
 
         Items with embeddings are written individually to avoid Firestore's 10MB
         transaction size limit. Items without embeddings use batch writes in chunks
@@ -98,6 +114,9 @@ class MediaCacheStore:
 
         Overwrites existing docs by id (idempotent).
         Writes _metadata doc after all items committed.
+        
+        Raises:
+            FirestoreSerializationError: If items contain unsupported types after sanitization
         """
 
         if not items:
@@ -113,29 +132,97 @@ class MediaCacheStore:
             )
             return
 
+        # Sanitize all items for Firestore compatibility
+        sanitized_items = []
+        failed_items = []
+        
+        for idx, item in enumerate(items):
+            item_id = str(item.get("id", f"item_{idx}"))
+            try:
+                sanitized = serialize_for_firestore(
+                    item, 
+                    path=f"{media_type}/{item_id}"
+                )
+                sanitized_items.append(sanitized)
+            except FirestoreSerializationError as e:
+                logger.error(
+                    "pocket_journal.media.cache_store: sanitization_failed "
+                    "media_type=%s item_id=%s error=%s",
+                    media_type, item_id, str(e)
+                )
+                failed_items.append(item_id)
+        
+        if failed_items:
+            logger.warning(
+                "pocket_journal.media.cache_store: skipping_items_due_to_serialization "
+                "media_type=%s total=%d sanitized=%d failed=%d failed_ids=%s",
+                media_type, len(items), len(sanitized_items), len(failed_items), failed_items[:5]
+            )
+        
+        if not sanitized_items:
+            logger.error(
+                "pocket_journal.media.cache_store: all_items_failed_sanitization media_type=%s",
+                media_type
+            )
+            return
+
         collection_ref = self.db.collection(self.collection_name(media_type))
+        existing_ids = self.get_existing_ids(media_type)
+        existing_stats = self.get_cache_stats(media_type)
+        added_at = datetime.now(timezone.utc)
+        new_items = []
+        for item in sanitized_items:
+            if str(item.get("id")) in existing_ids:
+                continue
+            stamped = dict(item)
+            stamped.setdefault("added_at", added_at)
+            new_items.append(stamped)
 
         # Check if any items contain embeddings
-        has_embeddings = any("embedding" in item for item in items)
+        has_embeddings = any("embedding" in item for item in new_items)
 
         logger.info(
-            "pocket_journal.media.cache_store: Writing %d items to %s (individual_writes=%s)",
-            len(items),
+            "pocket_journal.media.cache_store: writing_new_only media_type=%s requested=%d existing=%d new=%d individual_writes=%s skipped=%d",
+            media_type,
+            len(sanitized_items),
+            len(existing_ids),
+            len(new_items),
+            has_embeddings,
+            len(failed_items),
+        )
+
+        if not new_items:
+            meta_ref = collection_ref.document("_metadata")
+            meta_ref.set(
+                {
+                    "last_refreshed": firestore.SERVER_TIMESTAMP,
+                    "item_count": len(existing_ids),
+                    "item_count_by_language": existing_stats.get("item_count_by_language") or {},
+                    "schema_version": _SCHEMA_VERSION,
+                },
+                merge=True,
+            )
+            return
+
+        logger.info(
+            "pocket_journal.media.cache_store: Writing %d new items to %s (individual_writes=%s, skipped=%d)",
+            len(new_items),
             self.collection_name(media_type),
             has_embeddings,
+            len(failed_items),
         )
 
         if has_embeddings:
             # Individual writes to avoid transaction size limit
-            for item in items:
+            for item in new_items:
                 item_id = str(item["id"])
                 ref = collection_ref.document(item_id)
                 ref.set(item)  # individual set, not batched
         else:
             # Batch writes for small items without embeddings
-            for i in range(0, len(items), _BATCH_SIZE):
+            for i in range(0, len(new_items), _BATCH_SIZE):
                 batch = self.db.batch()
-                chunk = items[i : i + _BATCH_SIZE]
+                chunk = new_items[i : i + _BATCH_SIZE]
                 for item in chunk:
                     ref = collection_ref.document(str(item["id"]))
                     batch.set(ref, item)
@@ -143,11 +230,13 @@ class MediaCacheStore:
 
         # Write metadata after all items
         meta_ref = collection_ref.document("_metadata")
+        lang_counts = Counter(existing_stats.get("item_count_by_language") or {})
+        lang_counts.update(Counter(i.get("language", "neutral") for i in new_items))
         meta_ref.set(
             {
                 "last_refreshed": firestore.SERVER_TIMESTAMP,
-                "item_count": len(items),
-                "item_count_by_language": dict(Counter(i["language"] for i in items)),
+                "item_count": len(existing_ids) + len(new_items),
+                "item_count_by_language": dict(lang_counts),
                 "schema_version": _SCHEMA_VERSION,
             }
         )

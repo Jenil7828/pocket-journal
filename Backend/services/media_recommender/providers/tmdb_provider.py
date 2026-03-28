@@ -21,12 +21,12 @@ class TMDbProvider(BaseHTTPProvider):
             raise RuntimeError("TMDB_API_KEY environment variable is required for TMDbProvider")
         self.api_key = api_key
 
-    def _fetch_popular(self, pages: int = 1) -> List[dict]:
+    def _fetch_endpoint(self, endpoint: str, pages: int = 1) -> List[dict]:
         items: List[dict] = []
         for page in range(1, pages + 1):
             payload = self._request(
                 "GET",
-                _API["tmdb"]["popular_endpoint"],
+                endpoint,
                 params={
                     "api_key": self.api_key,
                     "language": "en-US",
@@ -38,22 +38,54 @@ class TMDbProvider(BaseHTTPProvider):
             items.extend(payload.get("results", []))
         return items
 
+    def _fetch_popular(self, pages: int = 1) -> List[dict]:
+        return self._fetch_endpoint(_API["tmdb"]["popular_endpoint"], pages=pages)
+
     def _fetch_top_rated(self, pages: int = 1) -> List[dict]:
-        items: List[dict] = []
-        for page in range(1, pages + 1):
-            payload = self._request(
-                "GET",
-                _API["tmdb"]["toprated_endpoint"],
-                params={
-                    "api_key": self.api_key,
-                    "language": "en-US",
-                    "page": page,
-                },
-            )
-            if not payload:
-                continue
-            items.extend(payload.get("results", []))
-        return items
+        return self._fetch_endpoint(_API["tmdb"]["toprated_endpoint"], pages=pages)
+
+    def _fetch_now_playing(self, pages: int = 1) -> List[dict]:
+        endpoint = _API["tmdb"].get("now_playing_endpoint", "https://api.themoviedb.org/3/movie/now_playing")
+        return self._fetch_endpoint(endpoint, pages=pages)
+
+    def _fetch_upcoming(self, pages: int = 1) -> List[dict]:
+        endpoint = _API["tmdb"].get("upcoming_endpoint", "https://api.themoviedb.org/3/movie/upcoming")
+        return self._fetch_endpoint(endpoint, pages=pages)
+
+    def _fetch_trending(self, pages: int = 1) -> List[dict]:
+        endpoint = _API["tmdb"].get("trending_endpoint", "https://api.themoviedb.org/3/trending/movie/week")
+        return self._fetch_endpoint(endpoint, pages=pages)
+
+    def _build_candidate(self, m: dict) -> dict:
+        movie_id = m.get("id")
+        runtime = None
+        poster_path = m.get("poster_path")
+        if movie_id:
+            details = self._fetch_movie_details(movie_id)
+            if details:
+                try:
+                    runtime = details.get("runtime")
+                except Exception:
+                    runtime = None
+                poster_path = poster_path or details.get("poster_path")
+
+        candidate = {
+            "id": m.get("id"),
+            "title": m.get("title") or m.get("original_title") or "",
+            "description": m.get("overview") or "",
+            "poster_path": poster_path,
+            "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
+            "vote_average": m.get("vote_average"),
+            "release_date": m.get("release_date"),
+            "popularity": m.get("popularity"),
+        }
+        if runtime is not None:
+            candidate["runtime"] = runtime
+            try:
+                candidate["duration_ms"] = int(float(runtime) * 60.0 * 1000.0)
+            except Exception:
+                pass
+        return candidate
 
     def _fetch_movie_details(self, movie_id: int) -> Optional[dict]:
         """Fetch movie details (including runtime and poster_path) from TMDb details endpoint."""
@@ -77,43 +109,12 @@ class TMDbProvider(BaseHTTPProvider):
         except Exception:
             pages = 1
 
-        primary_raw = self._fetch_popular(pages=pages)
-        primary = []
-        for m in primary_raw:
-            # try to enrich with details (runtime, poster_path) from movie details endpoint
-            movie_id = m.get("id")
-            runtime = None
-            poster_path = m.get("poster_path")
-            if movie_id:
-                details = self._fetch_movie_details(movie_id)
-                if details:
-                    # runtime in minutes
-                    try:
-                        runtime = details.get("runtime")
-                    except Exception:
-                        runtime = None
-                    # prefer detailed poster_path if present
-                    poster_path = poster_path or details.get("poster_path")
-
-            candidate = {
-                "id": m.get("id"),
-                "title": m.get("title") or m.get("original_title") or "",
-                "description": m.get("overview") or "",
-                # Preserve poster_path from TMDb raw response for formatting
-                "poster_path": poster_path,
-                "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
-                "vote_average": m.get("vote_average"),
-                "release_date": m.get("release_date"),
-                "popularity": m.get("popularity"),
-            }
-            # include runtime and duration_ms if we found it
-            if runtime is not None:
-                candidate["runtime"] = runtime
-                try:
-                    candidate["duration_ms"] = int(float(runtime) * 60.0 * 1000.0)
-                except Exception:
-                    pass
-            primary.append(candidate)
+        primary_raw: List[dict] = []
+        primary_raw.extend(self._fetch_trending(pages=max(1, pages)))
+        primary_raw.extend(self._fetch_now_playing(pages=max(1, pages)))
+        primary_raw.extend(self._fetch_upcoming(pages=max(1, pages)))
+        primary_raw.extend(self._fetch_popular(pages=max(1, pages)))
+        primary = [self._build_candidate(m) for m in primary_raw]
 
         cleaned = self._clean_items(primary)
         logger.info("TMDbProvider primary cleaned=%d", len(cleaned))
@@ -121,34 +122,7 @@ class TMDbProvider(BaseHTTPProvider):
         # If insufficient, fetch top-rated as fallback (limited pages)
         if len(cleaned) < max(10, limit // 2):
             fallback_raw = self._fetch_top_rated(pages=pages)
-            fallback = []
-            for m in fallback_raw:
-                movie_id = m.get("id")
-                runtime = None
-                poster_path = m.get("poster_path")
-                if movie_id:
-                    details = self._fetch_movie_details(movie_id)
-                    if details:
-                        runtime = details.get("runtime")
-                        poster_path = poster_path or details.get("poster_path")
-
-                cand = {
-                    "id": m.get("id"),
-                    "title": m.get("title") or m.get("original_title") or "",
-                    "description": m.get("overview") or "",
-                    "poster_path": poster_path,
-                        "poster_url": f"https://image.tmdb.org/t/p/w500{poster_path}" if poster_path else None,
-                    "vote_average": m.get("vote_average"),
-                    "release_date": m.get("release_date"),
-                    "popularity": m.get("popularity"),
-                }
-                if runtime is not None:
-                    cand["runtime"] = runtime
-                    try:
-                        cand["duration_ms"] = int(float(runtime) * 60.0 * 1000.0)
-                    except Exception:
-                        pass
-                fallback.append(cand)
+            fallback = [self._build_candidate(m) for m in fallback_raw]
             fallback_cleaned = self._clean_items(fallback)
             logger.info("TMDbProvider fallback cleaned=%d", len(fallback_cleaned))
             existing_ids = {c["id"] for c in cleaned}

@@ -1,5 +1,6 @@
 import logging
 from typing import Dict, List, Any, Optional
+from datetime import datetime
 
 logger = logging.getLogger("pocket_journal.media.recommendation.formatter")
 
@@ -79,6 +80,19 @@ def _deep_find_key(obj: Any, key: str, max_depth: int = 4):
         return None
 
 
+def _serialize_timestamp(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if hasattr(value, "isoformat"):
+        try:
+            return value.isoformat()
+        except Exception:
+            return str(value)
+    return str(value)
+
+
 def _format_movie(item: Dict[str, Any]) -> Dict[str, Any]:
     metadata = item.get("metadata") or {}
 
@@ -104,6 +118,7 @@ def _format_movie(item: Dict[str, Any]) -> Dict[str, Any]:
         "id": item.get("id"),
         "title": item.get("title"),
         "description": item.get("description"),
+        "added_at": _serialize_timestamp(item.get("added_at") or metadata.get("added_at")),
         "release_date": item.get("release_date") or metadata.get("release_date"),
         "rating": item.get("vote_average") or metadata.get("vote_average") or metadata.get("rating"),
         "poster_url": poster_url,
@@ -170,6 +185,7 @@ def _format_song(item: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": item.get("id"),
         "title": item.get("title"),
+        "added_at": _serialize_timestamp(item.get("added_at") or metadata.get("added_at")),
         "artist_names": artist_names or None,
         "album_name": album_name,
         "album_image_url": album_image_url,
@@ -202,6 +218,7 @@ def _format_book(item: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": item.get("id"),
         "title": item.get("title"),
+        "added_at": _serialize_timestamp(item.get("added_at") or metadata.get("added_at")),
         "authors": item.get("authors") or metadata.get("authors"),
         "description": item.get("description"),
         "thumbnail_url": thumb,
@@ -223,6 +240,7 @@ def _format_podcast(item: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "id": item.get("id", None),
         "title": item.get("title", None),
+        "added_at": _serialize_timestamp(item.get("added_at") or metadata.get("added_at")),
         "publisher": item.get("publisher", None),
         "description": item.get("description", None),
         "show_image_url": image_url,
