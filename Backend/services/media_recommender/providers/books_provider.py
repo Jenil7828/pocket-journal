@@ -31,7 +31,7 @@ class GoogleBooksProvider(BaseHTTPProvider):
 
         payload = self._request(
             "GET",
-            _API["google_books_endpoint"],
+            _API["google_books"]["endpoint"],
             params=params,
         )
         if not payload:
@@ -45,7 +45,7 @@ class GoogleBooksProvider(BaseHTTPProvider):
         # Google Books allows maxResults up to 40 per request. Page deterministically.
         remaining = max(0, int(limit))
         start = 0
-        page_size = int(_API["google_books_page_size"])
+        page_size = int(_API["google_books"]["page_size"])
         while remaining > 0:
             cur = min(page_size, remaining)
             batch = self._search(q, max_results=cur, start_index=start)

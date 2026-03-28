@@ -26,15 +26,15 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True, in
 
     try:
         from config_loader import get_config
-        use_gemini = bool(get_config()["insights"].get("use_gemini", False))
+        use_gemini = bool(get_config()["ml"]["insight_generation"].get("use_gemini", False))
 
         if use_gemini:
             logger.info("Insights backend: Gemini")
-            from ml.insight_generation.inference.gemini.insight_analyzer import InsightsGenerator
+            from ml.inference.insight_generation.gemini.insight_analyzer import InsightsGenerator
             generator = InsightsGenerator(db)
         else:
             logger.info("Insights backend: Local model (Qwen2)")
-            from ml.insight_generation.inference.qwen2.insight_analyzer import InsightsGenerator
+            from ml.inference.insight_generation.qwen2.insight_analyzer import InsightsGenerator
             generator = InsightsGenerator(db, insights_predictor=insights_predictor)
 
         insights = generator.generate_insights(uid, start_date, end_date)
@@ -76,7 +76,9 @@ def delete_insight(insight_id, uid, db):
     if insight_data.get("uid") != uid:
         return {"error": "Unauthorized: Insight does not belong to user"}, 403
 
-    mappings_query = db.db.collection("insight_entry_mapping").where(filter=("insight_id", "==", insight_id)).get()
+    mappings_query = db.db.collection("insight_entry_mapping").where(
+        filter=firestore.FieldFilter("insight_id", "==", insight_id)
+    ).get()
     mappings_deleted = 0
     for mapping_doc in mappings_query:
         mapping_doc.reference.delete()

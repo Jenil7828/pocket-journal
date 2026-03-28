@@ -35,7 +35,7 @@ class EmbeddingService:
 
     def __init__(self, model_name: Optional[str] = None):
         if model_name is None:
-            model_name = str(_CFG["embedding"]["model_name"])
+            model_name = str(_CFG["ml"]["embedding"]["model_name"])
 
         # Import SentenceTransformer lazily inside constructor so HF env flags are effective
         try:

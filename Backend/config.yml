@@ -1,118 +1,214 @@
-recommendation:
-  fetch_limit: 200               # RECOMMENDATION_FETCH_LIMIT
-  refine_top: 100                # RECOMMENDATION_REFINE_TOP
-  top_k: 10                      # RECOMMENDATION_TOP_K
-  ranking:
-    similarity_weight: 0.9       # RANKING_SIMILARITY_WEIGHT
-    popularity_weight: 0.1       # RANKING_POPULARITY_WEIGHT
-    low_std_threshold: 0.03      # RANKING_LOW_STD_THRESHOLD
-  intent:
-    beta_min: 0.15               # INTENT_BETA_MIN
-    beta_boost: 0.35             # INTENT_BETA_BOOST
-    beta_max: 0.40               # INTENT_BETA_MAX
-  candidate:
-    min_title_length: 3          # CANDIDATE_MIN_TITLE_LENGTH
-    min_popularity: 1.0          # CANDIDATE_MIN_POPULARITY
+# ════════════════════════════════════════════════════════════════
+# Pocket Journal — Master Configuration
+# Structure:
+#   server      — Flask server settings
+#   app         — application feature flags
+#   logging     — log levels
+#   firestore   — collection names
+#   api         — ALL external API settings (limits, endpoints,
+#                  rate limiting, media providers, export, entries)
+#   ml          — ALL ML settings (mood, summarization, insights,
+#                  embedding, model store, model versions)
+#   recommendation — intent, ranking, candidate pipeline
+#   cache       — media cache (Firestore-backed)
+#   jobs        — background job config
+# ════════════════════════════════════════════════════════════════
 
-embedding:
-  model_name: "all-mpnet-base-v2"   # EMBEDDING_MODEL_NAME
-  journal_blend_weight: 0.05         # JOURNAL_BLEND_WEIGHT
-  taste_blend_weight: 0.95           # TASTE_BLEND_WEIGHT
 
-ml:
-  mood_detection:
-    model_version: "v2"    # MOOD_MODEL_VERSION — set to v2 after running conversion script
-    model_name: "roberta-base"              # MOOD_MODEL_NAME
-    max_length: 128                         # MOOD_MAX_LENGTH
-    prediction_threshold: 0.35              # MOOD_PREDICTION_THRESHOLD
-    labels: ["anger", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
-  summarization:
-    model_version: "v2"    # SUMMARIZATION_MODEL_VERSION — set to v2 after running conversion script
-    model_name: "facebook/bart-large-cnn"  # SUMMARIZATION_MODEL_NAME
-    max_input_length: 1024                 # SUMMARIZATION_MAX_INPUT_LENGTH
-    max_summary_length: 128                # SUMMARIZATION_MAX_SUMMARY_LENGTH
-    min_summary_length: 20                 # SUMMARIZATION_MIN_SUMMARY_LENGTH
-    num_beams: 4                           # SUMMARIZATION_NUM_BEAMS
+# ── Server ───────────────────────────────────────────────────────
+server:
+  port: 5000                             # PORT
+  flask_debug: true                      # FLASK_DEBUG
+  disable_reloader: true                 # DISABLE_RELOADER
 
-insights:
-  use_gemini: false                                   # INSIGHTS_USE_GEMINI — true=Gemini, false=local Qwen2
-  backend: "huggingface"                              # INSIGHTS_BACKEND
-  ollama_model: "qwen2:1.5b"                         # INSIGHTS_OLLAMA_MODEL
-  ollama_base_url: "http://localhost:11434"           # INSIGHTS_OLLAMA_BASE_URL
-  hf_model_name: "Qwen/Qwen2-1.5B-Instruct"         # INSIGHTS_HF_MODEL_NAME
-  hf_model_dir: "ml/insight_generation/models/qwen2/v1"  # INSIGHTS_HF_MODEL_DIR
-  temperature: 0.7                                    # INSIGHTS_TEMPERATURE
-  batch_size: 5                                       # INSIGHTS_BATCH_SIZE
-  max_new_tokens: 4096                                # INSIGHTS_MAX_NEW_TOKENS
-  gemini_model_name: "gemini-2.0-flash"              # INSIGHTS_GEMINI_MODEL_NAME
-  gemini_max_retries: 2                              # INSIGHTS_GEMINI_MAX_RETRIES
 
-api:
-  default_limit: 10              # API_DEFAULT_LIMIT
-  max_limit: 100                 # API_MAX_LIMIT
-  request_timeout: 10            # API_REQUEST_TIMEOUT
-  request_max_retries: 1         # API_REQUEST_MAX_RETRIES
-  google_books_page_size: 40     # API_GOOGLE_BOOKS_PAGE_SIZE
-  google_books_endpoint: "https://www.googleapis.com/books/v1/volumes"  # API_GOOGLE_BOOKS_ENDPOINT
-  spotify_token_endpoint: "https://accounts.spotify.com/api/token"     # API_SPOTIFY_TOKEN_ENDPOINT
-  spotify_track_endpoint: "https://api.spotify.com/v1/tracks"          # API_SPOTIFY_TRACK_ENDPOINT
-  spotify_search_endpoint: "https://api.spotify.com/v1/search"         # API_SPOTIFY_SEARCH_ENDPOINT
-  tmdb_popular_endpoint: "https://api.themoviedb.org/3/movie/popular"  # API_TMDB_POPULAR_ENDPOINT
-  tmdb_toprated_endpoint: "https://api.themoviedb.org/3/movie/top_rated"  # API_TMDB_TOPRATED_ENDPOINT
-  tmdb_details_endpoint: "https://api.themoviedb.org/3/movie"          # API_TMDB_DETAILS_ENDPOINT
-  tmdb_max_pages: 5             # API_TMDB_MAX_PAGES
-  tmdb_results_per_page: 20     # API_TMDB_RESULTS_PER_PAGE
-  tmdb_default_max_results: 10  # API_TMDB_DEFAULT_MAX_RESULTS
-  tmdb_mood_movies_limit: 12    # API_TMDB_MOOD_MOVIES_LIMIT
-  tmdb_filtered_limit: 6        # API_TMDB_FILTERED_LIMIT
-
+# ── Application flags ────────────────────────────────────────────
 app:
-  timezone: "Asia/Kolkata"       # APP_TIMEZONE
-  enable_llm: true              # ENABLE_LLM
-  enable_insights: true         # ENABLE_INSIGHTS
-  force_color: true              # FORCE_COLOR
-  hf_hub_disable_xet: true       # HF_HUB_DISABLE_XET
-  tf_cpp_min_log_level: "2"      # TF_CPP_MIN_LOG_LEVEL
+  timezone: "Asia/Kolkata"              # APP_TIMEZONE
+  enable_llm: true                      # ENABLE_LLM
+  enable_insights: true                 # ENABLE_INSIGHTS
+  force_color: true                     # FORCE_COLOR
+  hf_hub_disable_xet: true              # HF_HUB_DISABLE_XET
+  tf_cpp_min_log_level: "2"             # TF_CPP_MIN_LOG_LEVEL
+  mood_tracking_enabled_default: true   # APP_MOOD_TRACKING_ENABLED_DEFAULT
+  summary_fallback_length: 200          # APP_SUMMARY_FALLBACK_LENGTH
 
-processing:
-  summary_fallback_length: 200   # PROCESSING_SUMMARY_FALLBACK_LENGTH
 
-features:
-  mood_tracking_enabled_default: true  # FEATURES_MOOD_TRACKING_ENABLED_DEFAULT
+# ── Logging ──────────────────────────────────────────────────────
+logging:
+  app_level: "INFO"                     # APP_LOG_LEVEL
+  werkzeug_level: "WARNING"             # WERKZEUG_LOG_LEVEL
+  firebase_level: "WARNING"             # FIREBASE_LOG_LEVEL
 
+
+# ── Firestore ────────────────────────────────────────────────────
 firestore:
   collections:
-    journal_entries: "journal_entries"              # FIRESTORE_COLLECTIONS_JOURNAL_ENTRIES
-    entry_analysis: "entry_analysis"                # FIRESTORE_COLLECTIONS_ENTRY_ANALYSIS
-    insights: "insights"                            # FIRESTORE_COLLECTIONS_INSIGHTS
-    insight_entry_mapping: "insight_entry_mapping"  # FIRESTORE_COLLECTIONS_INSIGHT_ENTRY_MAPPING
-    users: "users"                                  # FIRESTORE_COLLECTIONS_USERS
-    journal_embeddings: "journal_embeddings"        # FIRESTORE_COLLECTIONS_JOURNAL_EMBEDDINGS
-    user_vectors: "user_vectors"                    # FIRESTORE_COLLECTIONS_USER_VECTORS
+    journal_entries: "journal_entries"
+    entry_analysis: "entry_analysis"
+    insights: "insights"
+    insight_entry_mapping: "insight_entry_mapping"
+    users: "users"
+    journal_embeddings: "journal_embeddings"
+    user_vectors: "user_vectors"
 
-concurrency:
-  intent_builder_max_workers: 3  # CONCURRENCY_INTENT_BUILDER_MAX_WORKERS
 
-server:
-  port: 5000                     # PORT
-  flask_debug: true             # FLASK_DEBUG
-  disable_reloader: true         # DISABLE_RELOADER
+# ── API ──────────────────────────────────────────────────────────
+# All external-facing API config: request behaviour, pagination,
+# provider endpoints, and per-service limits.
+api:
 
-logging:
-  app_level: "INFO"              # APP_LOG_LEVEL
-  werkzeug_level: "WARNING"      # WERKZEUG_LOG_LEVEL
-  firebase_level: "WARNING"      # FIREBASE_LOG_LEVEL
+  # General request behaviour
+  request_timeout: 10                   # API_REQUEST_TIMEOUT
+  request_max_retries: 1                # API_REQUEST_MAX_RETRIES
 
+  # Pagination defaults used by routes and services
+  default_limit: 10                     # API_DEFAULT_LIMIT
+  max_limit: 100                        # API_MAX_LIMIT
+
+  # Journal entries
+  entries_max_limit: 100                # API_ENTRIES_MAX_LIMIT
+
+  # Google Books provider
+  google_books:
+    endpoint: "https://www.googleapis.com/books/v1/volumes"
+    page_size: 40                       # API_GOOGLE_BOOKS_PAGE_SIZE
+
+  # Spotify provider (songs + podcasts)
+  spotify:
+    token_endpoint: "https://accounts.spotify.com/api/token"
+    track_endpoint: "https://api.spotify.com/v1/tracks"
+    search_endpoint: "https://api.spotify.com/v1/search"
+
+  # TMDb provider (movies)
+  tmdb:
+    popular_endpoint: "https://api.themoviedb.org/3/movie/popular"
+    toprated_endpoint: "https://api.themoviedb.org/3/movie/top_rated"
+    details_endpoint: "https://api.themoviedb.org/3/movie"
+    max_pages: 5                        # API_TMDB_MAX_PAGES
+    results_per_page: 20                # API_TMDB_RESULTS_PER_PAGE
+    default_max_results: 10             # API_TMDB_DEFAULT_MAX_RESULTS
+    mood_movies_limit: 12               # API_TMDB_MOOD_MOVIES_LIMIT
+    filtered_limit: 6                   # API_TMDB_FILTERED_LIMIT
+
+
+# ── ML ───────────────────────────────────────────────────────────
+# All ML config: models, inference settings, embedding,
+# insight generation, and model store (where weights come from).
+ml:
+
+  # Mood detection — RoBERTa
+  # Inference: Backend/ml/inference/mood_detection/roberta/
+  # Models:    Via MODEL_STORE_PATH (controlled by resolve_model_path)
+  mood_detection:
+    model_version: "v2"                 # MOOD_MODEL_VERSION — v2=fp16+ONNX optimized
+    model_name: "roberta-base"          # MOOD_MODEL_NAME
+    max_length: 128                     # MOOD_MAX_LENGTH
+    prediction_threshold: 0.35          # MOOD_PREDICTION_THRESHOLD
+    labels: ["anger", "disgust", "fear", "happy", "neutral", "sad", "surprise"]
+
+  # Summarization — BART
+  # Inference: Backend/ml/inference/summarization/bart/
+  # Models:    Via MODEL_STORE_PATH (controlled by resolve_model_path)
+  summarization:
+    model_version: "v2"                 # SUMMARIZATION_MODEL_VERSION — v2=fp16+ONNX optimized
+    model_name: "facebook/bart-large-cnn" # SUMMARIZATION_MODEL_NAME
+    max_input_length: 1024              # SUMMARIZATION_MAX_INPUT_LENGTH
+    max_summary_length: 128             # SUMMARIZATION_MAX_SUMMARY_LENGTH
+    min_summary_length: 20              # SUMMARIZATION_MIN_SUMMARY_LENGTH
+    num_beams: 4                        # SUMMARIZATION_NUM_BEAMS
+
+  # Embedding — sentence-transformers
+  embedding:
+    model_name: "all-mpnet-base-v2"     # EMBEDDING_MODEL_NAME
+    journal_blend_weight: 0.05          # JOURNAL_BLEND_WEIGHT
+    taste_blend_weight: 0.95            # TASTE_BLEND_WEIGHT
+
+  # Insight generation — Qwen2 (local) or Gemini (cloud)
+  # Inference: Backend/ml/inference/insight_generation/
+  # Models:    Backend/ml/models/insight_generation/qwen2/{version}/
+  insight_generation:
+    use_gemini: false                   # INSIGHTS_USE_GEMINI — true=Gemini, false=Qwen2
+    backend: "huggingface"             # INSIGHTS_BACKEND — "huggingface" | "ollama"
+    model_version: "v1"                # INSIGHTS_MODEL_VERSION
+    hf_model_name: "Qwen/Qwen2-1.5B-Instruct" # INSIGHTS_HF_MODEL_NAME
+    hf_model_dir: "ml/models/insight_generation/qwen2/v1" # INSIGHTS_HF_MODEL_DIR
+    ollama_model: "qwen2:1.5b"         # INSIGHTS_OLLAMA_MODEL
+    ollama_base_url: "http://localhost:11434" # INSIGHTS_OLLAMA_BASE_URL
+    temperature: 0.7                   # INSIGHTS_TEMPERATURE
+    batch_size: 5                      # INSIGHTS_BATCH_SIZE
+    max_new_tokens: 4096               # INSIGHTS_MAX_NEW_TOKENS
+    gemini_model_name: "gemini-2.0-flash" # INSIGHTS_GEMINI_MODEL_NAME
+    gemini_max_retries: 2             # INSIGHTS_GEMINI_MAX_RETRIES
+
+  # Model store — controls where model weights are loaded from
+  # source=local → via MODEL_STORE_PATH env var
+  # source=gcs   → downloaded from GCS bucket at startup
+  # source=s3    → downloaded from S3 bucket at startup
+  # GCS/S3 path: {bucket}/{group}/{name}/{version}/
+  # Local path:  {MODEL_STORE_PATH}/{group}/{name}/{version}/
+  model_store:
+    source: "local"                    # MODEL_SOURCE — "local" | "gcs" | "s3"
+    local_path: ""                     # set via MODEL_STORE_PATH env var
+    cache_dir: "/tmp/models"           # MODEL_CACHE_DIR
+    gcs_bucket: ""                     # MODEL_GCS_BUCKET
+    s3_bucket: ""                      # MODEL_S3_BUCKET
+    s3_region: "us-east-1"            # MODEL_S3_REGION
+    download_on_startup: true          # MODEL_DOWNLOAD_ON_STARTUP
+    models:
+      roberta:
+        group: "mood_detection"
+        name: "roberta"
+        version: "v2"                  # MODEL_ROBERTA_VERSION
+      bart:
+        group: "summarization"
+        name: "bart"
+        version: "v2"                  # MODEL_BART_VERSION
+      qwen2:
+        group: "insight_generation"
+        name: "qwen2"
+        version: "v1"                  # MODEL_QWEN2_VERSION
+      # embedding intentionally omitted — sentence-transformers downloads automatically
+
+
+# ── Recommendation engine ────────────────────────────────────────
+recommendation:
+  fetch_limit: 200                     # RECOMMENDATION_FETCH_LIMIT
+  refine_top: 100                      # RECOMMENDATION_REFINE_TOP
+  top_k: 10                            # RECOMMENDATION_TOP_K
+
+  ranking:
+    similarity_weight: 0.9             # RANKING_SIMILARITY_WEIGHT
+    popularity_weight: 0.1             # RANKING_POPULARITY_WEIGHT
+    low_std_threshold: 0.03            # RANKING_LOW_STD_THRESHOLD
+
+  intent:
+    beta_min: 0.15                     # INTENT_BETA_MIN
+    beta_boost: 0.35                   # INTENT_BETA_BOOST
+    beta_max: 0.40                     # INTENT_BETA_MAX
+    journal_embedding_fetch_limit: 1   # INTENT_JOURNAL_EMBEDDING_FETCH_LIMIT
+
+  candidate:
+    min_title_length: 3                # CANDIDATE_MIN_TITLE_LENGTH
+    min_popularity: 1.0                # CANDIDATE_MIN_POPULARITY
+
+  concurrency:
+    intent_builder_max_workers: 3      # INTENT_BUILDER_MAX_WORKERS
+
+
+# ── Media cache ──────────────────────────────────────────────────
 cache:
-  max_age_hours: 24              # MEDIA_CACHE_MAX_AGE_HOURS
-  fetch_limit: 500               # MEDIA_CACHE_FETCH_LIMIT
-  batch_size: 400                # MEDIA_CACHE_BATCH_SIZE
-  schema_version: "v1"           # MEDIA_CACHE_SCHEMA_VERSION
+  max_age_hours: 24                    # MEDIA_CACHE_MAX_AGE_HOURS
+  fetch_limit: 500                     # MEDIA_CACHE_FETCH_LIMIT
+  batch_size: 400                      # MEDIA_CACHE_BATCH_SIZE
+  schema_version: "v1"                 # MEDIA_CACHE_SCHEMA_VERSION
+
   supported_media_types:
     - movies
     - songs
     - books
     - podcasts
+
   language_buckets:
     songs:
       - language: hindi
@@ -143,6 +239,12 @@ cache:
         queries: null
         market: null
 
+
+# ── Background jobs ──────────────────────────────────────────────
 jobs:
   cache_refresh: {}
+
+
+
+
 

@@ -10,8 +10,6 @@ logger = logging.getLogger("pocket_journal.journal_entries")
 
 _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]
-_FEAT = _CFG["features"]
-_PROC = _CFG["processing"]
 
 
 def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
@@ -31,10 +29,10 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
         analysis_doc.reference.delete()
         old_analysis_ids.append(analysis_doc.id)
 
-    summary = summarizer.summarize(entry_text) if summarizer else entry_text[:int(_PROC["summary_fallback_length"])] + "..."
+    summary = summarizer.summarize(entry_text) if summarizer else entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
 
     # Check user's mood tracking setting; default True
-    mood_enabled = bool(_FEAT["mood_tracking_enabled_default"])
+    mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
     try:
         user_doc = db.db.collection(_COLS["users"]).document(uid).get()
         if user_doc.exists:
@@ -42,7 +40,7 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
             settings = user_data.get("settings", {}) or {}
             mood_enabled = settings.get("mood_tracking_enabled", True)
     except Exception:
-        mood_enabled = bool(_FEAT["mood_tracking_enabled_default"])
+        mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
     if mood_enabled:
         mood_result = predictor.predict(entry_text) if predictor else {}

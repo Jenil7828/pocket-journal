@@ -42,7 +42,91 @@ def _load_config_once() -> Dict[str, Any]:
     # Only these scalar keys are overridable via env vars (as documented in config.yml comments).
     # Complex structures (language_buckets / supported_media_types) are intentionally not overridden here.
     overrides: List[Tuple[List[str], str, str]] = [
-        # Recommendation settings
+
+        # Server
+        (["server", "port"], "PORT", "int"),
+        (["server", "flask_debug"], "FLASK_DEBUG", "bool"),
+        (["server", "disable_reloader"], "DISABLE_RELOADER", "bool"),
+
+        # App
+        (["app", "enable_llm"], "ENABLE_LLM", "bool"),
+        (["app", "enable_insights"], "ENABLE_INSIGHTS", "bool"),
+        (["app", "force_color"], "FORCE_COLOR", "bool"),
+        (["app", "hf_hub_disable_xet"], "HF_HUB_DISABLE_XET", "bool"),
+        (["app", "tf_cpp_min_log_level"], "TF_CPP_MIN_LOG_LEVEL", "str"),
+        (["app", "timezone"], "APP_TIMEZONE", "str"),
+        (["app", "mood_tracking_enabled_default"], "APP_MOOD_TRACKING_ENABLED_DEFAULT", "bool"),
+        (["app", "summary_fallback_length"], "APP_SUMMARY_FALLBACK_LENGTH", "int"),
+
+        # Logging
+        (["logging", "app_level"], "APP_LOG_LEVEL", "str"),
+        (["logging", "werkzeug_level"], "WERKZEUG_LOG_LEVEL", "str"),
+        (["logging", "firebase_level"], "FIREBASE_LOG_LEVEL", "str"),
+
+        # API — general
+        (["api", "request_timeout"], "API_REQUEST_TIMEOUT", "int"),
+        (["api", "request_max_retries"], "API_REQUEST_MAX_RETRIES", "int"),
+        (["api", "default_limit"], "API_DEFAULT_LIMIT", "int"),
+        (["api", "max_limit"], "API_MAX_LIMIT", "int"),
+        (["api", "entries_max_limit"], "API_ENTRIES_MAX_LIMIT", "int"),
+
+        # API — Google Books
+        (["api", "google_books", "page_size"], "API_GOOGLE_BOOKS_PAGE_SIZE", "int"),
+
+        # API — TMDb
+        (["api", "tmdb", "max_pages"], "API_TMDB_MAX_PAGES", "int"),
+        (["api", "tmdb", "results_per_page"], "API_TMDB_RESULTS_PER_PAGE", "int"),
+        (["api", "tmdb", "default_max_results"], "API_TMDB_DEFAULT_MAX_RESULTS", "int"),
+        (["api", "tmdb", "mood_movies_limit"], "API_TMDB_MOOD_MOVIES_LIMIT", "int"),
+        (["api", "tmdb", "filtered_limit"], "API_TMDB_FILTERED_LIMIT", "int"),
+
+        # ML — mood detection
+        (["ml", "mood_detection", "model_version"], "MOOD_MODEL_VERSION", "str"),
+        (["ml", "mood_detection", "model_name"], "MOOD_MODEL_NAME", "str"),
+        (["ml", "mood_detection", "max_length"], "MOOD_MAX_LENGTH", "int"),
+        (["ml", "mood_detection", "prediction_threshold"], "MOOD_PREDICTION_THRESHOLD", "float"),
+
+        # ML — summarization
+        (["ml", "summarization", "model_version"], "SUMMARIZATION_MODEL_VERSION", "str"),
+        (["ml", "summarization", "model_name"], "SUMMARIZATION_MODEL_NAME", "str"),
+        (["ml", "summarization", "max_input_length"], "SUMMARIZATION_MAX_INPUT_LENGTH", "int"),
+        (["ml", "summarization", "max_summary_length"], "SUMMARIZATION_MAX_SUMMARY_LENGTH", "int"),
+        (["ml", "summarization", "min_summary_length"], "SUMMARIZATION_MIN_SUMMARY_LENGTH", "int"),
+        (["ml", "summarization", "num_beams"], "SUMMARIZATION_NUM_BEAMS", "int"),
+
+        # ML — embedding
+        (["ml", "embedding", "model_name"], "EMBEDDING_MODEL_NAME", "str"),
+        (["ml", "embedding", "journal_blend_weight"], "JOURNAL_BLEND_WEIGHT", "float"),
+        (["ml", "embedding", "taste_blend_weight"], "TASTE_BLEND_WEIGHT", "float"),
+
+        # ML — insight generation
+        (["ml", "insight_generation", "use_gemini"], "INSIGHTS_USE_GEMINI", "bool"),
+        (["ml", "insight_generation", "backend"], "INSIGHTS_BACKEND", "str"),
+        (["ml", "insight_generation", "model_version"], "INSIGHTS_MODEL_VERSION", "str"),
+        (["ml", "insight_generation", "hf_model_name"], "INSIGHTS_HF_MODEL_NAME", "str"),
+        (["ml", "insight_generation", "hf_model_dir"], "INSIGHTS_HF_MODEL_DIR", "str"),
+        (["ml", "insight_generation", "ollama_model"], "INSIGHTS_OLLAMA_MODEL", "str"),
+        (["ml", "insight_generation", "ollama_base_url"], "INSIGHTS_OLLAMA_BASE_URL", "str"),
+        (["ml", "insight_generation", "temperature"], "INSIGHTS_TEMPERATURE", "float"),
+        (["ml", "insight_generation", "batch_size"], "INSIGHTS_BATCH_SIZE", "int"),
+        (["ml", "insight_generation", "max_new_tokens"], "INSIGHTS_MAX_NEW_TOKENS", "int"),
+        (["ml", "insight_generation", "gemini_model_name"], "INSIGHTS_GEMINI_MODEL_NAME", "str"),
+        (["ml", "insight_generation", "gemini_max_retries"], "INSIGHTS_GEMINI_MAX_RETRIES", "int"),
+
+        # ML — model store
+        (["ml", "model_store", "source"], "MODEL_SOURCE", "str"),
+        (["ml", "model_store", "local_path"], "MODEL_STORE_PATH", "str"),
+        (["ml", "model_store", "cache_dir"], "MODEL_CACHE_DIR", "str"),
+        (["ml", "model_store", "gcs_bucket"], "MODEL_GCS_BUCKET", "str"),
+        (["ml", "model_store", "s3_bucket"], "MODEL_S3_BUCKET", "str"),
+        (["ml", "model_store", "s3_region"], "MODEL_S3_REGION", "str"),
+        (["ml", "model_store", "download_on_startup"], "MODEL_DOWNLOAD_ON_STARTUP", "bool"),
+        (["ml", "model_store", "models", "roberta", "version"], "MODEL_ROBERTA_VERSION", "str"),
+        (["ml", "model_store", "models", "bart", "version"], "MODEL_BART_VERSION", "str"),
+        (["ml", "model_store", "models", "qwen2", "version"], "MODEL_QWEN2_VERSION", "str"),
+        (["ml", "model_store", "models", "embedding", "version"], "MODEL_EMBEDDING_VERSION", "str"),
+
+        # Recommendation
         (["recommendation", "fetch_limit"], "RECOMMENDATION_FETCH_LIMIT", "int"),
         (["recommendation", "refine_top"], "RECOMMENDATION_REFINE_TOP", "int"),
         (["recommendation", "top_k"], "RECOMMENDATION_TOP_K", "int"),
@@ -52,70 +136,16 @@ def _load_config_once() -> Dict[str, Any]:
         (["recommendation", "intent", "beta_min"], "INTENT_BETA_MIN", "float"),
         (["recommendation", "intent", "beta_boost"], "INTENT_BETA_BOOST", "float"),
         (["recommendation", "intent", "beta_max"], "INTENT_BETA_MAX", "float"),
+        (["recommendation", "intent", "journal_embedding_fetch_limit"], "INTENT_JOURNAL_EMBEDDING_FETCH_LIMIT", "int"),
         (["recommendation", "candidate", "min_title_length"], "CANDIDATE_MIN_TITLE_LENGTH", "int"),
         (["recommendation", "candidate", "min_popularity"], "CANDIDATE_MIN_POPULARITY", "float"),
-        # Embedding settings
-        (["embedding", "model_name"], "EMBEDDING_MODEL_NAME", "str"),
-        (["embedding", "journal_blend_weight"], "JOURNAL_BLEND_WEIGHT", "float"),
-        (["embedding", "taste_blend_weight"], "TASTE_BLEND_WEIGHT", "float"),
-        # ML settings
-        (["ml", "mood_detection", "model_version"], "MOOD_MODEL_VERSION", "str"),
-        (["ml", "mood_detection", "model_name"], "MOOD_MODEL_NAME", "str"),
-        (["ml", "mood_detection", "max_length"], "MOOD_MAX_LENGTH", "int"),
-        (["ml", "mood_detection", "prediction_threshold"], "MOOD_PREDICTION_THRESHOLD", "float"),
-        (["ml", "summarization", "model_version"], "SUMMARIZATION_MODEL_VERSION", "str"),
-        (["ml", "summarization", "model_name"], "SUMMARIZATION_MODEL_NAME", "str"),
-        (["ml", "summarization", "max_input_length"], "SUMMARIZATION_MAX_INPUT_LENGTH", "int"),
-        (["ml", "summarization", "max_summary_length"], "SUMMARIZATION_MAX_SUMMARY_LENGTH", "int"),
-        (["ml", "summarization", "min_summary_length"], "SUMMARIZATION_MIN_SUMMARY_LENGTH", "int"),
-        (["ml", "summarization", "num_beams"], "SUMMARIZATION_NUM_BEAMS", "int"),
-        # API settings
-        (["api", "default_limit"], "API_DEFAULT_LIMIT", "int"),
-        (["api", "max_limit"], "API_MAX_LIMIT", "int"),
-        (["api", "request_timeout"], "API_REQUEST_TIMEOUT", "int"),
-        (["api", "request_max_retries"], "API_REQUEST_MAX_RETRIES", "int"),
-        (["api", "google_books_page_size"], "API_GOOGLE_BOOKS_PAGE_SIZE", "int"),
-        (["api", "tmdb_max_pages"], "API_TMDB_MAX_PAGES", "int"),
-        (["api", "tmdb_results_per_page"], "API_TMDB_RESULTS_PER_PAGE", "int"),
-        (["api", "tmdb_default_max_results"], "API_TMDB_DEFAULT_MAX_RESULTS", "int"),
-        (["api", "tmdb_mood_movies_limit"], "API_TMDB_MOOD_MOVIES_LIMIT", "int"),
-        (["api", "tmdb_filtered_limit"], "API_TMDB_FILTERED_LIMIT", "int"),
-        # App/Server/Logging settings (from previous step)
-        (["app", "timezone"], "APP_TIMEZONE", "str"),
-        (["app", "enable_llm"], "ENABLE_LLM", "bool"),
-        (["app", "enable_insights"], "ENABLE_INSIGHTS", "bool"),
-        (["app", "force_color"], "FORCE_COLOR", "bool"),
-        (["app", "hf_hub_disable_xet"], "HF_HUB_DISABLE_XET", "bool"),
-        (["app", "tf_cpp_min_log_level"], "TF_CPP_MIN_LOG_LEVEL", "str"),
-        (["server", "port"], "PORT", "int"),
-        (["server", "flask_debug"], "FLASK_DEBUG", "bool"),
-        (["server", "disable_reloader"], "DISABLE_RELOADER", "bool"),
-        (["logging", "app_level"], "APP_LOG_LEVEL", "str"),
-        (["logging", "werkzeug_level"], "WERKZEUG_LOG_LEVEL", "str"),
-        (["logging", "firebase_level"], "FIREBASE_LOG_LEVEL", "str"),
-        # Processing settings
-        (["processing", "summary_fallback_length"], "PROCESSING_SUMMARY_FALLBACK_LENGTH", "int"),
-        # Features settings
-        (["features", "mood_tracking_enabled_default"], "FEATURES_MOOD_TRACKING_ENABLED_DEFAULT", "bool"),
-        # Concurrency settings
-        (["concurrency", "intent_builder_max_workers"], "CONCURRENCY_INTENT_BUILDER_MAX_WORKERS", "int"),
-        # Cache settings
+        (["recommendation", "concurrency", "intent_builder_max_workers"], "INTENT_BUILDER_MAX_WORKERS", "int"),
+
+        # Media cache
         (["cache", "max_age_hours"], "MEDIA_CACHE_MAX_AGE_HOURS", "int"),
         (["cache", "fetch_limit"], "MEDIA_CACHE_FETCH_LIMIT", "int"),
         (["cache", "batch_size"], "MEDIA_CACHE_BATCH_SIZE", "int"),
         (["cache", "schema_version"], "MEDIA_CACHE_SCHEMA_VERSION", "str"),
-        # Insights settings
-        (["insights", "use_gemini"], "INSIGHTS_USE_GEMINI", "bool"),
-        (["insights", "gemini_model_name"], "INSIGHTS_GEMINI_MODEL_NAME", "str"),
-        (["insights", "gemini_max_retries"], "INSIGHTS_GEMINI_MAX_RETRIES", "int"),
-        (["insights", "backend"], "INSIGHTS_BACKEND", "str"),
-        (["insights", "ollama_model"], "INSIGHTS_OLLAMA_MODEL", "str"),
-        (["insights", "ollama_base_url"], "INSIGHTS_OLLAMA_BASE_URL", "str"),
-        (["insights", "hf_model_name"], "INSIGHTS_HF_MODEL_NAME", "str"),
-        (["insights", "hf_model_dir"], "INSIGHTS_HF_MODEL_DIR", "str"),
-        (["insights", "temperature"], "INSIGHTS_TEMPERATURE", "float"),
-        (["insights", "batch_size"], "INSIGHTS_BATCH_SIZE", "int"),
-        (["insights", "max_new_tokens"], "INSIGHTS_MAX_NEW_TOKENS", "int"),
     ]
 
     for path, env_name, cast in overrides:

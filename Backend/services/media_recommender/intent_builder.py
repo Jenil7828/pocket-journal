@@ -13,7 +13,7 @@ logger = logging.getLogger("pocket_journal.media.intent")
 
 _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]
-_CONC = _CFG["concurrency"]
+_CONC = _CFG["recommendation"]["concurrency"]
 
 MediaIntent = Tuple[np.ndarray, float, float]
 

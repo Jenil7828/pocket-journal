@@ -21,7 +21,7 @@ MOOD_GENRE_MAP = {
 }
 
 
-def _format_tmdb_results(raw_list, max_results=int(_API["tmdb_default_max_results"])):
+def _format_tmdb_results(raw_list, max_results=int(_API["tmdb"]["default_max_results"])):
     out = []
     for m in raw_list[:max_results]:
         out.append(
@@ -35,7 +35,7 @@ def _format_tmdb_results(raw_list, max_results=int(_API["tmdb_default_max_result
     return out
 
 
-def _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb_default_max_results"])):
+def _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb"]["default_max_results"])):
     # TMDbProvider doesn't expose a discover with genres on the provider interface,
     # so call TMDb API directly using the provider's internal helper pattern.
     provider = TMDbProvider()
@@ -85,7 +85,7 @@ def recommend_movies_for_user(uid, db):
     if not genre_ids:
         genre_ids = MOOD_GENRE_MAP.get("happy", []) or next(iter(MOOD_GENRE_MAP.values()), [])
 
-    movies = _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb_mood_movies_limit"]))
+    movies = _fetch_movies_by_genres(genre_ids, max_results=int(_API["tmdb"]["mood_movies_limit"]))
     return {"mood": dominant, "recommendations": movies}, 200
 
 

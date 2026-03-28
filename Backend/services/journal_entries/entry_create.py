@@ -8,8 +8,6 @@ logger = logging.getLogger("pocket_journal.journal_entries")
 
 _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]
-_FEAT = _CFG["features"]
-_PROC = _CFG["processing"]
 
 
 def process_entry(user, data, db, predictor, summarizer):
@@ -23,10 +21,10 @@ def process_entry(user, data, db, predictor, summarizer):
     entry_id = db.insert_entry(uid, text)
 
     # Summarize (optional)
-    summary = summarizer.summarize(text) if summarizer else text[:int(_PROC["summary_fallback_length"])] + "..."
+    summary = summarizer.summarize(text) if summarizer else text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
 
     # Determine whether mood detection is enabled for the user (default from config)
-    mood_enabled = bool(_FEAT["mood_tracking_enabled_default"])
+    mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
     try:
         if uid:
             fs = getattr(db, "db", None) or None
@@ -38,7 +36,7 @@ def process_entry(user, data, db, predictor, summarizer):
                     mood_enabled = settings.get("mood_tracking_enabled", mood_enabled)
     except Exception:
         # If anything goes wrong while reading settings, default to config value
-        mood_enabled = bool(_FEAT["mood_tracking_enabled_default"])
+        mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
     # Use original entry text for mood detection per design
     if mood_enabled:
@@ -128,8 +126,8 @@ def process_entry(user, data, db, predictor, summarizer):
                                 # nothing to blend
                                 continue
                             # Blend: configured taste_blend_weight * existing + journal_blend_weight * journal embedding
-                            taste_blend_weight = float(_CFG["embedding"]["taste_blend_weight"])
-                            journal_blend_weight = float(_CFG["embedding"]["journal_blend_weight"])
+                            taste_blend_weight = float(_CFG["ml"]["embedding"]["taste_blend_weight"])
+                            journal_blend_weight = float(_CFG["ml"]["embedding"]["journal_blend_weight"])
                             blended = existing_vec * taste_blend_weight + journal_vec * journal_blend_weight
                             # Normalize
                             normed = (blended / (np.linalg.norm(blended) + 1e-12)).astype(np.float32)

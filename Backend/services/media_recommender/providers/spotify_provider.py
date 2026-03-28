@@ -21,7 +21,7 @@ class SpotifyProvider(BaseHTTPProvider):
     requests must handle 401 by invalidating and refreshing the token once.
     """
 
-    token_url = _API["spotify_token_endpoint"]
+    token_url = _API["spotify"]["token_endpoint"]
 
     def __init__(self) -> None:
         client_id = os.getenv("SONG_ID")
@@ -92,7 +92,7 @@ class SpotifyProvider(BaseHTTPProvider):
         # Ensure token is valid
         token = self._get_access_token()
         headers = {"Authorization": f"Bearer {token}"}
-        url = f'{_API["spotify_track_endpoint"]}/{track_id}'
+        url = f'{_API["spotify"]["track_endpoint"]}/{track_id}'
         try:
             payload = self._request("GET", url, headers=headers)
             return payload
@@ -128,7 +128,7 @@ class SpotifyProvider(BaseHTTPProvider):
         try:
             payload = self._request(
                 "GET",
-                _API["spotify_search_endpoint"],
+                _API["spotify"]["search_endpoint"],
                 headers=headers,
                 params=params,
             )
@@ -142,7 +142,7 @@ class SpotifyProvider(BaseHTTPProvider):
                 new_headers = {"Authorization": f"Bearer {new_token}"}
                 payload = self._request(
                     "GET",
-                    _API["spotify_search_endpoint"],
+                    _API["spotify"]["search_endpoint"],
                     headers=new_headers,
                     params=params,
                 )

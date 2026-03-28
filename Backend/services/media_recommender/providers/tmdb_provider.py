@@ -3,6 +3,8 @@ import os
 from typing import List, Optional, Dict, Any
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
+from config_loader import get_config
+_API = get_config()["api"]
 
 logger = logging.getLogger("pocket_journal.media.providers.tmdb")
 
@@ -24,7 +26,7 @@ class TMDbProvider(BaseHTTPProvider):
         for page in range(1, pages + 1):
             payload = self._request(
                 "GET",
-                _API["tmdb_popular_endpoint"],
+                _API["tmdb"]["popular_endpoint"],
                 params={
                     "api_key": self.api_key,
                     "language": "en-US",
@@ -41,7 +43,7 @@ class TMDbProvider(BaseHTTPProvider):
         for page in range(1, pages + 1):
             payload = self._request(
                 "GET",
-                _API["tmdb_toprated_endpoint"],
+                _API["tmdb"]["toprated_endpoint"],
                 params={
                     "api_key": self.api_key,
                     "language": "en-US",
@@ -58,7 +60,7 @@ class TMDbProvider(BaseHTTPProvider):
         try:
             payload = self._request(
                 "GET",
-                f'{_API["tmdb_details_endpoint"]}/{movie_id}',
+                f'{_API["tmdb"]["details_endpoint"]}/{movie_id}',
                 params={
                     "api_key": self.api_key,
                     "language": "en-US",
@@ -71,7 +73,7 @@ class TMDbProvider(BaseHTTPProvider):
     def fetch_candidates(self, query: Optional[str], filters: Optional[Dict[str, Any]], limit: int) -> List[STANDARD_MEDIA_ITEM]:
         # Determine number of pages to fetch (TMDb usually returns ~20 results per page)
         try:
-            pages = max(1, min(int(_API["tmdb_max_pages"]), (int(limit) + int(_API["tmdb_results_per_page"]) - 1) // int(_API["tmdb_results_per_page"])))
+            pages = max(1, min(int(_API["tmdb"]["max_pages"]), (int(limit) + int(_API["tmdb"]["results_per_page"]) - 1) // int(_API["tmdb"]["results_per_page"])))
         except Exception:
             pages = 1
 

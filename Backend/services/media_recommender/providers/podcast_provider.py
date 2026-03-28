@@ -16,7 +16,7 @@ logger = logging.getLogger("pocket_journal.media.providers.podcast")
 class PodcastAPIProvider(BaseHTTPProvider):
     """Podcast provider backed by Spotify episode search API."""
 
-    token_url = _API["spotify_token_endpoint"]
+    token_url = _API["spotify"]["token_endpoint"]
 
     def __init__(self) -> None:
         client_id = os.getenv("SONG_ID")
