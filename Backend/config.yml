@@ -124,6 +124,9 @@ ml:
   # Embedding — sentence-transformers
   embedding:
     model_name: "all-mpnet-base-v2"     # EMBEDDING_MODEL_NAME
+    embedding_dimension: 384            # EMBEDDING_DIMENSION (all-mpnet-base-v2)
+    device: "auto"                      # Device: "auto" | "cuda" | "cpu"
+    use_half_precision: true            # Use float16 on CUDA
     journal_blend_weight: 0.05          # JOURNAL_BLEND_WEIGHT
     taste_blend_weight: 0.95            # TASTE_BLEND_WEIGHT
 
@@ -222,6 +225,96 @@ recommendation:
     intent_builder_max_workers: 3      # INTENT_BUILDER_MAX_WORKERS
 
 
+# ── Interactions (Phase 4 Feedback Loop) ──────────────────────────
+interactions:
+  # Signal-to-weight mapping for feedback loop learning
+  signal_weights:
+    click: 0.02                         # Weight for click signal
+    save: 0.05                          # Weight for save signal
+    skip: -0.01                         # Weight for skip signal
+  
+  # Valid interaction values
+  valid_media_types:
+    - songs
+    - movies
+    - books
+    - podcasts
+  
+  valid_signals:
+    - click
+    - save
+    - skip
+  
+  valid_contexts:
+    - recommendation
+    - search
+  
+  # Rate limiting
+  rate_limit_per_hour: 10              # Max interactions per media type per hour
+  rate_limit_check_window_minutes: 60  # Window for rate limit check
+
+
+# ── Search Service ───────────────────────────────────────────────
+search:
+  # Fuzzy search thresholds
+  fuzzy_threshold_relevance: 75        # Minimum fuzzy score to include result
+  fuzzy_threshold_dedup: 90            # Score to consider items duplicates
+  
+  # Search limits
+  max_cache_results_per_type: 500      # Max items to score from cache
+  default_search_limit: 20             # Default items to return
+  max_search_limit: 100                # Maximum items to return
+  
+  # Search strategy
+  fallback_to_provider: true           # Fallback to live provider if cache miss
+  min_cache_results_for_success: 3     # Minimum results to consider cache hit
+  
+  # Performance
+  search_timeout_seconds: 10           # Timeout for search operations
+  concurrent_providers: 4              # Concurrent provider searches
+
+
+# ── Providers Configuration ───────────────────────────────────────
+providers:
+  # Timeout for all provider requests
+  default_timeout_seconds: 10
+  
+  # Retry configuration
+  max_retries: 2
+  retry_backoff_multiplier: 1.5
+  
+  # Result limits
+  default_max_results: 20
+  max_max_results: 100
+  
+  # TMDb specific (movies)
+  tmdb:
+    timeout_seconds: 10
+    max_pages: 5
+    results_per_page: 20
+    default_max_results: 10
+    mood_movies_limit: 12
+    filtered_limit: 6
+    popularity_threshold: 1.0           # Min popularity score
+  
+  # Spotify specific (songs & podcasts)
+  spotify:
+    timeout_seconds: 10
+    default_max_results: 20
+    market_default: "US"
+  
+  # Google Books specific (books)
+  google_books:
+    timeout_seconds: 10
+    page_size: 40
+    default_max_results: 20
+  
+  # Podcast API specific (podcasts)
+  podcast_api:
+    timeout_seconds: 10
+    default_max_results: 20
+
+
 # ── Media cache ──────────────────────────────────────────────────
 cache:
   max_age_hours: 24                    # MEDIA_CACHE_MAX_AGE_HOURS
@@ -269,6 +362,79 @@ cache:
 # ── Background jobs ──────────────────────────────────────────────
 jobs:
   cache_refresh: {}
+
+
+# ── System Limits & Processing ───────────────────────────────────
+system:
+  limits:
+    # API response limits
+    default_top_k: 10                   # Default number of recommendations
+    max_top_k: 50                       # Maximum allowed top_k
+    max_limit: 100                      # Maximum results to return
+    
+    # Text processing
+    min_text_length: 1                  # Minimum text length for processing
+    max_text_length: 5000               # Maximum text length to process
+    
+    # Embedding dimensions
+    embedding_dim: 384                  # Standard embedding dimension
+    
+    # Batch processing
+    batch_size_default: 32              # Default batch size
+    batch_size_embedding: 32            # Batch size for embeddings
+    batch_size_inference: 16            # Batch size for ML inference
+    
+    # Performance & memory
+    max_concurrent_requests: 50         # Max concurrent requests
+    request_timeout_seconds: 30         # General request timeout
+    
+  # Data retention
+  retention:
+    interactions_days: 90               # Keep interactions for N days
+    embeddings_days: 180                # Keep embeddings for N days
+    cache_TTL_hours: 24                 # Cache TTL in hours
+  
+  # Normalized text processing
+  text:
+    normalize_before_search: true       # Normalize text in search
+    case_sensitive_search: false        # Case-insensitive search
+    remove_punctuation: true            # Remove special chars
+  
+  # Numerical precision
+  numeric:
+    float_precision: "float32"          # Default float precision
+    similarity_precision: "float32"     # Similarity computation precision
+    min_similarity_value: -1.0          # Min cosine similarity
+    max_similarity_value: 1.0           # Max cosine similarity
+
+
+# ── Firestore Configuration ──────────────────────────────────────
+firestore:
+  # Collection names (already defined)
+  collections:
+    journal_entries: "journal_entries"
+    entry_analysis: "entry_analysis"
+    insights: "insights"
+    insight_entry_mapping: "insight_entry_mapping"
+    users: "users"
+    journal_embeddings: "journal_embeddings"
+    user_vectors: "user_vectors"
+    user_interactions: "user_interactions"
+    media_cache_movies: "media_cache_movies"
+    media_cache_songs: "media_cache_songs"
+    media_cache_books: "media_cache_books"
+    media_cache_podcasts: "media_cache_podcasts"
+  
+  # Query limits
+  query_batch_size: 100                 # Firestore batch query size
+  max_write_batch_size: 500             # Max docs per write batch
+  
+  # Index hints
+  indexes_required:
+    - collection: "user_interactions"
+      fields: ["uid", "media_type", "timestamp"]
+    - collection: "journal_embeddings"
+      fields: ["uid", "created_at"]
 
 
 

@@ -28,7 +28,7 @@ _CFG = get_config()
 def compute_temporal_decay(
     interaction_timestamp: str,
     current_time: Optional[datetime] = None,
-    decay_rate: float = 0.15,
+    decay_rate: Optional[float] = None,
 ) -> float:
     """Apply exponential decay to interaction weights based on age.
     
@@ -38,12 +38,16 @@ def compute_temporal_decay(
     Args:
         interaction_timestamp: ISO timestamp of interaction (e.g., "2026-03-20T10:30:00")
         current_time: Reference time (defaults to now)
-        decay_rate: Decay coefficient (default 0.15 per day)
+        decay_rate: Decay coefficient (default from config: 0.15 per day, or None to use config)
     
     Returns:
         Decay multiplier in [0, 1] (1.0 for recent, <1.0 for older)
     """
     try:
+        # Use config default if not provided
+        if decay_rate is None:
+            decay_rate = float(_CFG.get("recommendation", {}).get("ranking", {}).get("temporal_decay_rate", 0.15))
+        
         if current_time is None:
             current_time = datetime.now()
         
@@ -224,7 +228,7 @@ def compute_recency_score(
 def apply_mmr_diversification(
     candidates: List[Dict[str, Any]],
     intent_vector: np.ndarray,
-    lambda_param: float = 0.7,
+    lambda_param: Optional[float] = None,
     top_k: int = 10,
 ) -> List[Dict[str, Any]]:
     """Apply Maximal Marginal Relevance for diversity.
@@ -237,7 +241,7 @@ def apply_mmr_diversification(
     Args:
         candidates: List of candidate items with '_embedding' field
         intent_vector: User intent vector (normalized)
-        lambda_param: Relevance weight (0-1, default 0.7)
+        lambda_param: Relevance weight (0-1, default from config 0.7)
         top_k: Number of items to select
     
     Returns:
@@ -247,6 +251,10 @@ def apply_mmr_diversification(
         return []
     
     try:
+        # Use config default if not provided
+        if lambda_param is None:
+            lambda_param = float(_CFG.get("recommendation", {}).get("ranking", {}).get("mmr_lambda", 0.7))
+        
         intent_vec = np.asarray(intent_vector, dtype=np.float32).reshape(-1)
         
         # Compute all similarities with user vector
@@ -409,4 +417,6 @@ def compute_hybrid_score(
     }
     
     return float(final_score), components
+
+
 
