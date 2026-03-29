@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "0b55a018-2506-4671-9327-110df51e57d4",
     "name": "New Pocket Journal API Collection",
-    "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, and utility endpoints",
+    "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, utility endpoints, and Phase 4 Personalization Feedback Loop (interaction tracking & taste vector updates)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
     "_collection_link": "https://go.postman.co/collection/49178362-0b55a018-2506-4671-9327-110df51e57d4?source=collection_link"
@@ -1238,6 +1238,298 @@
       ]
     },
     {
+      "name": "⭐ Phase 4 - Personalization Feedback Loop (NEW)",
+      "item": [
+        {
+          "name": "📊 Track Interaction - Save Song",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('last_event_id', response.event_id);",
+                  "    console.log('Interaction tracked:', response.event_id);",
+                  "    console.log('Vector updated:', response.updated);",
+                  "} else {",
+                  "    console.log('Interaction failed:', pm.response.code);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"songs\",\n  \"item_id\": \"spotify_2takcwgx1hOnNBvXbzjD6S\",\n  \"signal\": \"save\",\n  \"context\": \"recommendation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "📊 Track Interaction - Click Movie",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Interaction tracked:', response.event_id);",
+                  "    console.log('Weight applied:', response.weight);",
+                  "} else {",
+                  "    console.log('Interaction failed:', pm.response.code);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"movies\",\n  \"item_id\": \"tmdb_550\",\n  \"signal\": \"click\",\n  \"context\": \"recommendation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "📊 Track Interaction - Skip Book",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    console.log('Interaction tracked:', response.event_id);",
+                  "    console.log('Signal:', response.signal);",
+                  "    console.log('Updated:', response.updated);",
+                  "} else {",
+                  "    console.log('Error:', pm.response.json());",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"books\",\n  \"item_id\": \"google_isbn_123456\",\n  \"signal\": \"skip\",\n  \"context\": \"recommendation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "📊 Track Interaction - Save Podcast",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"podcasts\",\n  \"item_id\": \"podcast_episode_789\",\n  \"signal\": \"save\",\n  \"context\": \"search\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "❌ Track Interaction - Invalid Signal (Error Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"songs\",\n  \"item_id\": \"spotify_xyz\",\n  \"signal\": \"invalid_signal\",\n  \"context\": \"recommendation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "❌ Track Interaction - Missing Item ID (Error Test)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"songs\",\n  \"item_id\": \"\",\n  \"signal\": \"save\",\n  \"context\": \"recommendation\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "App Metadata",
       "item": [
         {
@@ -1635,6 +1927,18 @@
       "key": "insight_id",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "last_event_id",
+      "value": "",
+      "type": "string",
+      "description": "Phase 4: Last interaction event ID"
+    },
+    {
+      "key": "interaction_count",
+      "value": "0",
+      "type": "string",
+      "description": "Phase 4: Total interactions tracked"
     },
     {
       "key": "Private_variable",
