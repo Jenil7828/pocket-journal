@@ -13,6 +13,7 @@ from .providers.podcast_provider import PodcastAPIProvider
 from .providers.spotify_provider import SpotifyProvider
 from .providers.tmdb_provider import TMDbProvider
 from .ranking_engine import rank_candidates
+from .enhanced_ranking_engine import rank_candidates_phase5
 from .response_formatter import format_results
 
 logger = logging.getLogger("pocket_journal.media.recommendation")
@@ -176,7 +177,24 @@ def recommend_media(
                     item["similarity"] = similarity
                 refined_pool.append(item)
 
-            results = rank_candidates(intent_vector=intent_vec, refined_candidates=refined_pool, top_k=top_k)
+            # Use Phase 5 enhanced ranking with MMR and hybrid scoring
+            use_phase5 = _CFG.get("recommendation", {}).get("ranking", {}).get("use_phase5", True)
+            
+            if use_phase5:
+                results = rank_candidates_phase5(
+                    intent_vector=intent_vec,
+                    candidates=refined_pool,
+                    uid=uid,
+                    user_mood=None,  # Could fetch from mood service
+                    use_mmr=True,
+                    use_hybrid=True,
+                    use_temporal_decay=True,
+                    top_k=top_k,
+                )
+            else:
+                # Fallback to Phase 4 simple ranking
+                results = rank_candidates(intent_vector=intent_vec, refined_candidates=refined_pool, top_k=top_k)
+            
             formatted = format_results(media_type, results)
 
             logger.info(
@@ -221,7 +239,23 @@ def recommend_media(
 
         refined_pool = refine_candidates(intent_vector=intent_vec, raw_candidates=raw_candidates, refine_top=refine_top)
 
-        results = rank_candidates(intent_vector=intent_vec, refined_candidates=refined_pool, top_k=top_k)
+        # Use Phase 5 enhanced ranking with MMR and hybrid scoring
+        use_phase5 = _CFG.get("recommendation", {}).get("ranking", {}).get("use_phase5", True)
+        
+        if use_phase5:
+            results = rank_candidates_phase5(
+                intent_vector=intent_vec,
+                candidates=refined_pool,
+                uid=uid,
+                user_mood=None,
+                use_mmr=True,
+                use_hybrid=True,
+                use_temporal_decay=True,
+                top_k=top_k,
+            )
+        else:
+            results = rank_candidates(intent_vector=intent_vec, refined_candidates=refined_pool, top_k=top_k)
+        
         formatted = format_results(media_type, results)
 
         logger.info(

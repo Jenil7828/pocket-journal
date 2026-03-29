@@ -184,6 +184,29 @@ recommendation:
     similarity_weight: 0.9             # RANKING_SIMILARITY_WEIGHT
     popularity_weight: 0.1             # RANKING_POPULARITY_WEIGHT
     low_std_threshold: 0.03            # RANKING_LOW_STD_THRESHOLD
+    
+    # Phase 5: Advanced Ranking
+    use_phase5: true                   # Use Phase 5 advanced ranking (MMR, temporal decay, etc.)
+    use_mmr: true                      # Enable MMR diversification
+    use_hybrid_scoring: true           # Enable hybrid scoring
+    use_temporal_decay: true           # Enable temporal decay for old interactions
+    
+    # MMR (Maximal Marginal Relevance) settings
+    mmr_lambda: 0.7                    # Relevance vs diversity trade-off (0-1, higher=more relevant)
+    
+    # Temporal decay settings
+    temporal_decay_rate: 0.15          # Decay per day (0.15 = ~15% per day)
+    
+    # Hybrid scoring weights
+    hybrid_weights:
+      similarity: 0.5
+      interaction_frequency: 0.2
+      popularity: 0.2
+      recency: 0.1
+    
+    # Performance limits
+    max_candidates_for_ranking: 500    # Limit candidates to process (for performance)
+    target_response_time_ms: 500       # Target response time
 
   intent:
     beta_min: 0.15                     # INTENT_BETA_MIN
