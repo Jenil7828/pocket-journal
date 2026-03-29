@@ -141,11 +141,61 @@ def _load_config_once() -> Dict[str, Any]:
         (["recommendation", "candidate", "min_popularity"], "CANDIDATE_MIN_POPULARITY", "float"),
         (["recommendation", "concurrency", "intent_builder_max_workers"], "INTENT_BUILDER_MAX_WORKERS", "int"),
 
-        # Media cache
-        (["cache", "max_age_hours"], "MEDIA_CACHE_MAX_AGE_HOURS", "int"),
-        (["cache", "fetch_limit"], "MEDIA_CACHE_FETCH_LIMIT", "int"),
-        (["cache", "batch_size"], "MEDIA_CACHE_BATCH_SIZE", "int"),
-        (["cache", "schema_version"], "MEDIA_CACHE_SCHEMA_VERSION", "str"),
+        # Recommendation Phase 5
+        (["recommendation", "ranking", "use_phase5"], "RANKING_USE_PHASE5", "bool"),
+        (["recommendation", "ranking", "use_mmr"], "RANKING_USE_MMR", "bool"),
+        (["recommendation", "ranking", "use_hybrid_scoring"], "RANKING_USE_HYBRID_SCORING", "bool"),
+        (["recommendation", "ranking", "use_temporal_decay"], "RANKING_USE_TEMPORAL_DECAY", "bool"),
+        (["recommendation", "ranking", "mmr_lambda"], "RANKING_MMR_LAMBDA", "float"),
+        (["recommendation", "ranking", "temporal_decay_rate"], "RANKING_TEMPORAL_DECAY_RATE", "float"),
+        (["recommendation", "ranking", "max_candidates_for_ranking"], "RANKING_MAX_CANDIDATES", "int"),
+        (["recommendation", "ranking", "target_response_time_ms"], "RANKING_TARGET_RESPONSE_TIME_MS", "int"),
+
+        # Interactions
+        (["interactions", "signal_weights", "click"], "INTERACTION_WEIGHT_CLICK", "float"),
+        (["interactions", "signal_weights", "save"], "INTERACTION_WEIGHT_SAVE", "float"),
+        (["interactions", "signal_weights", "skip"], "INTERACTION_WEIGHT_SKIP", "float"),
+        (["interactions", "rate_limit_per_hour"], "INTERACTION_RATE_LIMIT_PER_HOUR", "int"),
+        (["interactions", "rate_limit_check_window_minutes"], "INTERACTION_RATE_LIMIT_WINDOW_MIN", "int"),
+
+        # Search
+        (["search", "fuzzy_threshold_relevance"], "SEARCH_FUZZY_THRESHOLD_RELEVANCE", "int"),
+        (["search", "fuzzy_threshold_dedup"], "SEARCH_FUZZY_THRESHOLD_DEDUP", "int"),
+        (["search", "max_cache_results_per_type"], "SEARCH_MAX_CACHE_RESULTS", "int"),
+        (["search", "default_search_limit"], "SEARCH_DEFAULT_LIMIT", "int"),
+        (["search", "max_search_limit"], "SEARCH_MAX_LIMIT", "int"),
+        (["search", "fallback_to_provider"], "SEARCH_FALLBACK_TO_PROVIDER", "bool"),
+        (["search", "min_cache_results_for_success"], "SEARCH_MIN_CACHE_RESULTS", "int"),
+        (["search", "search_timeout_seconds"], "SEARCH_TIMEOUT_SECONDS", "int"),
+        (["search", "concurrent_providers"], "SEARCH_CONCURRENT_PROVIDERS", "int"),
+
+        # Providers
+        (["providers", "default_timeout_seconds"], "PROVIDER_TIMEOUT_SECONDS", "int"),
+        (["providers", "max_retries"], "PROVIDER_MAX_RETRIES", "int"),
+        (["providers", "default_max_results"], "PROVIDER_DEFAULT_MAX_RESULTS", "int"),
+        (["providers", "tmdb", "timeout_seconds"], "TMDB_TIMEOUT_SECONDS", "int"),
+        (["providers", "tmdb", "popularity_threshold"], "TMDB_POPULARITY_THRESHOLD", "float"),
+        (["providers", "spotify", "market_default"], "SPOTIFY_MARKET_DEFAULT", "str"),
+        (["providers", "google_books", "page_size"], "GOOGLE_BOOKS_PAGE_SIZE", "int"),
+
+        # Embedding
+        (["ml", "embedding", "embedding_dimension"], "EMBEDDING_DIMENSION", "int"),
+        (["ml", "embedding", "device"], "EMBEDDING_DEVICE", "str"),
+        (["ml", "embedding", "use_half_precision"], "EMBEDDING_USE_HALF_PRECISION", "bool"),
+
+        # System limits
+        (["system", "limits", "default_top_k"], "SYSTEM_DEFAULT_TOP_K", "int"),
+        (["system", "limits", "max_top_k"], "SYSTEM_MAX_TOP_K", "int"),
+        (["system", "limits", "batch_size_default"], "SYSTEM_BATCH_SIZE_DEFAULT", "int"),
+        (["system", "limits", "batch_size_embedding"], "SYSTEM_BATCH_SIZE_EMBEDDING", "int"),
+        (["system", "limits", "batch_size_inference"], "SYSTEM_BATCH_SIZE_INFERENCE", "int"),
+        (["system", "limits", "max_concurrent_requests"], "SYSTEM_MAX_CONCURRENT_REQUESTS", "int"),
+        (["system", "limits", "request_timeout_seconds"], "SYSTEM_REQUEST_TIMEOUT_SECONDS", "int"),
+        (["system", "text", "normalize_before_search"], "SYSTEM_NORMALIZE_BEFORE_SEARCH", "bool"),
+
+        # Firestore
+        (["firestore", "query_batch_size"], "FIRESTORE_QUERY_BATCH_SIZE", "int"),
+        (["firestore", "max_write_batch_size"], "FIRESTORE_MAX_WRITE_BATCH_SIZE", "int"),
     ]
 
     for path, env_name, cast in overrides:
@@ -182,4 +232,138 @@ def get_config() -> Dict[str, Any]:
 
     # Defensive: if something mutates _CONFIG internally, we always return a clean copy.
     return copy.deepcopy(_CONFIG)  # type: ignore[arg-type]
+
+
+def get(path: str, default: Any = None) -> Any:
+    """
+    Get a config value using dot notation (e.g., 'recommendation.ranking.mmr_lambda').
+    
+    Args:
+        path: Dot-separated path to config value (e.g., "ml.mood_detection.max_length")
+        default: Default value if path not found
+    
+    Returns:
+        Config value or default
+    """
+    cfg = get_config()
+    parts = path.split(".")
+    value = cfg
+    
+    for part in parts:
+        if isinstance(value, dict) and part in value:
+            value = value[part]
+        else:
+            logger.debug("Config path not found: %s, using default: %r", path, default)
+            return default
+    
+    return value
+
+
+def get_int(path: str, default: int = 0) -> int:
+    """Get integer config value."""
+    val = get(path, default)
+    return int(val) if val is not None else default
+
+
+def get_float(path: str, default: float = 0.0) -> float:
+    """Get float config value."""
+    val = get(path, default)
+    return float(val) if val is not None else default
+
+
+def get_str(path: str, default: str = "") -> str:
+    """Get string config value."""
+    val = get(path, default)
+    return str(val) if val is not None else default
+
+
+def get_bool(path: str, default: bool = False) -> bool:
+    """Get boolean config value."""
+    val = get(path, default)
+    if isinstance(val, bool):
+        return val
+    if isinstance(val, str):
+        return _env_to_bool(val)
+    return bool(val) if val is not None else default
+
+
+def get_list(path: str, default: List[Any] | None = None) -> List[Any]:
+    """Get list config value."""
+    if default is None:
+        default = []
+    val = get(path, default)
+    return list(val) if val is not None else default
+
+
+def get_dict(path: str, default: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Get dictionary config value."""
+    if default is None:
+        default = {}
+    val = get(path, default)
+    return dict(val) if isinstance(val, dict) else default
+
+
+def validate_required_keys(required_paths: List[str]) -> Tuple[bool, List[str]]:
+    """
+    Validate that required config keys exist.
+    
+    Args:
+        required_paths: List of dot-notation paths to validate
+    
+    Returns:
+        (is_valid, list_of_missing_paths)
+    """
+    cfg = get_config()
+    missing = []
+    
+    for path in required_paths:
+        parts = path.split(".")
+        value = cfg
+        for part in parts:
+            if isinstance(value, dict) and part in value:
+                value = value[part]
+            else:
+                missing.append(path)
+                break
+    
+    return len(missing) == 0, missing
+
+
+def validate_and_log_config() -> bool:
+    """
+    Validate critical config on startup.
+    Logs warnings for missing optional configs.
+    Returns False if any critical configs are missing.
+    """
+    # Critical paths that must exist
+    critical_paths = [
+        "server.port",
+        "api.request_timeout",
+        "ml.mood_detection.model_version",
+        "ml.summarization.model_version",
+        "ml.embedding.model_name",
+        "recommendation.top_k",
+        "cache.max_age_hours",
+    ]
+    
+    is_valid, missing = validate_required_keys(critical_paths)
+    
+    if not is_valid:
+        logger.error("Critical config keys missing: %s", missing)
+        return False
+    
+    # Optional paths to check
+    optional_paths = [
+        "ml.insight_generation.use_gemini",
+        "recommendation.ranking.use_phase5",
+        "search.fuzzy_threshold_relevance",
+    ]
+    
+    _, missing_optional = validate_required_keys(optional_paths)
+    if missing_optional:
+        logger.warning("Optional config keys missing (using defaults): %s", missing_optional)
+    
+    logger.info("Config validation: OK (critical keys present, optional: %d missing)", len(missing_optional))
+    return True
+
 

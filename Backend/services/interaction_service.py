@@ -12,24 +12,14 @@ from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 
 from firebase_admin import firestore
+from config_loader import get_config
 
 logger = logging.getLogger("pocket_journal.interaction_service")
 
-# Signal to weight mapping
-SIGNAL_WEIGHTS = {
-    "click": 0.02,
-    "save": 0.05,
-    "skip": -0.01,
-}
-
-# Valid media types
-VALID_MEDIA_TYPES = {"songs", "movies", "books", "podcasts"}
-
-# Valid signals
-VALID_SIGNALS = set(SIGNAL_WEIGHTS.keys())
-
-# Valid contexts
-VALID_CONTEXTS = {"recommendation", "search"}
+def _get_config():
+    """Get config on-demand to ensure latest values."""
+    cfg = get_config()
+    return cfg
 
 
 class InteractionService:
@@ -53,16 +43,24 @@ class InteractionService:
         context: str,
     ) -> tuple[bool, Optional[str]]:
         """
-        Validate interaction parameters.
+        Validate interaction parameters using config.
 
         Returns:
             (is_valid, error_message)
         """
+        cfg = _get_config()
+        
+        # Get valid values from config
+        signal_weights = cfg.get("interactions", {}).get("signal_weights", {})
+        valid_media_types = cfg.get("interactions", {}).get("valid_media_types", ["songs", "movies", "books", "podcasts"])
+        valid_signals = list(signal_weights.keys())
+        valid_contexts = cfg.get("interactions", {}).get("valid_contexts", ["recommendation", "search"])
+        
         if not media_type:
             return False, "media_type is required"
 
-        if media_type.lower() not in VALID_MEDIA_TYPES:
-            return False, f"Invalid media_type: {media_type}. Must be one of: {', '.join(VALID_MEDIA_TYPES)}"
+        if media_type.lower() not in valid_media_types:
+            return False, f"Invalid media_type: {media_type}. Must be one of: {', '.join(valid_media_types)}"
 
         if not item_id or not isinstance(item_id, str):
             return False, "item_id must be a non-empty string"
@@ -70,11 +68,11 @@ class InteractionService:
         if not signal:
             return False, "signal is required"
 
-        if signal.lower() not in VALID_SIGNALS:
-            return False, f"Invalid signal: {signal}. Must be one of: {', '.join(VALID_SIGNALS)}"
+        if signal.lower() not in valid_signals:
+            return False, f"Invalid signal: {signal}. Must be one of: {', '.join(valid_signals)}"
 
-        if context and context.lower() not in VALID_CONTEXTS:
-            return False, f"Invalid context: {context}. Must be one of: {', '.join(VALID_CONTEXTS)}"
+        if context and context.lower() not in valid_contexts:
+            return False, f"Invalid context: {context}. Must be one of: {', '.join(valid_contexts)}"
 
         return True, None
 
@@ -127,8 +125,10 @@ class InteractionService:
             )
             raise ValueError(error_msg)
 
-        # Get weight for signal
-        weight = SIGNAL_WEIGHTS[signal]
+        # Get weight for signal from config
+        cfg = _get_config()
+        signal_weights = cfg.get("interactions", {}).get("signal_weights", {"click": 0.02, "save": 0.05, "skip": -0.01})
+        weight = signal_weights.get(signal, 0.0)
 
         # Build event document
         event_doc = {
@@ -238,4 +238,7 @@ class InteractionService:
                 str(e),
             )
             return 0
+
+
+
 

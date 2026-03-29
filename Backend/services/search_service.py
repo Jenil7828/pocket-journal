@@ -79,13 +79,17 @@ class SearchService:
         # Score all items
         scored_results = []
         all_scores = []
+        
+        # Get fuzzy threshold from config
+        fuzzy_threshold = _CFG.get("search", {}).get("fuzzy_threshold_relevance", 75)
+        
         for item in cached_items:
             score = self._compute_score(item, query, media_type)
             all_scores.append(score)
             scored_results.append((score, item))
         
-        # Filter by relevance threshold (>= 75)
-        relevant_results = [(score, item) for score, item in scored_results if score >= 75]
+        # Filter by relevance threshold from config
+        relevant_results = [(score, item) for score, item in scored_results if score >= fuzzy_threshold]
         
         # Sort by score DESC, then popularity
         relevant_results.sort(key=lambda x: (-x[0], -self._get_popularity(x[1], media_type)))

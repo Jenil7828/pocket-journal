@@ -47,23 +47,29 @@ class EmbeddingService:
         if SentenceTransformer is None:
             raise RuntimeError("sentence-transformers is not installed or failed to import")
 
-        # Determine device
-        device = "cpu"
-        try:
-            if torch is not None and torch.cuda.is_available():
-                device = "cuda"
-        except Exception:
+        # Determine device from config or auto-detect
+        device_config = str(_CFG.get("ml", {}).get("embedding", {}).get("device", "auto")).lower()
+        use_half_precision = bool(_CFG.get("ml", {}).get("embedding", {}).get("use_half_precision", True))
+        
+        if device_config == "auto":
             device = "cpu"
+            try:
+                if torch is not None and torch.cuda.is_available():
+                    device = "cuda"
+            except Exception:
+                device = "cpu"
+        else:
+            device = device_config
 
         self.device = device
-        logger.info("EmbeddingService using device=%s", self.device)
+        logger.info("EmbeddingService using device=%s, half_precision=%s", self.device, use_half_precision)
 
         # Load the model onto the chosen device once, suppressing HF chatter
         try:
             with suppress_hf():
                 # SentenceTransformer accepts a device string like 'cpu' or 'cuda'
                 self.model = SentenceTransformer(model_name, device=self.device)
-                if self.device == "cuda":
+                if self.device == "cuda" and use_half_precision:
                     self.model = self.model.half()
                     logger.info("EmbeddingService cast to float16 on CUDA")
         except Exception as e:
