@@ -29,16 +29,32 @@ class DBManager:
         self.tz = pytz.timezone(_TZ)
 
     # -------------------- Journal Entries --------------------
-    def insert_entry(self, uid: str, entry_text: str) -> str:
+    def insert_entry(self, uid: str, entry_text: str, title: str = None) -> str:
+        """Insert a journal entry with optional title.
+        
+        Args:
+            uid: User ID
+            entry_text: Journal entry content
+            title: Optional title for the entry. If None, will be auto-generated from entry_text
+            
+        Returns:
+            Document ID of the created entry
+        """
         doc_ref = self.db.collection(_COLS["journal_entries"]).document()
         now = datetime.now(self.tz)
 
-        doc_ref.set({
+        entry_data = {
             "uid": uid,
             "entry_text": entry_text,
             "created_at": now,
             "updated_at": now
-        })
+        }
+        
+        # Add optional title if provided
+        if title:
+            entry_data["title"] = title.strip()
+        
+        doc_ref.set(entry_data)
         return doc_ref.id
 
     def insert_analysis(self, entry_id: str, interpreted_response_or_summary, mood: dict = None, raw_analysis: dict = None):
@@ -284,7 +300,18 @@ class DBManager:
         }
 
     # -------------------- Update Entries --------------------
-    def update_entry(self, entry_id: str, uid: str, new_entry_text: str) -> dict:
+    def update_entry(self, entry_id: str, uid: str, new_entry_text: str, title: str = None) -> dict:
+        """Update a journal entry with optional title.
+        
+        Args:
+            entry_id: Document ID of entry
+            uid: User ID for authorization
+            new_entry_text: New entry content
+            title: Optional new title
+            
+        Returns:
+            Dict with success status and details
+        """
         try:
             ref = self.db.collection(_COLS["journal_entries"]).document(entry_id)
             doc = ref.get()
@@ -295,10 +322,16 @@ class DBManager:
             if doc.to_dict().get("uid") != uid:
                 return {"success": False, "error": "Unauthorized: Entry does not belong to user"}
 
-            ref.update({
+            update_data = {
                 "entry_text": new_entry_text,
                 "updated_at": datetime.now(self.tz)
-            })
+            }
+            
+            # Update title if provided
+            if title:
+                update_data["title"] = title.strip()
+            
+            ref.update(update_data)
 
             analysis_docs = (
                 self.db.collection(_COLS["entry_analysis"])

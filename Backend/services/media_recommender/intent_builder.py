@@ -7,7 +7,7 @@ import numpy as np
 from firebase_admin import firestore
 
 from config_loader import get_config
-from services.embedding_service import EmbeddingService
+from services.embeddings import get_embedding_service
 
 logger = logging.getLogger("pocket_journal.media.intent")
 
@@ -38,7 +38,7 @@ def _normalize(vec: Optional[np.ndarray]) -> Optional[np.ndarray]:
         return None
     if vec.size == 0:
         return None
-    return EmbeddingService.normalize(vec)
+    return get_embedding_service().normalize(vec)
 
 
 def _fetch_taste_vector(uid: str, media_type: str) -> Optional[np.ndarray]:

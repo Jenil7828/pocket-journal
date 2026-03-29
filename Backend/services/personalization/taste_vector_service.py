@@ -15,7 +15,7 @@ from typing import Optional, Dict, Any
 import numpy as np
 from firebase_admin import firestore
 
-from services.embedding_service import EmbeddingService
+from services.embeddings.embedding_service import EmbeddingService
 
 logger = logging.getLogger("pocket_journal.taste_vector_service")
 

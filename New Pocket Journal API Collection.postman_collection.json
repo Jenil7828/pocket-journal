@@ -2,10 +2,12 @@
   "info": {
     "_postman_id": "0b55a018-2506-4671-9327-110df51e57d4",
     "name": "New Pocket Journal API Collection",
-    "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, utility endpoints, and Phase 4 Personalization Feedback Loop (interaction tracking & taste vector updates)",
+    "description": "Complete API collection for Pocket Journal application with all CRUD operations, analytics, utility endpoints, Phase 4 Personalization Feedback Loop (interaction tracking & taste vector updates), and Journal Entry Search System with fuzzy matching and content-first ranking.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
-    "_collection_link": "https://go.postman.co/collection/49178362-0b55a018-2506-4671-9327-110df51e57d4?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/49178362-0b55a018-2506-4671-9327-110df51e57d4?source=collection_link",
+    "version": "2.1.0",
+    "lastUpdatedDate": "2026-03-29T00:00:00.000Z"
   },
   "item": [
     {
@@ -518,6 +520,239 @@
                 "batch"
               ]
             }
+          },
+          "response": []
+        },
+        {
+          "name": "🔍 Search Entries (NEW)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/search?query=stressed&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "stressed",
+                  "description": "Search term (optional)"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": true,
+                  "description": "Filter start date (YYYY-MM-DD, optional)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-03-31",
+                  "disabled": true,
+                  "description": "Filter end date (YYYY-MM-DD, optional)"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Number of results (1-50, default 20)"
+                }
+              ]
+            },
+            "description": "Search journal entries with fuzzy matching, content-first ranking, and date filtering.\n\nFeatures:\n- Fuzzy search with typo tolerance\n- Content-first ranking (60% entry_text, 35% title, 5% summary)\n- Optional date range filtering\n- Auto-generated titles for entries without titles\n\nResponse includes:\n- results: Array of matching entries\n- count: Number of results returned\n- total_count: Total matching entries\n- score: Relevance score (0-100)\n- matched_on: Field matched on (content, title, summary)"
+          },
+          "response": []
+        },
+        {
+          "name": "🔍 Search with Typo Tolerance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/search?query=prezentation&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "prezentation",
+                  "description": "Misspelled search term - fuzzy matching will find 'presentation'"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Demonstrates fuzzy search with typo tolerance.\nQuery 'prezentation' will find entries containing 'presentation'"
+          },
+          "response": []
+        },
+        {
+          "name": "🔍 Search with Date Range",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/search?query=work&start_date=2026-01-01&end_date=2026-03-31&limit=50",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "work"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "description": "Start date filter (YYYY-MM-DD)"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-03-31",
+                  "description": "End date filter (YYYY-MM-DD)"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Search with date range filtering.\nOnly returns entries created between start_date and end_date."
+          },
+          "response": []
+        },
+        {
+          "name": "🔍 Search (No Query - Recent Entries)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/search?limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Returns 20 most recent entries when no query provided"
+                }
+              ]
+            },
+            "description": "Returns recent entries sorted by date when no search query is provided."
+          },
+          "response": []
+        },
+        {
+          "name": "📝 Create Entry with Title (NEW)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_text\": \"I feel stressed about the upcoming presentation tomorrow. It's a big opportunity but I'm nervous about the delivery.\",\n  \"title\": \"Presentation Anxiety\"\n}"
+            },
+            "description": "Create entry with optional title field.\nIf title is not provided, it will be auto-generated from the first 50 characters of entry_text."
+          },
+          "url": {
+            "raw": "{{baseURL}}/api/v1/process_entry",
+            "host": [
+              "{{baseURL}}"
+            ],
+            "path": [
+              "api",
+              "v1",
+              "process_entry"
+            ]
+          },
+          "response": []
+        },
+        {
+          "name": "📝 Update Entry with Title (NEW)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_text\": \"Presentation went better than expected! The audience was engaged and the feedback was positive.\",\n  \"title\": \"Presentation Success\",\n  \"regenerate_analysis\": true\n}"
+            },
+            "description": "Update entry with optional title field.\nTitle will be updated if provided, otherwise previous title is maintained."
+          },
+          "url": {
+            "raw": "{{baseURL}}/api/v1/entries/{{entry_id}}",
+            "host": [
+              "{{baseURL}}"
+            ],
+            "path": [
+              "api",
+              "v1",
+              "entries",
+              "{{entry_id}}"
+            ]
           },
           "response": []
         }

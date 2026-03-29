@@ -11,7 +11,7 @@ from typing import Dict
 
 import requests as _requests
 from config_loader import get_config
-from services.suppression import suppress_hf
+from services.utils.suppression import suppress_hf
 
 from persistence.db_manager import DBManager
 

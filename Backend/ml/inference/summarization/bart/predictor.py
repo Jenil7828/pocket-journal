@@ -2,7 +2,7 @@ import os
 import torch
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from .config import Config
-from services.suppression import suppress_hf
+from services.utils.suppression import suppress_hf
 import logging
 
 logger = logging.getLogger("pocket_journal.summarizer")

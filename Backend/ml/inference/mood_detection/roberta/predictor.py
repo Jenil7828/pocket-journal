@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import logging
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
-from services.suppression import suppress_hf
+from services.utils.suppression import suppress_hf
 from .config import Config
 
 logger = logging.getLogger("pocket_journal.roberta.predictor")

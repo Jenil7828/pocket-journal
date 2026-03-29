@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 
 from config_loader import get_config
-from services.embedding_service import get_embedding_service
+from services.embeddings import get_embedding_service
 from .providers.base_provider import MediaProvider, STANDARD_MEDIA_ITEM
 
 logger = logging.getLogger("pocket_journal.media.candidates")

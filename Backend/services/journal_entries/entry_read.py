@@ -12,6 +12,19 @@ _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]
 
 
+# Helper function to generate title from entry text
+def _generate_title(text: str) -> str:
+    """Auto-generate a title from entry text (first 50 chars or first sentence)."""
+    if not text:
+        return "Untitled"
+    # Extract first sentence (up to period, newline, or 50 chars)
+    text = text.strip()
+    for i, char in enumerate(text):
+        if char in '.!?\n' and i > 0:
+            return text[:i].strip()[:50]
+    return text[:50].strip() if text else "Untitled"
+
+
 def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
     entry_doc = db.db.collection(_COLS["journal_entries"]).document(entry_id).get()
     if not entry_doc.exists:
@@ -89,6 +102,9 @@ def get_single_entry(entry_id, uid, db):
     if entry_data.get("uid") != uid:
         return {"error": "Unauthorized: Entry does not belong to user"}, 403
 
+    # Auto-generate title if missing (for backward compatibility)
+    title = entry_data.get("title") or _generate_title(entry_data.get("entry_text", ""))
+
     analysis_query = db.db.collection(_COLS["entry_analysis"]).where(filter=firestore.FieldFilter("entry_id", "==", entry_id)).get()
     analysis_data = None
     for analysis_doc in analysis_query:
@@ -98,6 +114,7 @@ def get_single_entry(entry_id, uid, db):
 
     return {
         "entry_id": entry_id,
+        "title": title,
         "entry_text": entry_data["entry_text"],
         "created_at": entry_data["created_at"],
         "updated_at": entry_data.get("updated_at"),
@@ -193,6 +210,10 @@ def get_entries_filtered(uid, params, db):
                         continue
                 except Exception:
                     pass
+
+            # Auto-generate title if missing (backward compatibility)
+            if "title" not in entry_data:
+                entry_data["title"] = _generate_title(entry_data.get("entry_text", ""))
 
             entries.append(entry_data)
         except Exception:

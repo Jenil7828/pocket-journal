@@ -1,7 +1,7 @@
 """Minimal suppression context manager for Hugging Face/Transformers materialization output.
 
 Usage:
-    from services.suppression import suppress_hf
+    from services.utils.suppression import suppress_hf
     with suppress_hf():
         # call model.from_pretrained, SentenceTransformer(...), model.encode(...)
 

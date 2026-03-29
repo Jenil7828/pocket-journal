@@ -16,9 +16,10 @@ def process_entry(user, data, db, predictor, summarizer):
 
     uid = user.get("uid") if isinstance(user, dict) else None
     text = data["entry_text"]
+    title = data.get("title")  # Optional title field
 
-    # Insert the entry first
-    entry_id = db.insert_entry(uid, text)
+    # Insert the entry first (title is optional and backward compatible)
+    entry_id = db.insert_entry(uid, text, title=title)
 
     # Summarize (optional)
     summary = summarizer.summarize(text) if summarizer else text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
@@ -78,7 +79,7 @@ def process_entry(user, data, db, predictor, summarizer):
     # NEW: Embedding storage and identity update
     try:
         # lazy import to avoid hard dependency at module import time
-        from services.embedding_service import get_embedding_service
+        from services.embeddings import get_embedding_service
         embedder = get_embedding_service() if callable(get_embedding_service) else None
     except Exception:
         embedder = None

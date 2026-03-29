@@ -35,7 +35,7 @@ from services.media_recommender.providers.tmdb_provider import TMDbProvider
 from services.media_recommender.providers.spotify_provider import SpotifyProvider
 from services.media_recommender.providers.books_provider import GoogleBooksProvider
 from services.media_recommender.providers.podcast_provider import PodcastAPIProvider
-from services.embedding_service import EmbeddingService
+from services.embeddings.embedding_service import EmbeddingService
 from utils.firestore_serializer import serialize_for_firestore, FirestoreSerializationError
 
 _CFG = get_config()

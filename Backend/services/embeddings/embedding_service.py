@@ -10,7 +10,7 @@ import numpy as np
 os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 from config_loader import get_config
-from services.suppression import suppress_hf
+from services.utils.suppression import suppress_hf
 
 logger = logging.getLogger("pocket_journal.embedding_service")
 

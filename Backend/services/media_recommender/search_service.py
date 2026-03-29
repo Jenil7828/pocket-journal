@@ -18,7 +18,7 @@ from services.media_recommender.providers.tmdb_provider import TMDbProvider
 from services.media_recommender.providers.spotify_provider import SpotifyProvider
 from services.media_recommender.providers.books_provider import GoogleBooksProvider
 from services.media_recommender.providers.podcast_provider import PodcastAPIProvider
-from services.embedding_service import EmbeddingService
+from services.embeddings import get_embedding_service
 
 logger = logging.getLogger("pocket_journal.search_service")
 _CFG = get_config()
@@ -50,7 +50,7 @@ class SearchService:
         firestore_client = db.db if hasattr(db, 'db') else db
         self.db = firestore_client
         self.cache_store = MediaCacheStore(firestore_client)
-        self.embedding_service = EmbeddingService()
+        self.embedding_service = get_embedding_service()
         self.providers = {
             "movies": TMDbProvider(),
             "songs": SpotifyProvider(),
