@@ -87,3 +87,21 @@ def delete_insight(insight_id, uid, db):
     insight_doc.reference.delete()
     return {"message": "Insight deleted successfully", "insight_id": insight_id, "mappings_deleted": mappings_deleted}, 200
 
+
+def get_insight(insight_id, uid, db):
+    """Get a single insight by ID with authorization check."""
+    try:
+        ref = db.db.collection("insights").document(insight_id)
+        doc = ref.get()
+        
+        if not doc.exists:
+            return {"error": "Insight not found"}, 404
+        
+        data = doc.to_dict()
+        if data.get("uid") != uid:
+            return {"error": "Unauthorized"}, 403
+        
+        data["id"] = insight_id
+        return {"insight": data}, 200
+    except Exception as e:
+        return {"error": str(e)}, 500

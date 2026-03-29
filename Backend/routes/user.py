@@ -2,6 +2,7 @@
 from flask import request, jsonify
 import logging
 from firebase_admin import firestore as fa_firestore
+from utils.logging_utils import log_request, log_response
 
 logger = logging.getLogger("pocket_journal.routes.user")
 

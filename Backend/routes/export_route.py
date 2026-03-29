@@ -8,15 +8,18 @@ def register(app, deps):
     export_service = deps["export_service"]
     get_db = deps["get_db"]
 
-    @app.route("/api/v1/export", methods=["GET"])
+    @app.route("/api/v1/export", methods=["POST"])
     @login_required
     def export_data():
         start_time = time.time()
         log_request()
         uid = request.user["uid"]
-        start_date = request.args.get("start_date")
-        end_date = request.args.get("end_date")
-        export_format = request.args.get("format", "json").lower()
+        
+        # Accept data from JSON body or query args
+        data = request.get_json() or {}
+        start_date = data.get("start_date") or request.args.get("start_date")
+        end_date = data.get("end_date") or request.args.get("end_date")
+        export_format = (data.get("format") or request.args.get("format", "json")).lower()
 
         _db = get_db()
         result = export_service.export_data(uid, start_date, end_date, export_format, _db)

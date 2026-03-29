@@ -134,7 +134,7 @@ ml:
   # Inference: Backend/ml/inference/insight_generation/
   # Models:    Backend/ml/models/insight_generation/qwen2/{version}/
   insight_generation:
-    use_gemini: false                   # INSIGHTS_USE_GEMINI — true=Gemini, false=Qwen2
+    use_gemini: true                   # INSIGHTS_USE_GEMINI — true=Gemini, false=Qwen2
     backend: "huggingface"             # INSIGHTS_BACKEND — "huggingface" | "ollama"
     model_version: "v1"                # INSIGHTS_MODEL_VERSION
     hf_model_name: "Qwen/Qwen2-1.5B-Instruct" # INSIGHTS_HF_MODEL_NAME

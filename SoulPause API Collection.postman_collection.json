@@ -1,0 +1,1572 @@
+{
+  "info": {
+    "_postman_id": "289393c4-44a6-4a88-b239-8e20fc60c29f",
+    "name": "SoulPause API Collection",
+    "description": "Complete SoulPause (Pocket Journal) API collection with all 50+ endpoints. Includes: Journal CRUD, Insights, Media recommendations, Statistics (with weekly/monthly), Streaks, User management, Jobs, Export, Authentication (with Create User), and System endpoints. All endpoints are production-ready with timezone-aware datetime handling and optimized Firestore queries.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "49178362",
+    "_collection_link": "https://go.postman.co/collection/49178362-289393c4-44a6-4a88-b239-8e20fc60c29f?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "🔐 Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('token_id', response.id_token || response.idToken || response.token);",
+                  "    console.log('✅ Token saved');",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jenilrathod114@gmail.com\",\n  \"password\": \"BetterPass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/auth/login",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jenil.rathod@gmail.com\",\n  \"password\": \"securepassword123\",\n  \"name\": \"Jenil Rathod Another\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/auth/create-user",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "create-user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"old_password\",\n  \"new_password\": \"new_password\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/auth/change-password",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "change-password"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User authentication endpoints (3 endpoints)"
+    },
+    {
+      "name": "📔 Journal Domain",
+      "item": [
+        {
+          "name": "Create Entry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('entry_id', response.entry_id);",
+                  "    console.log('✅ Entry ID saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_text\": \"Today was a productive day...\",\n  \"title\": \"Productive Day (optional)\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Entries (Filtered)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal?limit=20&offset=0",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-03-31",
+                  "disabled": true
+                },
+                {
+                  "key": "mood",
+                  "value": "happy",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Entries (No Filters)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/all",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "all"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search Entries (Fuzzy)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/search?query=stressed&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "stressed"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2026-01-01",
+                  "disabled": true
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-03-31",
+                  "disabled": true
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Entry",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/{{entry_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "{{entry_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Entry Analysis",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/{{entry_id}}/analysis",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "{{entry_id}}",
+                "analysis"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Entry (Full with Analysis)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_text\": \"Updated content...\",\n  \"title\": \"New Title\",\n  \"regenerate_analysis\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/{{entry_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "{{entry_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Entry Content Only (No Analysis)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_text\": \"Updated text only\",\n  \"title\": \"Updated Title\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/{{entry_id}}/content",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "{{entry_id}}",
+                "content"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reanalyze Entry",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/{{entry_id}}/reanalyze",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "{{entry_id}}",
+                "reanalyze"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Entry",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/{{entry_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "{{entry_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Multiple Entries (Batch)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry_ids\": [\"entry_id_1\", \"entry_id_2\", \"entry_id_3\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journal/batch",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journal",
+                "batch"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Journal entry management (12 endpoints)"
+    },
+    {
+      "name": "⭐ Streak",
+      "item": [
+        {
+          "name": "Get User Streak",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/streak",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "streak"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User's writing streak metrics (NEW)"
+    },
+    {
+      "name": "💡 Insights Domain",
+      "item": [
+        {
+          "name": "Generate Insights",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('insight_id', response.insight_id);",
+                  "    console.log('✅ Insight ID saved');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"start_date\": \"2026-03-01\",\n  \"end_date\": \"2026-03-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/insights/generate",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "insights",
+                "generate"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Insights",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/insights?limit=20&offset=0",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "insights"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Single Insight",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/insights/{{insight_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "insights",
+                "{{insight_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Insight",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/insights/{{insight_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "insights",
+                "{{insight_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Insights generation and management (4 endpoints)"
+    },
+    {
+      "name": "🎬 Media - Movies",
+      "item": [
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/movies/recommend?limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "movies",
+                "recommend"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/movies/search?query=action&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "movies",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "action"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Movie recommendations and search"
+    },
+    {
+      "name": "🎵 Media - Songs",
+      "item": [
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/songs/recommend?limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "songs",
+                "recommend"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/songs/search?query=jazz&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "songs",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "jazz"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Song recommendations and search"
+    },
+    {
+      "name": "📚 Media - Books",
+      "item": [
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/books/recommend?limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "books",
+                "recommend"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/books/search?query=fiction&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "books",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "fiction"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Book recommendations and search"
+    },
+    {
+      "name": "🎙️ Media - Podcasts",
+      "item": [
+        {
+          "name": "Get Recommendations",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/podcasts/recommend?limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "podcasts",
+                "recommend"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Search",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/podcasts/search?query=technology&limit=20",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "podcasts",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "technology"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Podcast recommendations and search"
+    },
+    {
+      "name": "📱 Media - Interactions",
+      "item": [
+        {
+          "name": "Track Interaction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"media_type\": \"songs\",\n  \"item_id\": \"song_123\",\n  \"signal\": \"click\",\n  \"context\": \"recommendation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/media/interaction",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "media",
+                "interaction"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Track user media interactions"
+    },
+    {
+      "name": "👤 User",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"preferences\": {\n    \"theme\": \"dark\",\n    \"notifications\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/user",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/user",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User profile management"
+    },
+    {
+      "name": "📊 Statistics",
+      "item": [
+        {
+          "name": "Get Statistics (Overall)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/stats",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Mood Trends",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/mood-trends?days=30",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "mood-trends"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Weekly Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/stats/weekly",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stats",
+                "weekly"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Monthly Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/stats/monthly",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "stats",
+                "monthly"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Analytics and statistics (4 endpoints with timezone-aware datetime)"
+    },
+    {
+      "name": "💾 Export",
+      "item": [
+        {
+          "name": "Export Entries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 202 || pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.collectionVariables.set('export_id', response.export_id);",
+                  "    console.log('✅ Export ID saved');",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"json\",\n  \"start_date\": \"2026-03-01\",\n  \"end_date\": \"2026-03-31\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/export",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "export"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Export Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/export/status?export_id={{export_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "export",
+                "status"
+              ],
+              "query": [
+                {
+                  "key": "export_id",
+                  "value": "{{export_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Data export functionality"
+    },
+    {
+      "name": "📋 Jobs",
+      "item": [
+        {
+          "name": "Cache Refresh All",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cache Refresh - Movies",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"force\":\"true\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/movies",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "movies"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cache Refresh - Songs",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/songs",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "songs"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cache Refresh - Books",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"force\":\"true\"}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/books",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "books"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cache Refresh - Podcasts",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/refresh/podcasts",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "refresh",
+                "podcasts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cache Status",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/cache/status",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "cache",
+                "status"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Background job management (8+ endpoints including media-specific cache jobs)"
+    },
+    {
+      "name": "🏥 System",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/health",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "App Metadata",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/app/about",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "about"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "App Terms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/app/terms",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "terms"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Home",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}",
+              "host": [
+                "{{baseURL}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "Health checks and system information"
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseURL",
+      "value": "http://localhost:5000",
+      "type": "string",
+      "description": "Base URL for SoulPause API"
+    },
+    {
+      "key": "token_id",
+      "value": "",
+      "type": "string",
+      "description": "Firebase authentication token (set after login)"
+    },
+    {
+      "key": "entry_id",
+      "value": "",
+      "type": "string",
+      "description": "Last created journal entry ID"
+    },
+    {
+      "key": "insight_id",
+      "value": "",
+      "type": "string",
+      "description": "Last created insight ID"
+    },
+    {
+      "key": "export_id",
+      "value": "",
+      "type": "string",
+      "description": "Last export ID"
+    },
+    {
+      "key": "job_id",
+      "value": "",
+      "type": "string",
+      "description": "Last job ID"
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import os
 import logging
 import torch
 from config_loader import get_config
-from services.suppression import suppress_hf
+from services.utils.suppression import suppress_hf
 
 logger = logging.getLogger("pocket_journal.insights.predictor")
 

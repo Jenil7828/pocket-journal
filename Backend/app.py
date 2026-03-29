@@ -101,7 +101,7 @@ export_service = _services_pkg.export_service
 stats_service = _services_pkg.stats_service
 
 from persistence.db_manager import DBManager
-from services.embedding_service import get_embedding_service
+from services.embeddings import get_embedding_service
 from services.media_recommender.cache_store import MediaCacheStore
 from ml.utils.model_loader import resolve_model_path
 
@@ -242,6 +242,11 @@ deps = {
     "stats_service": stats_service,
     "media_recommendations": media_recommendations,
     "health_service": health_service,
+    # Phase 4: Personalization & Advanced Features
+    "cold_start_handler": _services_pkg.cold_start_handler,
+    "search_service": _services_pkg.search_service,
+    "interaction_service": _services_pkg.interaction_service,
+    # ML Models & Accessors
     "PREDICTOR": PREDICTOR,
     "SUMMARIZER": SUMMARIZER,
     "INSIGHTS_PREDICTOR": INSIGHTS_PREDICTOR,

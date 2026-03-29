@@ -6,6 +6,23 @@ from . import export_service as export_service
 from . import insights_service as insights_service
 from . import stats_service as stats_service
 
+# Phase 4: Personalization & Advanced Features (reorganized)
+from .media_recommender import cold_start_handler as cold_start_handler
+from .media_recommender import search_service as search_service
+from .media_recommender import media_recommendations as media_recommendations
+from .personalization import interaction_service as interaction_service
+from .personalization import taste_vector_service as taste_vector_service
+
+# Analytics services
+from .analytics import calculate_streak as calculate_streak
+
+# Embeddings service
+from .embeddings import embedding_service as embedding_service
+from .embeddings import get_embedding_service as get_embedding_service
+
+# System services
+from .system import health_service as health_service
+
 # Also expose function-level shortcuts if needed
 from .journal_entries import (
     process_entry,
@@ -24,6 +41,20 @@ __all__ = [
     "export_data",
     "insights_service",
     "stats_service",
+    # Phase 4: Personalization (reorganized)
+    "cold_start_handler",
+    "search_service",
+    "media_recommendations",
+    "interaction_service",
+    "taste_vector_service",
+    # Analytics
+    "calculate_streak",
+    # Embeddings
+    "embedding_service",
+    "get_embedding_service",
+    # System
+    "health_service",
+    # Functions
     "process_entry",
     "update_entry",
     "delete_entry",

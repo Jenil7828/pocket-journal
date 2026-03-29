@@ -2,6 +2,8 @@ from datetime import datetime
 import pytz
 from firebase_admin import firestore
 
+_TZ = "Asia/Kolkata"
+
 
 def fetch_entries_and_insights(uid: str, start_date: str, end_date: str, db):
     query = db.db.collection("journal_entries").where(filter=firestore.FieldFilter("uid", "==", uid))

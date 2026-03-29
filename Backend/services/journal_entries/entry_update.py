@@ -18,14 +18,15 @@ def update_entry(entry_id, uid, data, db, predictor, summarizer):
         return {"error": "Missing entry_text in request body"}, 400
 
     new_entry_text = data["entry_text"]
+    new_title = data.get("title")  # Optional title field
     regenerate_analysis = data.get("regenerate_analysis", True)
 
     if not new_entry_text.strip():
         return {"error": "Entry text cannot be empty"}, 400
 
     if regenerate_analysis:
-        # Update the entry text first (will remove old analyses)
-        result = db.update_entry(entry_id, uid, new_entry_text)
+        # Update the entry text and title first (will remove old analyses)
+        result = db.update_entry(entry_id, uid, new_entry_text, title=new_title)
         if not result.get("success"):
             return {"error": result.get("error", "Failed to update entry")}, 400
 
@@ -61,7 +62,7 @@ def update_entry(entry_id, uid, data, db, predictor, summarizer):
         if analysis_doc_id:
             result["updated"]["new_analysis"]["analysis_id"] = analysis_doc_id
     else:
-        result = db.update_entry(entry_id, uid, new_entry_text)
+        result = db.update_entry(entry_id, uid, new_entry_text, title=new_title)
 
     logger.debug("update_entry: entry_id=%s, regenerate_analysis=%s", entry_id, regenerate_analysis)
 

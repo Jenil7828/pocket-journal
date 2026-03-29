@@ -1,6 +1,9 @@
 from datetime import datetime, timedelta
+import pytz
 from firebase_admin import firestore
 from utils import extract_dominant_mood
+
+TZ = pytz.timezone("Asia/Kolkata")
 
 
 def get_user_stats(uid, db):
@@ -23,7 +26,8 @@ def get_user_stats(uid, db):
                 if dominant_mood:
                     mood_distribution[dominant_mood] = mood_distribution.get(dominant_mood, 0) + 1
 
-    seven_days_ago = datetime.now() - timedelta(days=7)
+    # Use timezone-aware datetime
+    seven_days_ago = datetime.now(TZ) - timedelta(days=7)
     recent_entries_query = db.db.collection("journal_entries").where(filter=firestore.FieldFilter("uid", "==", uid)).where(filter=firestore.FieldFilter("created_at", ">=", seven_days_ago))
     recent_entries_count = len(list(recent_entries_query.stream()))
 
@@ -37,7 +41,8 @@ def get_user_stats(uid, db):
 
 
 def get_mood_trends(uid, days, db):
-    end_date = datetime.now()
+    # Use timezone-aware datetime
+    end_date = datetime.now(TZ)
     start_date = end_date - timedelta(days=days)
 
     entries_query = db.db.collection("journal_entries").where(filter=firestore.FieldFilter("uid", "==", uid)).where(filter=firestore.FieldFilter("created_at", ">=", start_date)).where(filter=firestore.FieldFilter("created_at", "<=", end_date))
