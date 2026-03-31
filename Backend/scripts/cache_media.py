@@ -26,7 +26,11 @@ logging.basicConfig(
 logger = logging.getLogger("pocket_journal.cache_media")
 
 # Add parent directory to path for imports
-sys.path.insert(0, "/app")
+import os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Also add /app for Docker compatibility
+if os.path.exists("/app"):
+    sys.path.insert(0, "/app")
 
 from config_loader import get_config
 from persistence.db_manager import DBManager
@@ -36,6 +40,8 @@ from services.media_recommender.providers.spotify_provider import SpotifyProvide
 from services.media_recommender.providers.books_provider import GoogleBooksProvider
 from services.media_recommender.providers.podcast_provider import PodcastAPIProvider
 from services.embeddings.embedding_service import EmbeddingService
+from services.media.media_normalizer import normalize_media
+from services.media.media_provider_enricher import enrich_from_providers, should_enrich
 from utils.firestore_serializer import serialize_for_firestore, FirestoreSerializationError
 
 _CFG = get_config()
@@ -312,16 +318,26 @@ class MediaCacheRefresher:
                     "duration_ms": int((time.time() - refresh_start) * 1000),
                 }
 
-            # Add embeddings to candidates
+            # Add embeddings to candidates, enrich, and normalize
+            normalized_candidates = []
             for item, emb in zip(new_candidates, embeddings):
                 item["embedding"] = emb
+                
+                # Step 1: Enrich from providers if missing critical fields
+                if should_enrich(item, media_type):
+                    logger.debug(f"Enriching new {media_type} item: {item.get('id')}")
+                    item = enrich_from_providers(item, media_type)
+                
+                # Step 2: Normalize the media before writing (CRITICAL: ensures schema consistency)
+                normalized_item = normalize_media(item, media_type)
+                normalized_candidates.append(normalized_item)
 
             items_embedded = len(embeddings)
 
             # Write to cache
             if not dry_run:
                 write_start = time.time()
-                self.cache_store.write_cache(media_type, new_candidates)
+                self.cache_store.write_cache(media_type, normalized_candidates)
                 write_duration_ms = int((time.time() - write_start) * 1000)
                 logger.info(
                     f"pocket_journal.cache_media: written media_type={media_type} items={items_embedded} duration_ms={write_duration_ms}"
