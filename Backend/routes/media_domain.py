@@ -1,7 +1,15 @@
 """
 Domain-based API routes for Media recommendations.
 
-Domain-specific endpoints (NOT merged):
+Unified Pipeline (all media types use same logic):
+  1. Fetch large candidate pool from cache (~300 items)
+  2. Apply hard filters (genre, search, mood)
+  3. Apply personalized ranking
+  4. Apply sorting (optional)
+  5. Paginate
+  6. Strip internal fields
+
+Domain-specific endpoints:
   GET  /api/v1/movies/recommend     - Get movie recommendations
   GET  /api/v1/songs/recommend      - Get song recommendations
   GET  /api/v1/books/recommend      - Get book recommendations
@@ -15,15 +23,18 @@ Interaction endpoints:
 """
 
 import time
+import logging
 from flask import request, jsonify
 from config_loader import get_config
 from utils.logging_utils import log_request, log_response
-from services.media_recommender.recommendation import recommend_media
+from services.media_recommender.recommendation_pipeline import get_pipeline
 from services.media_recommender.search_service import SearchService
 from services.personalization.interaction_service import InteractionService
 from services.personalization.taste_vector_service import TasteVectorService
 
 _CFG = get_config()
+logger = logging.getLogger("pocket_journal.media_domain")
+_PIPELINE = get_pipeline()
 
 
 def register(app, deps):
@@ -48,111 +59,216 @@ def register(app, deps):
     @app.route("/api/v1/movies/recommend", methods=["GET"])
     @login_required
     def recommend_movies():
-        """Get movie recommendations based on user taste profile."""
+        """Get movie recommendations using unified pipeline."""
         start_time = time.time()
         log_request()
 
         try:
             uid = request.user["uid"]
-            default_limit = int(_CFG["api"]["default_limit"])
-            limit = request.args.get("limit", default_limit, type=int)
-
-            result = recommend_media(
+            
+            # Parse query parameters
+            limit = request.args.get("limit", int(_CFG["api"]["default_limit"]), type=int)
+            offset = request.args.get("offset", 0, type=int)
+            genre = request.args.get("genre")
+            search_query = request.args.get("search")
+            mood = request.args.get("mood")
+            sort_by = request.args.get("sort", "default")
+            
+            # Use shared pipeline
+            results, total = _PIPELINE.get_recommendations(
                 uid=uid,
                 media_type="movies",
-                top_k=limit,
+                genre=genre,
+                mood=mood,
+                search=search_query,
+                sort=sort_by,
+                language=None,
+                limit=limit,
+                offset=offset,
             )
-
+            
             log_response(200, start_time)
-            return jsonify(result), 200
+            return jsonify({
+                "results": results,
+                "meta": {
+                    "total": total,
+                    "returned": len(results),
+                    "offset": offset,
+                    "limit": limit,
+                    "filters_applied": {
+                        "genre": genre,
+                        "search": search_query,
+                        "mood": mood,
+                        "sort": sort_by
+                    }
+                }
+            }), 200
+            
         except Exception as e:
+            logger.exception("pocket_journal.media_domain: recommend_movies_failed uid=%s error=%s", request.user.get("uid"), str(e))
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/v1/songs/recommend", methods=["GET"])
     @login_required
     def recommend_songs():
-        """Get song recommendations based on user taste profile."""
+        """Get song recommendations using unified pipeline."""
         start_time = time.time()
         log_request()
 
         try:
             uid = request.user["uid"]
-            default_limit = int(_CFG["api"]["default_limit"])
-            limit = request.args.get("limit", default_limit, type=int)
+            
+            # Parse query parameters
+            limit = request.args.get("limit", int(_CFG["api"]["default_limit"]), type=int)
+            offset = request.args.get("offset", 0, type=int)
             language = request.args.get("language")
-
-            filters = None
-            if language:
-                filters = {"language": language}
-
-            result = recommend_media(
+            genre = request.args.get("genre")
+            search_query = request.args.get("search")
+            mood = request.args.get("mood")
+            sort_by = request.args.get("sort", "default")
+            
+            # Use shared pipeline
+            results, total = _PIPELINE.get_recommendations(
                 uid=uid,
                 media_type="songs",
-                filters=filters,
-                top_k=limit,
+                genre=genre,
+                mood=mood,
+                search=search_query,
+                sort=sort_by,
+                language=language,
+                limit=limit,
+                offset=offset,
             )
-
+            
             log_response(200, start_time)
-            return jsonify(result), 200
+            return jsonify({
+                "results": results,
+                "meta": {
+                    "total": total,
+                    "returned": len(results),
+                    "offset": offset,
+                    "limit": limit,
+                    "filters_applied": {
+                        "language": language,
+                        "genre": genre,
+                        "search": search_query,
+                        "mood": mood,
+                        "sort": sort_by
+                    }
+                }
+            }), 200
+            
         except Exception as e:
+            logger.exception("pocket_journal.media_domain: recommend_songs_failed uid=%s error=%s", request.user.get("uid"), str(e))
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/v1/books/recommend", methods=["GET"])
     @login_required
     def recommend_books():
-        """Get book recommendations based on user taste profile."""
+        """Get book recommendations using unified pipeline."""
         start_time = time.time()
         log_request()
 
         try:
             uid = request.user["uid"]
-            default_limit = int(_CFG["api"]["default_limit"])
-            limit = request.args.get("limit", default_limit, type=int)
-
-            result = recommend_media(
+            
+            # Parse query parameters
+            limit = request.args.get("limit", int(_CFG["api"]["default_limit"]), type=int)
+            offset = request.args.get("offset", 0, type=int)
+            genre = request.args.get("genre")
+            search_query = request.args.get("search")
+            mood = request.args.get("mood")
+            sort_by = request.args.get("sort", "default")
+            
+            # Use shared pipeline
+            results, total = _PIPELINE.get_recommendations(
                 uid=uid,
                 media_type="books",
-                top_k=limit,
+                genre=genre,
+                mood=mood,
+                search=search_query,
+                sort=sort_by,
+                language=None,
+                limit=limit,
+                offset=offset,
             )
-
+            
             log_response(200, start_time)
-            return jsonify(result), 200
+            return jsonify({
+                "results": results,
+                "meta": {
+                    "total": total,
+                    "returned": len(results),
+                    "offset": offset,
+                    "limit": limit,
+                    "filters_applied": {
+                        "genre": genre,
+                        "search": search_query,
+                        "mood": mood,
+                        "sort": sort_by
+                    }
+                }
+            }), 200
+            
         except Exception as e:
+            logger.exception("pocket_journal.media_domain: recommend_books_failed uid=%s error=%s", request.user.get("uid"), str(e))
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
     @app.route("/api/v1/podcasts/recommend", methods=["GET"])
     @login_required
     def recommend_podcasts():
-        """Get podcast recommendations based on user taste profile."""
+        """Get podcast recommendations using unified pipeline."""
         start_time = time.time()
         log_request()
 
         try:
             uid = request.user["uid"]
-            default_limit = int(_CFG["api"]["default_limit"])
-            limit = request.args.get("limit", default_limit, type=int)
+            
+            # Parse query parameters
+            limit = request.args.get("limit", int(_CFG["api"]["default_limit"]), type=int)
+            offset = request.args.get("offset", 0, type=int)
             language = request.args.get("language")
             genre = request.args.get("genre")
-
-            filters = {}
-            if language:
-                filters["language"] = language
-            if genre:
-                filters["genre"] = genre
-
-            result = recommend_media(
+            search_query = request.args.get("search")
+            mood = request.args.get("mood")
+            sort_by = request.args.get("sort", "default")
+            
+            # Use shared pipeline
+            results, total = _PIPELINE.get_recommendations(
                 uid=uid,
                 media_type="podcasts",
-                filters=filters or None,
-                top_k=limit,
+                genre=genre,
+                mood=mood,
+                search=search_query,
+                sort=sort_by,
+                language=language,
+                limit=limit,
+                offset=offset,
             )
-
+            
             log_response(200, start_time)
-            return jsonify(result), 200
+            return jsonify({
+                "results": results,
+                "meta": {
+                    "total": total,
+                    "returned": len(results),
+                    "offset": offset,
+                    "limit": limit,
+                    "filters_applied": {
+                        "language": language,
+                        "genre": genre,
+                        "search": search_query,
+                        "mood": mood,
+                        "sort": sort_by
+                    }
+                }
+            }), 200
+            
         except Exception as e:
+            logger.exception("pocket_journal.media_domain: recommend_podcasts_failed uid=%s error=%s", request.user.get("uid"), str(e))
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 

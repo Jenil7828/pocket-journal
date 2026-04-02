@@ -1,0 +1,393 @@
+"""
+Unified media recommendation pipeline service.
+
+Implements the corrected pipeline for all media types:
+  1. Fetch large candidate pool from cache (~300 items)
+  2. Apply hard filters (genre, search, mood)
+  3. Apply personalized ranking
+  4. Apply sorting (optional)
+  5. Paginate
+  6. Strip internal fields (embeddings, similarity)
+
+This shared service eliminates code duplication across all media types
+(movies, songs, books, podcasts) while ensuring consistent behavior.
+"""
+
+import logging
+import numpy as np
+from typing import Tuple, List, Dict, Any, Optional
+
+from config_loader import get_config
+from services.media_recommender.cache_store import MediaCacheStore
+from services.media_recommender.intent_builder import build_intent_vector
+from services.media_recommender.enhanced_ranking_engine import rank_candidates_phase5
+from persistence.db_manager import DBManager
+
+logger = logging.getLogger("pocket_journal.recommendation_pipeline")
+_CFG = get_config()
+
+
+class RecommendationPipeline:
+    """Unified recommendation pipeline for all media types."""
+    
+    def __init__(self):
+        """Initialize the pipeline service."""
+        self.cache_store = None
+        try:
+            db_manager = DBManager(firebase_json_path=None)
+            self.cache_store = MediaCacheStore(db_manager.db)
+        except Exception as e:
+            logger.warning("pocket_journal.recommendation_pipeline: cache_init_failed error=%s", str(e))
+    
+    def get_recommendations(
+        self,
+        uid: str,
+        media_type: str,
+        genre: Optional[str] = None,
+        mood: Optional[str] = None,
+        search: Optional[str] = None,
+        sort: Optional[str] = None,
+        language: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """
+        Get recommendations with filtering, ranking, and sorting.
+        
+        Pipeline:
+          1. Fetch large candidate pool from cache
+          2. Apply hard filters (genre, search, mood)
+          3. Apply personalized ranking
+          4. Apply sorting
+          5. Paginate
+          6. Strip internal fields
+        
+        Args:
+            uid: User ID
+            media_type: "movies", "songs", "books", or "podcasts"
+            genre: Optional genre filter
+            mood: Optional mood filter
+            search: Optional search query
+            sort: Optional sort order (default, rating, trending, recent)
+            language: Optional language filter (songs/podcasts only)
+            limit: Results per page (1-100)
+            offset: Pagination offset
+        
+        Returns:
+            Tuple of (results list, total count after filtering)
+        """
+        # Validate parameters
+        limit = max(1, min(limit, 100))
+        offset = max(0, offset)
+        
+        # Step 1: Fetch large candidate pool
+        candidates = self._fetch_candidates(media_type, language)
+        
+        if not candidates:
+            logger.warning(
+                "pocket_journal.recommendation_pipeline: no_candidates uid=%s media_type=%s",
+                uid, media_type
+            )
+            return [], 0
+        
+        # Step 2: Apply hard filters (on large pool before ranking)
+        filtered = self._apply_filters(
+            candidates,
+            genre=genre,
+            search_query=search,
+            mood=mood
+        )
+        
+        if not filtered and (genre or search or mood):
+            # Fallback: if filters removed everything, return unfiltered ranked results
+            logger.warning(
+                "pocket_journal.recommendation_pipeline: all_items_filtered uid=%s media_type=%s",
+                uid, media_type
+            )
+            filtered = candidates
+        
+        # Step 3: Apply personalized ranking to filtered candidates
+        ranked = self._rank_candidates(uid, filtered, media_type)
+        
+        # Step 4: Apply sorting
+        sorted_items = self._apply_sorting(ranked, sort)
+        
+        # Step 5: Calculate total after filtering/sorting
+        total_count = len(sorted_items)
+        
+        # Step 6: Paginate
+        paginated = sorted_items[offset : offset + limit]
+        
+        # Step 7: Strip internal fields (embeddings, similarity)
+        clean_results = self._strip_internal_fields(paginated)
+        
+        logger.info(
+            "pocket_journal.recommendation_pipeline: recommendations_returned uid=%s media_type=%s "
+            "total=%d returned=%d offset=%d limit=%d filters=%s",
+            uid, media_type, total_count, len(clean_results), offset, limit,
+            {"genre": genre, "search": search, "mood": mood, "sort": sort}
+        )
+        
+        return clean_results, total_count
+    
+    def _fetch_candidates(self, media_type: str, language: Optional[str] = None) -> List[Dict[str, Any]]:
+        """
+        Fetch large candidate pool from cache.
+        
+        Args:
+            media_type: Media type to fetch
+            language: Optional language filter (for songs/podcasts)
+        
+        Returns:
+            List of ~300 candidate items
+        """
+        try:
+            if not self.cache_store:
+                logger.warning("pocket_journal.recommendation_pipeline: cache_store_not_initialized media_type=%s", media_type)
+                return []
+            
+            candidates = self.cache_store.read_cache(media_type, language=language)
+            logger.debug(
+                "pocket_journal.recommendation_pipeline: candidates_fetched media_type=%s language=%s count=%d",
+                media_type, language, len(candidates)
+            )
+            return candidates
+        except Exception as e:
+            logger.warning(
+                "pocket_journal.recommendation_pipeline: fetch_candidates_failed media_type=%s error=%s",
+                media_type, str(e)
+            )
+            return []
+    
+    def _apply_filters(
+        self,
+        items: List[Dict[str, Any]],
+        genre: Optional[str] = None,
+        search_query: Optional[str] = None,
+        mood: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply hard filters to candidate items.
+        
+        Args:
+            items: Candidate items to filter
+            genre: Optional genre filter (case-insensitive partial match)
+            search_query: Optional search query (title/description)
+            mood: Optional mood filter
+        
+        Returns:
+            Filtered items
+        """
+        filtered = items
+        
+        # Genre filter
+        if genre:
+            genre_lower = genre.lower().strip()
+            before_count = len(filtered)
+            filtered = [
+                item for item in filtered
+                if item.get("genres") and any(
+                    genre_lower in g.lower() for g in item.get("genres", [])
+                    if isinstance(g, str)
+                )
+            ]
+            logger.debug(
+                "pocket_journal.recommendation_pipeline: genre_filter_applied genre=%s before=%d after=%d",
+                genre, before_count, len(filtered)
+            )
+        
+        # Search filter
+        if search_query:
+            query_lower = search_query.lower().strip()
+            before_count = len(filtered)
+            filtered = [
+                item for item in filtered
+                if (query_lower in (item.get("title") or "").lower()
+                    or query_lower in (item.get("description") or "").lower())
+            ]
+            logger.debug(
+                "pocket_journal.recommendation_pipeline: search_filter_applied query=%s before=%d after=%d",
+                search_query, before_count, len(filtered)
+            )
+        
+        # Mood filter
+        if mood:
+            mood_lower = mood.lower().strip()
+            before_count = len(filtered)
+            filtered = [
+                item for item in filtered
+                if mood_lower in (item.get("mood_tag") or "").lower()
+                or any(mood_lower in g.lower() for g in item.get("genres", []) if isinstance(g, str))
+            ]
+            logger.debug(
+                "pocket_journal.recommendation_pipeline: mood_filter_applied mood=%s before=%d after=%d",
+                mood, before_count, len(filtered)
+            )
+        
+        return filtered
+    
+    def _rank_candidates(
+        self,
+        uid: str,
+        candidates: List[Dict[str, Any]],
+        media_type: str,
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply personalized ranking to candidates.
+        
+        Args:
+            uid: User ID
+            candidates: Items to rank
+            media_type: Media type for ranking context
+        
+        Returns:
+            Ranked items
+        """
+        if not candidates:
+            return []
+        
+        try:
+            # Build intent vector from user taste
+            intent_vec, emotional_intensity, beta = build_intent_vector(uid, media_type)
+            intent_vec = np.asarray(intent_vec, dtype=np.float32).reshape(-1)
+            
+            logger.debug(
+                "pocket_journal.recommendation_pipeline: ranking_intent_built uid=%s media_type=%s beta=%.4f items=%d",
+                uid, media_type, float(beta), len(candidates)
+            )
+            
+            # Add similarity scores to candidates
+            for item in candidates:
+                if item.get("embedding"):
+                    emb = np.asarray(item["embedding"], dtype=np.float32).reshape(-1)
+                    try:
+                        similarity = float(np.dot(intent_vec, emb) / (np.linalg.norm(intent_vec) * np.linalg.norm(emb) + 1e-8))
+                    except Exception:
+                        similarity = 0.0
+                    item["_embedding"] = item["embedding"]
+                    item["similarity"] = similarity
+            
+            # Apply Phase 5 ranking with MMR + hybrid scoring
+            use_phase5 = _CFG.get("recommendation", {}).get("ranking", {}).get("use_phase5", True)
+            
+            if use_phase5:
+                ranked = rank_candidates_phase5(
+                    intent_vector=intent_vec,
+                    candidates=candidates,
+                    uid=uid,
+                    user_mood=None,
+                    use_mmr=True,
+                    use_hybrid=True,
+                    use_temporal_decay=True,
+                    top_k=len(candidates),
+                )
+            else:
+                # Fallback: sort by similarity
+                ranked = sorted(candidates, key=lambda x: (x.get("similarity") or 0), reverse=True)
+            
+            logger.debug(
+                "pocket_journal.recommendation_pipeline: candidates_ranked uid=%s media_type=%s count=%d",
+                uid, media_type, len(ranked)
+            )
+            return ranked
+            
+        except Exception as e:
+            logger.warning(
+                "pocket_journal.recommendation_pipeline: ranking_failed uid=%s media_type=%s error=%s, returning unranked",
+                uid, media_type, str(e)
+            )
+            return candidates
+    
+    def _apply_sorting(
+        self,
+        items: List[Dict[str, Any]],
+        sort: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply sorting to ranked items.
+        
+        Args:
+            items: Ranked items
+            sort: Sort order (default, rating, trending, recent)
+        
+        Returns:
+            Sorted items
+        """
+        if not sort or sort.lower() == "default":
+            return items
+        
+        sort_lower = sort.lower().strip()
+        
+        if sort_lower == "rating":
+            # Sort by rating (highest first)
+            return sorted(items, key=lambda x: (x.get("rating") or 0), reverse=True)
+        
+        elif sort_lower == "trending":
+            # Sort by popularity (highest first)
+            return sorted(items, key=lambda x: (x.get("popularity") or 0), reverse=True)
+        
+        elif sort_lower == "recent":
+            # Sort by release_date (newest releases first)
+            # Handle Firestore DatetimeWithNanoseconds and string dates
+            def get_timestamp_key(item):
+                release_date = item.get("release_date")
+                if release_date is None:
+                    return 0  # Items without release_date go to the end
+                # Convert Firestore timestamps to sortable format
+                if hasattr(release_date, "timestamp"):
+                    # Firestore DatetimeWithNanoseconds has a timestamp() method
+                    return release_date.timestamp()
+                elif isinstance(release_date, str):
+                    # If it's a string, try to parse it (ISO format)
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(release_date.replace('Z', '+00:00'))
+                        return dt.timestamp()
+                    except Exception:
+                        return 0
+                else:
+                    # For other types, try to convert to float
+                    try:
+                        return float(release_date)
+                    except Exception:
+                        return 0
+            
+            return sorted(items, key=get_timestamp_key, reverse=True)
+        
+        return items
+    
+    def _strip_internal_fields(
+        self,
+        items: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        """
+        Remove internal fields before returning to client.
+        
+        Args:
+            items: Items to clean
+        
+        Returns:
+            Cleaned items without embeddings or internal scores
+        """
+        cleaned = []
+        for item in items:
+            clean_item = dict(item)
+            # Remove internal fields
+            clean_item.pop("_embedding", None)
+            clean_item.pop("embedding", None)
+            clean_item.pop("similarity", None)
+            cleaned.append(clean_item)
+        return cleaned
+
+
+# Singleton instance
+_pipeline = None
+
+
+def get_pipeline() -> RecommendationPipeline:
+    """Get or create the singleton pipeline instance."""
+    global _pipeline
+    if _pipeline is None:
+        _pipeline = RecommendationPipeline()
+    return _pipeline
+

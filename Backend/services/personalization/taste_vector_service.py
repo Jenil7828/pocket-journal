@@ -342,4 +342,55 @@ class TasteVectorService:
                 "updated": False,
             }
 
+    def get_favorite_items_map(self, uid: str, media_type: str) -> Dict[str, bool]:
+        """
+        Get a map of item IDs marked as favorites by the user.
 
+        Favorites are items with "like" signals in recent interactions.
+
+        Args:
+            uid: User ID
+            media_type: Media type (songs, movies, books, podcasts)
+
+        Returns:
+            Dict[item_id] -> bool (True if favorite, False otherwise)
+        """
+        try:
+            favorites_map = {}
+            media_type_lower = media_type.lower().strip()
+
+            # Query interactions with "like" signal
+            collection_ref = self.db.collection("user_interactions").document(uid).collection("events")
+            query = (
+                collection_ref
+                .where("media_type", "==", media_type_lower)
+                .where("signal", "==", "like")
+                .order_by("timestamp", direction=firestore.Query.DIRECTION_DESCENDING)
+                .limit(100)  # Recent 100 favorites
+            )
+
+            events = list(query.stream())
+
+            for event_doc in events:
+                event_data = event_doc.to_dict() or {}
+                item_id = event_data.get("item_id")
+                if item_id:
+                    favorites_map[item_id] = True
+
+            logger.debug(
+                "pocket_journal.taste_vector: favorites_map_built uid=%s media_type=%s count=%d",
+                uid,
+                media_type,
+                len(favorites_map),
+            )
+
+            return favorites_map
+
+        except Exception as e:
+            logger.warning(
+                "pocket_journal.taste_vector: favorites_map_failed uid=%s media_type=%s error=%s",
+                uid,
+                media_type,
+                str(e),
+            )
+            return {}
