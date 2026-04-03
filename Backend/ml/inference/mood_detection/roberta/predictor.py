@@ -6,7 +6,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from services.utils.suppression import suppress_hf
 from .config import Config
 
-logger = logging.getLogger("pocket_journal.roberta.predictor")
+logger = logging.getLogger()
 
 
 class SentencePredictor:

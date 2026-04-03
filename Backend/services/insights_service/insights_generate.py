@@ -1,7 +1,7 @@
 from firebase_admin import firestore
 import logging
 
-logger = logging.getLogger("pocket_journal.insights.service")
+logger = logging.getLogger()
 
 
 def _clean_insight_response(data: dict) -> dict:

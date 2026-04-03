@@ -9,7 +9,7 @@ from flask import jsonify, request
 
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.routes.jobs")
+logger = logging.getLogger()
 
 
 def _utc_now_iso() -> str:
@@ -46,14 +46,14 @@ def register(app, deps: dict):
         start_time = time.time()
         force = _request_force_flag()
 
-        logger.info("Job started: job=%s triggered_at=%s force=%s", job, triggered_at, force)
+        logger.info(f"[REQ][jobs] started job={job} triggered_at={triggered_at} force={force}")
 
         try:
             from scripts.cache_media import refresh_all
             refresh_all(force=force)
 
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.info("Job completed: job=%s duration_ms=%d", job, duration_ms)
+            logger.info(f"[RES][jobs] completed job={job} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -69,7 +69,7 @@ def register(app, deps: dict):
             )
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.error("Job failed: job=%s error=%s duration_ms=%d", job, str(e), duration_ms)
+            logger.error(f"[ERR][jobs] failed job={job} error={str(e)} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -94,14 +94,14 @@ def register(app, deps: dict):
         start_time = time.time()
         force = _request_force_flag()
 
-        logger.info("Job started: job=%s triggered_at=%s force=%s", job, triggered_at, force)
+        logger.info(f"[REQ][jobs] started job={job} media_type={mt} triggered_at={triggered_at} force={force}")
 
         try:
             from scripts.cache_media import refresh_cache
             refresh_cache(mt, force=force)
 
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.info("Job completed: job=%s duration_ms=%d", job, duration_ms)
+            logger.info(f"[RES][jobs] completed job={job} media_type={mt} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -118,7 +118,7 @@ def register(app, deps: dict):
             )
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.error("Job failed: job=%s error=%s duration_ms=%d", job, str(e), duration_ms)
+            logger.error(f"[ERR][jobs] failed job={job} media_type={mt} error={str(e)} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -150,5 +150,4 @@ def register(app, deps: dict):
 
         data = cache_store.get_cache_stats(mt) if cache_store is not None else {}
         return jsonify(data), 200
-
 

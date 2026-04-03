@@ -5,7 +5,7 @@ from .config import Config
 from services.utils.suppression import suppress_hf
 import logging
 
-logger = logging.getLogger("pocket_journal.summarizer")
+logger = logging.getLogger()
 
 
 class SummarizationPredictor:

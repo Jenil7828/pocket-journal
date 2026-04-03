@@ -5,7 +5,7 @@ import numpy as np
 
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.media.ranking")
+logger = logging.getLogger()
 
 _CFG = get_config()
 
@@ -79,7 +79,7 @@ def rank_candidates(
     std_score = float(scores.std())
 
     logger.info(
-        "Ranking stats: min=%.4f max=%.4f mean=%.4f std=%.4f (n=%d)",
+        "[SRV][ranking] ranking_stats min=%.4f max=%.4f mean=%.4f std=%.4f count=%d",
         min_score,
         max_score,
         mean_score,
@@ -89,7 +89,7 @@ def rank_candidates(
 
     low_std_threshold = float(_CFG["recommendation"]["ranking"]["low_std_threshold"])
     if std_score < low_std_threshold:
-        logger.warning("Low similarity std deviation detected (std=%.4f)", std_score)
+        logger.warning("[SRV][ranking] low_std_deviation detected std=%.4f", std_score)
 
     # Select top_k
     n = scores.shape[0]

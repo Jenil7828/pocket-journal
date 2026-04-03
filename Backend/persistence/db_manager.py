@@ -11,7 +11,7 @@ import pytz
 from config_loader import get_config
 from utils import extract_dominant_mood
 
-logger = logging.getLogger("pocket_journal.db_manager")
+logger = logging.getLogger()
 
 _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]

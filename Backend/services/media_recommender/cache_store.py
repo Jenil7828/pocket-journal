@@ -10,7 +10,8 @@ from firebase_admin import firestore
 from config_loader import get_config
 from utils.firestore_serializer import serialize_for_firestore, FirestoreSerializationError
 
-logger = logging.getLogger("pocket_journal.media_cache_store")
+# Clean root logger - no module prefix
+logger = logging.getLogger()
 
 
 _CFG = get_config()
@@ -146,22 +147,20 @@ class MediaCacheStore:
                 sanitized_items.append(sanitized)
             except FirestoreSerializationError as e:
                 logger.error(
-                    "pocket_journal.media.cache_store: sanitization_failed "
-                    "media_type=%s item_id=%s error=%s",
+                    "[DB][cache_store] sanitization_failed media_type=%s item_id=%s error=%s",
                     media_type, item_id, str(e)
                 )
                 failed_items.append(item_id)
         
         if failed_items:
             logger.warning(
-                "pocket_journal.media.cache_store: skipping_items_due_to_serialization "
-                "media_type=%s total=%d sanitized=%d failed=%d failed_ids=%s",
-                media_type, len(items), len(sanitized_items), len(failed_items), failed_items[:5]
+                "[DB][cache_store] skipping_items media_type=%s total=%d sanitized=%d failed=%d",
+                media_type, len(items), len(sanitized_items), len(failed_items)
             )
         
         if not sanitized_items:
             logger.error(
-                "pocket_journal.media.cache_store: all_items_failed_sanitization media_type=%s",
+                "[DB][cache_store] all_items_failed media_type=%s",
                 media_type
             )
             return
@@ -182,13 +181,11 @@ class MediaCacheStore:
         has_embeddings = any("embedding" in item for item in new_items)
 
         logger.info(
-            "pocket_journal.media.cache_store: writing_new_only media_type=%s requested=%d existing=%d new=%d individual_writes=%s skipped=%d",
+            "[DB][cache_store] writing_new media_type=%s requested=%d new=%d has_embeddings=%s",
             media_type,
             len(sanitized_items),
-            len(existing_ids),
             len(new_items),
             has_embeddings,
-            len(failed_items),
         )
 
         if not new_items:
@@ -205,7 +202,7 @@ class MediaCacheStore:
             return
 
         logger.info(
-            "pocket_journal.media.cache_store: Writing %d new items to %s (individual_writes=%s, skipped=%d)",
+            "[DB][cache_store] writing_items count=%d media_type=%s has_embeddings=%s failed_count=%d",
             len(new_items),
             self.collection_name(media_type),
             has_embeddings,

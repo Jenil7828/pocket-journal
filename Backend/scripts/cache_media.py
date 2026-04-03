@@ -23,7 +23,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("pocket_journal.cache_media")
+logger = logging.getLogger()
 
 # Add parent directory to path for imports
 import os
@@ -213,7 +213,7 @@ class MediaCacheRefresher:
             logger.error(f"Error fetching {media_type} candidates for {language}: {e}")
 
         logger.info(
-            f"pocket_journal.cache_media: fetched media_type={media_type} language={language} count={len(candidates)}"
+            f"[SRV][cache_media] fetched media_type={media_type} language={language} count={len(candidates)}"
         )
         return candidates
 
@@ -232,7 +232,7 @@ class MediaCacheRefresher:
         
         # Check if cache is fresh
         if not force and self.cache_store.is_cache_fresh(media_type):
-            logger.info(f"pocket_journal.cache_media: cache_fresh media_type={media_type}, skipping refresh")
+            logger.info(f"[SRV][cache_media] cache_fresh media_type={media_type}")
             return {
                 "media_type": media_type,
                 "status": "skipped",
@@ -258,11 +258,11 @@ class MediaCacheRefresher:
 
             items_fetched = len(all_candidates)
             logger.info(
-                f"pocket_journal.cache_media: fetched media_type={media_type} total_items={items_fetched}"
+                f"[SRV][cache_media] fetched media_type={media_type} total_items={items_fetched}"
             )
 
             if not all_candidates:
-                logger.warning(f"pocket_journal.cache_media: no_candidates media_type={media_type}")
+                logger.warning(f"[SRV][cache_media] no_candidates media_type={media_type}")
                 return {
                     "media_type": media_type,
                     "status": "completed",
@@ -279,12 +279,7 @@ class MediaCacheRefresher:
             ]
             skipped_existing = items_fetched - len(new_candidates)
             logger.info(
-                "pocket_journal.cache_media: dedupe_against_db media_type=%s existing=%d fetched=%d new=%d skipped_existing=%d",
-                media_type,
-                len(existing_ids),
-                items_fetched,
-                len(new_candidates),
-                skipped_existing,
+                f"[SRV][cache_media] dedupe_against_db media_type={media_type} existing={len(existing_ids)} fetched={items_fetched} new={len(new_candidates)} skipped={skipped_existing}"
             )
 
             if not new_candidates:
@@ -310,7 +305,7 @@ class MediaCacheRefresher:
             embed_duration_ms = int((time.time() - embed_start) * 1000)
 
             if not embeddings or len(embeddings) != len(new_candidates):
-                logger.error(f"pocket_journal.cache_media: embedding_count_mismatch expected={len(new_candidates)} got={len(embeddings or [])}")
+                logger.error(f"[ERR][cache_media] embedding_count_mismatch expected={len(new_candidates)} got={len(embeddings or [])}")
                 return {
                     "media_type": media_type,
                     "status": "failed",
@@ -340,11 +335,11 @@ class MediaCacheRefresher:
                 self.cache_store.write_cache(media_type, normalized_candidates)
                 write_duration_ms = int((time.time() - write_start) * 1000)
                 logger.info(
-                    f"pocket_journal.cache_media: written media_type={media_type} items={items_embedded} duration_ms={write_duration_ms}"
+                    f"[SRV][cache_media] written media_type={media_type} items={items_embedded} duration_ms={write_duration_ms}"
                 )
             else:
                 logger.info(
-                    f"pocket_journal.cache_media: dry_run media_type={media_type} items={items_embedded} (not written)"
+                    f"[SRV][cache_media] dry_run media_type={media_type} items={items_embedded}"
                 )
 
             items_written = items_embedded if not dry_run else 0
@@ -367,7 +362,7 @@ class MediaCacheRefresher:
             }
 
         except Exception as e:
-            logger.exception(f"pocket_journal.cache_media: refresh_failed media_type={media_type} error={e}")
+            logger.error(f"[ERR][cache_media] refresh_failed media_type={media_type} error={str(e)}")
             return {
                 "media_type": media_type,
                 "status": "failed",
@@ -407,8 +402,7 @@ class MediaCacheRefresher:
             return sanitized
         except FirestoreSerializationError as e:
             logger.error(
-                f"pocket_journal.cache_media: sanitization_failed media_type={media_type} "
-                f"item_id={item_id} error={str(e)}"
+                f"[ERR][cache_media] sanitization_failed media_type={media_type} item_id={item_id} error={str(e)}"
             )
             return None
 
@@ -436,17 +430,14 @@ class MediaCacheRefresher:
                 failed_count += 1
                 skipped_ids.append(item_id)
                 logger.warning(
-                    f"pocket_journal.cache_media: skipping_bad_record media_type={media_type} "
-                    f"item_id={item_id} (sanitization failed)"
+                    f"[SRV][cache_media] skipping_bad_record media_type={media_type} item_id={item_id}"
                 )
             else:
                 sanitized_items.append(sanitized)
         
         if failed_count > 0:
             logger.warning(
-                f"pocket_journal.cache_media: batch_sanitization_summary media_type={media_type} "
-                f"total={len(items)} sanitized={len(sanitized_items)} failed={failed_count} "
-                f"skipped_ids={skipped_ids[:5]}"  # Log first 5 skipped IDs
+                f"[SRV][cache_media] batch_sanitization_summary media_type={media_type} total={len(items)} sanitized={len(sanitized_items)} failed={failed_count}"
             )
         
         return sanitized_items, failed_count, skipped_ids
@@ -457,10 +448,10 @@ def refresh_cache(media_type: str, force: bool = False, dry_run: bool = False) -
     Public function for refresh_cache() — called by job endpoint.
     Refreshes a single media type cache.
     """
-    logger.info(f"pocket_journal.cache_media.refresh_cache: starting media_type={media_type} force={force} dry_run={dry_run}")
+    logger.info(f"[SRV][cache_media] refresh_cache_starting media_type={media_type} force={force} dry_run={dry_run}")
     refresher = MediaCacheRefresher()
     result = refresher.refresh_media_type(media_type, force=force, dry_run=dry_run)
-    logger.info(f"pocket_journal.cache_media.refresh_cache: completed result={result}")
+    logger.info(f"[SRV][cache_media] refresh_cache_completed status={result.get('status')}")
     return result
 
 
@@ -469,10 +460,10 @@ def refresh_all(force: bool = False, dry_run: bool = False) -> Dict[str, Any]:
     Public function for refresh_all() — called by job endpoint.
     Refreshes all media type caches.
     """
-    logger.info(f"pocket_journal.cache_media.refresh_all: starting force={force} dry_run={dry_run}")
+    logger.info(f"[SRV][cache_media] refresh_all_starting force={force} dry_run={dry_run}")
     refresher = MediaCacheRefresher()
     result = refresher.refresh_all(force=force, dry_run=dry_run)
-    logger.info(f"pocket_journal.cache_media.refresh_all: completed")
+    logger.info(f"[SRV][cache_media] refresh_all_completed")
     return result
 
 
@@ -523,6 +514,8 @@ Examples:
 
 if __name__ == "__main__":
     main()
+
+
 
 
 

@@ -9,7 +9,7 @@ from firebase_admin import auth as firebase_auth
 from firebase_admin import firestore as fa_firestore
 from google.cloud import firestore as gc_firestore
 
-logger = logging.getLogger("pocket_journal.routes.auth")
+logger = logging.getLogger()
 
 
 def register(app, deps: dict):
@@ -31,7 +31,7 @@ def register(app, deps: dict):
         password = payload.get("password")
         name = (payload.get("name") or "").strip()
         # Identity-aware log for user creation
-        logger.info("AUTH ACTION: action=create_user email=%s name=%s", email, name)
+        logger.info(f"[REQ][auth] action=create_user email={email} name={name}")
 
         if not email or not password or not name:
             log_response(400, start_time)
@@ -41,7 +41,7 @@ def register(app, deps: dict):
         try:
             user = firebase_auth.create_user(email=email, password=password, display_name=name)
         except Exception as e:
-            logger.exception("Failed to create firebase user: %s", str(e))
+            logger.error(f"[ERR][auth] failed_firebase_create error={str(e)}")
             log_response(500, start_time)
             return jsonify({"error": "failed_to_create_user", "details": str(e)}), 500
 
@@ -51,7 +51,7 @@ def register(app, deps: dict):
         try:
             dbmgr = get_db() if get_db else None
             if dbmgr is None:
-                logger.warning("DB manager not available via deps.get('get_db')")
+                logger.warning("[ERR][auth] db_manager_unavailable")
                 # Attempt to use firebase_admin firestore client directly
                 fs = fa_firestore.client()
             else:
@@ -80,12 +80,12 @@ def register(app, deps: dict):
             fs.collection("users").document(uid).set(user_doc)
 
         except Exception as e:
-            logger.exception("Failed to create firestore user doc for uid=%s: %s", uid, str(e))
+            logger.error(f"[ERR][auth] failed_firestore_create uid={uid} error={str(e)}")
             # Try to roll back created auth user to avoid orphaned auth accounts
             try:
                 firebase_auth.delete_user(uid)
             except Exception:
-                logger.exception("Failed to delete auth user after firestore failure: %s", uid)
+                logger.error(f"[ERR][auth] failed_delete_auth_rollback uid={uid}")
             log_response(500, start_time)
             return jsonify({"error": "failed_to_create_user_profile", "details": str(e)}), 500
 
@@ -100,7 +100,7 @@ def register(app, deps: dict):
         email = (payload.get("email") or "").strip()
         password = payload.get("password")
         # Identity-aware log for login
-        logger.info("AUTH ACTION: action=login email=%s", email)
+        logger.info(f"[REQ][auth] action=login email={email}")
 
         if not email or not password:
             log_response(400, start_time)
@@ -141,7 +141,7 @@ def register(app, deps: dict):
             log_response(401, start_time)
             return jsonify({"error": "invalid_credentials", "details": err}), 401
         except Exception as e:
-            logger.exception("Error calling Firebase REST API: %s", str(e))
+            logger.error(f"[ERR][auth] firebase_api_error error={str(e)}")
             log_response(500, start_time)
             return jsonify({"error": "login_failed", "details": str(e)}), 500
 
@@ -162,7 +162,7 @@ def register(app, deps: dict):
         uid = user.get("uid")
         email = user.get("email")
         # Identity-aware log for password change
-        logger.info("AUTH ACTION: action=change_password uid=%s email=%s", uid, email)
+        logger.info(f"[REQ][auth] action=change_password")
 
         if not uid or not email:
             log_response(401, start_time)

@@ -23,7 +23,7 @@ logging.basicConfig(
     level="INFO",
     format="[%(asctime)s] %(levelname)s %(name)s: %(message)s"
 )
-logger = logging.getLogger("pocket_journal.download_models")
+logger = logging.getLogger()
 
 from config_loader import get_config
 from ml.utils.model_loader import ensure_model, get_all_model_specs

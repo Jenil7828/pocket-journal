@@ -6,7 +6,7 @@ from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 from config_loader import get_config
 _API = get_config()["api"]
 
-logger = logging.getLogger("pocket_journal.media.providers.books")
+logger = logging.getLogger()
 
 
 class GoogleBooksProvider(BaseHTTPProvider):
@@ -85,13 +85,14 @@ class GoogleBooksProvider(BaseHTTPProvider):
                     "ratingsCount": info.get("ratingsCount"),
                     "infoLink": info.get("infoLink"),
                     "thumbnail_url": thumb,
+                    "type": "books",
                 }
             )
 
         cleaned = self._clean_items(primary)
-        logger.info("GoogleBooksProvider primary cleaned=%d", len(cleaned))
+        logger.info("[PROVIDER][books] primary cleaned=%d", len(cleaned))
 
         if len(cleaned) < 10:
-            logger.warning("Low GoogleBooks candidate pool: %d", len(cleaned))
+            logger.warning("[PROVIDER][books] low_candidate_pool count=%d", len(cleaned))
 
         return cleaned[:limit]

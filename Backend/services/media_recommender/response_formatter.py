@@ -2,7 +2,7 @@ import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
-logger = logging.getLogger("pocket_journal.media.recommendation.formatter")
+logger = logging.getLogger()
 
 TMDB_IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 
@@ -219,6 +219,8 @@ def _format_book(item: Dict[str, Any]) -> Dict[str, Any]:
     contributors = item.get("contributors") or []
     creator = item.get("creator")
     page_count = item.get("page_count")
+    rating = item.get("rating")
+    popularity = item.get("popularity")
     
     # Fallback to legacy field extraction if normalized fields missing
     if not image_url:
@@ -245,6 +247,15 @@ def _format_book(item: Dict[str, Any]) -> Dict[str, Any]:
 
     if not page_count:
         page_count = item.get("pageCount") or metadata.get("pageCount") or _deep_find_key(metadata, "pageCount") or _deep_find_key(metadata, "page_count")
+    
+    # Fallback for rating and popularity
+    if not rating:
+        rating = metadata.get("averageRating") or metadata.get("rating") or _deep_find_key(metadata, "averageRating")
+    
+    if not popularity:
+        ratings_count = metadata.get("ratingsCount") or _deep_find_key(metadata, "ratingsCount")
+        if ratings_count and ratings_count > 0:
+            popularity = min(100.0, float(ratings_count) / 10.0)
 
     return {
         "id": item.get("id"),
@@ -258,6 +269,8 @@ def _format_book(item: Dict[str, Any]) -> Dict[str, Any]:
         "creator": creator,
         "genres": item.get("genres"),
         "page_count": page_count,
+        "rating": rating,
+        "popularity": popularity,
         "release_date": item.get("release_date") or item.get("published_date"),
         "score": item.get("score"),
     }

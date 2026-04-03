@@ -16,7 +16,7 @@ from .ranking_engine import rank_candidates
 from .enhanced_ranking_engine import rank_candidates_phase5
 from .response_formatter import format_results
 
-logger = logging.getLogger("pocket_journal.media.recommendation")
+logger = logging.getLogger()
 
 _CFG = get_config()
 _PROVIDER_CACHE: Dict[str, object] = {}
@@ -71,9 +71,9 @@ def _trigger_background_refresh(media_type: str) -> None:
         try:
             from scripts.cache_media import refresh_cache
             refresh_cache(media_type)
-            logger.info("pocket_journal.media.phase3: background_refresh_completed media_type=%s", media_type)
+            logger.info(f"[SRV][recommendation] background_refresh_completed media_type={media_type}")
         except Exception as e:
-            logger.warning("pocket_journal.media.phase3: background_refresh_failed media_type=%s error=%s", media_type, str(e))
+            logger.warning(f"[ERR][recommendation] background_refresh_failed media_type={media_type} error={str(e)}")
 
     thread = threading.Thread(target=bg_task, daemon=True)
     thread.start()
@@ -112,14 +112,10 @@ def recommend_media(
         intent_vec, emotional_intensity, beta = build_intent_vector(uid, media_type)
         intent_vec = np.asarray(intent_vec, dtype=np.float32).reshape(-1)
         logger.info(
-            "pocket_journal.media.intent: uid=%s media_type=%s beta=%.4f emotional_intensity=%.4f",
-            uid,
-            media_type,
-            float(beta),
-            float(emotional_intensity),
+            f"[SRV][recommendation] intent_built media_type={media_type} beta={float(beta):.4f} emotional_intensity={float(emotional_intensity):.4f}"
         )
     except Exception as e:
-        logger.error("pocket_journal.media.recommendation: Failed to build intent vector uid=%s media_type=%s error=%s", uid, media_type, str(e))
+        logger.error(f"[ERR][recommendation] failed_intent_build media_type={media_type} error={str(e)}")
         return {
             "uid": uid,
             "media_type": media_type,
@@ -146,10 +142,7 @@ def recommend_media(
         if cached_candidates:
             cache_hit = True
             logger.info(
-                "pocket_journal.media.phase3: cache_hit media_type=%s items=%d language=%s",
-                media_type,
-                len(cached_candidates),
-                language,
+                f"[SRV][recommendation] cache_hit media_type={media_type} items={len(cached_candidates)} language={language}"
             )
             # Check if cache is fresh; if not, trigger background refresh
             try:
@@ -159,7 +152,7 @@ def recommend_media(
             except Exception:
                 pass
     except Exception as e:
-        logger.warning("pocket_journal.media.phase3: cache_read_failed media_type=%s error=%s", media_type, str(e))
+        logger.warning(f"[ERR][recommendation] cache_read_failed media_type={media_type} error={str(e)}")
 
     # Step 3: If cache hit, rank and return
     if cache_hit and cached_candidates:
@@ -198,10 +191,7 @@ def recommend_media(
             formatted = format_results(media_type, results)
 
             logger.info(
-                "pocket_journal.media.recommendation: cache_return uid=%s media_type=%s results=%d source=cache",
-                uid,
-                media_type,
-                len(formatted),
+                f"[SRV][recommendation] cache_return media_type={media_type} results={len(formatted)}"
             )
 
             return {
@@ -211,24 +201,22 @@ def recommend_media(
                 "source": "cache",
             }
         except Exception as e:
-            logger.warning("pocket_journal.media.phase3: cache_ranking_failed uid=%s media_type=%s error=%s", uid, media_type, str(e))
+            logger.warning(f"[ERR][recommendation] cache_ranking_failed media_type={media_type} error={str(e)}")
 
     # Step 4: Live pipeline fallback
     try:
         logger.warning(
-            "pocket_journal.media.phase3: cache_miss_fallback_to_live media_type=%s language=%s",
-            media_type,
-            language,
+            f"[SRV][recommendation] cache_miss_fallback_to_live media_type={media_type} language={language}"
         )
 
         semantic_query = build_semantic_query(uid, media_type)
-        logger.info("pocket_journal.media.filters: semantic_query=%s filters=%s", semantic_query, filters)
+        logger.debug(f"[SRV][recommendation] semantic_query={semantic_query}")
 
         provider = _get_provider(media_type.split(":", 1)[0])
         raw_candidates = generate_candidates(provider=provider, query=semantic_query, filters=filters, fetch_limit=fetch_limit)
 
         if not raw_candidates:
-            logger.warning("pocket_journal.media.phase3: no_candidates uid=%s media_type=%s", uid, media_type)
+            logger.warning(f"[SRV][recommendation] no_candidates media_type={media_type}")
             return {
                 "uid": uid,
                 "media_type": media_type,
@@ -259,10 +247,7 @@ def recommend_media(
         formatted = format_results(media_type, results)
 
         logger.info(
-            "pocket_journal.media.recommendation: live_return uid=%s media_type=%s results=%d source=live",
-            uid,
-            media_type,
-            len(formatted),
+            f"[SRV][recommendation] live_return media_type={media_type} results={len(formatted)}"
         )
 
         return {
@@ -273,7 +258,7 @@ def recommend_media(
         }
 
     except Exception as e:
-        logger.error("pocket_journal.media.recommendation: live_pipeline_failed uid=%s media_type=%s error=%s", uid, media_type, str(e))
+        logger.error(f"[ERR][recommendation] live_pipeline_failed media_type={media_type} error={str(e)}")
         return {
             "uid": uid,
             "media_type": media_type,

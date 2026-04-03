@@ -6,7 +6,7 @@ import logging
 
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.journal_entries")
+logger = logging.getLogger()
 
 _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]
