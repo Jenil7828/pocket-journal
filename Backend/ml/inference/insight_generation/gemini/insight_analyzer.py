@@ -14,7 +14,7 @@ from ml.inference.insight_generation.gemini.guards import setup_gemini_env
 from config_loader import get_config
 from persistence.db_manager import DBManager
 
-logger = logging.getLogger("pocket_journal.insights.gemini")
+logger = logging.getLogger()
 
 
 class InsightsGenerator:

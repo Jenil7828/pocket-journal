@@ -21,9 +21,11 @@ from config_loader import get_config
 from services.media_recommender.cache_store import MediaCacheStore
 from services.media_recommender.intent_builder import build_intent_vector
 from services.media_recommender.enhanced_ranking_engine import rank_candidates_phase5
+from services.media_recommender.response_schema import strip_internal_fields_list
 from persistence.db_manager import DBManager
 
-logger = logging.getLogger("pocket_journal.recommendation_pipeline")
+# Clean root logger - no module prefix
+logger = logging.getLogger()
 _CFG = get_config()
 
 
@@ -37,7 +39,7 @@ class RecommendationPipeline:
             db_manager = DBManager(firebase_json_path=None)
             self.cache_store = MediaCacheStore(db_manager.db)
         except Exception as e:
-            logger.warning("pocket_journal.recommendation_pipeline: cache_init_failed error=%s", str(e))
+            logger.warning(f"[ERR][pipeline] cache_init_failed error={str(e)}")
     
     def get_recommendations(
         self,
@@ -85,8 +87,7 @@ class RecommendationPipeline:
         
         if not candidates:
             logger.warning(
-                "pocket_journal.recommendation_pipeline: no_candidates uid=%s media_type=%s",
-                uid, media_type
+                f"[SRV][pipeline] no_candidates media_type={media_type}"
             )
             return [], 0
         
@@ -101,8 +102,7 @@ class RecommendationPipeline:
         if not filtered and (genre or search or mood):
             # Fallback: if filters removed everything, return unfiltered ranked results
             logger.warning(
-                "pocket_journal.recommendation_pipeline: all_items_filtered uid=%s media_type=%s",
-                uid, media_type
+                f"[SRV][pipeline] all_items_filtered media_type={media_type}"
             )
             filtered = candidates
         
@@ -122,10 +122,8 @@ class RecommendationPipeline:
         clean_results = self._strip_internal_fields(paginated)
         
         logger.info(
-            "pocket_journal.recommendation_pipeline: recommendations_returned uid=%s media_type=%s "
-            "total=%d returned=%d offset=%d limit=%d filters=%s",
-            uid, media_type, total_count, len(clean_results), offset, limit,
-            {"genre": genre, "search": search, "mood": mood, "sort": sort}
+            f"[SRV][pipeline] recommendations_returned media_type={media_type} "
+            f"total={total_count} returned={len(clean_results)} offset={offset} limit={limit}"
         )
         
         return clean_results, total_count
@@ -143,19 +141,17 @@ class RecommendationPipeline:
         """
         try:
             if not self.cache_store:
-                logger.warning("pocket_journal.recommendation_pipeline: cache_store_not_initialized media_type=%s", media_type)
+                logger.warning(f"[ERR][pipeline] cache_store_not_initialized media_type={media_type}")
                 return []
             
             candidates = self.cache_store.read_cache(media_type, language=language)
             logger.debug(
-                "pocket_journal.recommendation_pipeline: candidates_fetched media_type=%s language=%s count=%d",
-                media_type, language, len(candidates)
+                f"[SRV][pipeline] candidates_fetched media_type={media_type} language={language} count={len(candidates)}"
             )
             return candidates
         except Exception as e:
             logger.warning(
-                "pocket_journal.recommendation_pipeline: fetch_candidates_failed media_type=%s error=%s",
-                media_type, str(e)
+                f"[ERR][pipeline] fetch_candidates_failed media_type={media_type} error={str(e)}"
             )
             return []
     
@@ -192,8 +188,7 @@ class RecommendationPipeline:
                 )
             ]
             logger.debug(
-                "pocket_journal.recommendation_pipeline: genre_filter_applied genre=%s before=%d after=%d",
-                genre, before_count, len(filtered)
+                f"[SRV][pipeline] genre_filter_applied genre={genre} before={before_count} after={len(filtered)}"
             )
         
         # Search filter
@@ -206,8 +201,7 @@ class RecommendationPipeline:
                     or query_lower in (item.get("description") or "").lower())
             ]
             logger.debug(
-                "pocket_journal.recommendation_pipeline: search_filter_applied query=%s before=%d after=%d",
-                search_query, before_count, len(filtered)
+                f"[SRV][pipeline] search_filter_applied query={search_query} before={before_count} after={len(filtered)}"
             )
         
         # Mood filter
@@ -220,8 +214,7 @@ class RecommendationPipeline:
                 or any(mood_lower in g.lower() for g in item.get("genres", []) if isinstance(g, str))
             ]
             logger.debug(
-                "pocket_journal.recommendation_pipeline: mood_filter_applied mood=%s before=%d after=%d",
-                mood, before_count, len(filtered)
+                f"[SRV][pipeline] mood_filter_applied mood={mood} before={before_count} after={len(filtered)}"
             )
         
         return filtered
@@ -252,8 +245,7 @@ class RecommendationPipeline:
             intent_vec = np.asarray(intent_vec, dtype=np.float32).reshape(-1)
             
             logger.debug(
-                "pocket_journal.recommendation_pipeline: ranking_intent_built uid=%s media_type=%s beta=%.4f items=%d",
-                uid, media_type, float(beta), len(candidates)
+                f"[SRV][pipeline] ranking_intent_built media_type={media_type} beta={beta:.4f} items={len(candidates)}"
             )
             
             # Add similarity scores to candidates
@@ -286,15 +278,13 @@ class RecommendationPipeline:
                 ranked = sorted(candidates, key=lambda x: (x.get("similarity") or 0), reverse=True)
             
             logger.debug(
-                "pocket_journal.recommendation_pipeline: candidates_ranked uid=%s media_type=%s count=%d",
-                uid, media_type, len(ranked)
+                f"[SRV][pipeline] candidates_ranked media_type={media_type} count={len(ranked)}"
             )
             return ranked
             
         except Exception as e:
             logger.warning(
-                "pocket_journal.recommendation_pipeline: ranking_failed uid=%s media_type=%s error=%s, returning unranked",
-                uid, media_type, str(e)
+                f"[ERR][pipeline] ranking_failed media_type={media_type} error={str(e)}"
             )
             return candidates
     
@@ -369,15 +359,7 @@ class RecommendationPipeline:
         Returns:
             Cleaned items without embeddings or internal scores
         """
-        cleaned = []
-        for item in items:
-            clean_item = dict(item)
-            # Remove internal fields
-            clean_item.pop("_embedding", None)
-            clean_item.pop("embedding", None)
-            clean_item.pop("similarity", None)
-            cleaned.append(clean_item)
-        return cleaned
+        return strip_internal_fields_list(items)
 
 
 # Singleton instance
@@ -390,4 +372,6 @@ def get_pipeline() -> RecommendationPipeline:
     if _pipeline is None:
         _pipeline = RecommendationPipeline()
     return _pipeline
+
+
 

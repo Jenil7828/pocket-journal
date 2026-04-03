@@ -11,7 +11,7 @@ from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 from config_loader import get_config
 _API = get_config()["api"]
 
-logger = logging.getLogger("pocket_journal.media.providers.podcast")
+logger = logging.getLogger()
 
 
 class PodcastAPIProvider(BaseHTTPProvider):
@@ -53,10 +53,10 @@ class PodcastAPIProvider(BaseHTTPProvider):
             payload = resp.json()
             self._access_token = payload["access_token"]
             self._access_token_expires_at = time.time() + int(payload["expires_in"])
-            logger.info("Spotify podcast token refreshed")
+            logger.info("[SRV][podcasts] token_refreshed")
             return self._access_token
         except Exception as e:
-            logger.error("Failed to fetch Spotify token: %s", str(e))
+            logger.error("[ERR][podcasts] token_request_failed error=%s", str(e))
             raise RuntimeError("Failed to fetch Spotify token")
 
     def _invalidate_token(self) -> None:
@@ -212,8 +212,7 @@ class PodcastAPIProvider(BaseHTTPProvider):
                     status_code = getattr(e.response, "status_code", None)
                     if status_code == 403:
                         logger.warning(
-                            "Spotify episode search forbidden for query=%s; falling back to show search",
-                            qx,
+                            "[PROVIDER][podcasts] search_forbidden query=%s fallback_to_shows", qx
                         )
                         try:
                             payload = self._spotify_search(
@@ -228,16 +227,16 @@ class PodcastAPIProvider(BaseHTTPProvider):
                             )
                         except Exception as show_exc:
                             logger.error(
-                                "Spotify podcast fallback show search failed query=%s: %s",
+                                "[PROVIDER][podcasts] fallback_show_search_failed query=%s error=%s",
                                 qx,
                                 str(show_exc),
                             )
                             break
                     else:
-                        logger.error("Spotify podcast search failed query=%s: %s", qx, str(e))
+                        logger.error("[PROVIDER][podcasts] episode_search_failed query=%s error=%s", qx, str(e))
                         break
                 except Exception as e:
-                    logger.error("Spotify podcast search failed query=%s: %s", qx, str(e))
+                    logger.error("[PROVIDER][podcasts] episode_search_failed query=%s error=%s", qx, str(e))
                     break
 
                 for item in batch_items:
@@ -253,7 +252,7 @@ class PodcastAPIProvider(BaseHTTPProvider):
                 offset += fetched
 
         items = self._filter_by_language(raw_items, lang)
-        logger.info("PodcastAPIProvider cleaned candidates count=%d", len(items))
+        logger.info("[PROVIDER][podcasts] cleaned_candidates count=%d", len(items))
         return items[:limit]
 
     def _filter_by_language(

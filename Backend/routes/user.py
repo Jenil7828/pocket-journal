@@ -4,7 +4,7 @@ import logging
 from firebase_admin import firestore as fa_firestore
 from utils.logging_utils import log_request, log_response
 
-logger = logging.getLogger("pocket_journal.routes.user")
+logger = logging.getLogger()
 
 
 def register(app, deps: dict):
@@ -121,10 +121,10 @@ def register(app, deps: dict):
                         # Ensure we have a numpy vector; store as list of floats
                         updates[f"{domain}_vector"] = vec.tolist() if getattr(vec, "size", 0) else []
                         # Log embedding creation concisely
-                        logger.debug("Embedded persona for uid=%s domain=%s (persona_len=%d)", uid, domain, len(persona))
+                        logger.debug(f"[SRV][user] embedded_persona domain={domain} persona_len={len(persona)}")
                     except Exception as e:
                         # Log concise warning and keep stacktrace at debug level
-                        logger.warning("Failed to embed persona for uid=%s domain=%s: %s", uid, domain, str(e))
+                        logger.warning(f"[SRV][user] embed_persona_failed domain={domain} error={str(e)}")
                         logger.debug("%s", __import__('traceback').format_exc())
 
                 # Write updates preserving other domains
@@ -135,11 +135,11 @@ def register(app, deps: dict):
                     # Log an info per domain vector written (exclude updated_at)
                     written_domains = [k for k in updates.keys() if k.endswith("_vector")]
                     for d in written_domains:
-                        logger.info("Persisted user_vectors for uid=%s domain=%s", uid, d)
+                        logger.info(f"[SRV][user] persisted_user_vectors domain={d}")
 
             return jsonify({"uid": uid, "preferences": new_prefs}), 200
         except Exception as e:
-            logger.exception("Failed to update preferences for uid=%s: %s", uid, str(e))
+            logger.error(f"[ERR][user] failed_update_preferences error={str(e)}")
             return jsonify({"error": "failed_to_update_preferences", "details": str(e)}), 500
 
     @app.route("/api/v1/me/settings", methods=["PUT"])

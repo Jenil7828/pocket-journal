@@ -17,7 +17,7 @@ from firebase_admin import firestore
 
 from services.embeddings.embedding_service import EmbeddingService
 
-logger = logging.getLogger("pocket_journal.taste_vector_service")
+logger = logging.getLogger()
 
 # Media type to vector key mapping
 MEDIA_TYPE_TO_VECTOR_KEY = {
@@ -68,25 +68,18 @@ class TasteVectorService:
 
             if not exists:
                 logger.debug(
-                    "pocket_journal.taste_vector: item_not_in_cache media_type=%s item_id=%s",
-                    media_type,
-                    item_id,
+                    f"[SRV][taste_vector] item_not_in_cache media_type={media_type} item_id={item_id}"
                 )
             else:
                 logger.debug(
-                    "pocket_journal.taste_vector: item_found_in_cache media_type=%s item_id=%s",
-                    media_type,
-                    item_id,
+                    f"[SRV][taste_vector] item_found_in_cache media_type={media_type} item_id={item_id}"
                 )
 
             return exists
 
         except Exception as e:
             logger.error(
-                "pocket_journal.taste_vector: cache_check_failed media_type=%s item_id=%s error=%s",
-                media_type,
-                item_id,
-                str(e),
+                f"[ERR][taste_vector] cache_check_failed media_type={media_type} item_id={item_id} error={str(e)}"
             )
             # Return False on error (item not found)
             return False
@@ -112,9 +105,7 @@ class TasteVectorService:
 
             if not doc.exists:
                 logger.debug(
-                    "pocket_journal.taste_vector: item_not_found media_type=%s item_id=%s",
-                    media_type,
-                    item_id,
+                    f"[SRV][taste_vector] item_not_found media_type={media_type} item_id={item_id}"
                 )
                 return None
 
@@ -123,9 +114,7 @@ class TasteVectorService:
 
             if not embedding:
                 logger.debug(
-                    "pocket_journal.taste_vector: item_has_no_embedding media_type=%s item_id=%s",
-                    media_type,
-                    item_id,
+                    f"[SRV][taste_vector] item_has_no_embedding media_type={media_type} item_id={item_id}"
                 )
                 return None
 
@@ -138,20 +127,14 @@ class TasteVectorService:
                 arr = arr / norm
 
             logger.debug(
-                "pocket_journal.taste_vector: item_embedding_fetched media_type=%s item_id=%s dim=%d",
-                media_type,
-                item_id,
-                len(arr),
+                f"[SRV][taste_vector] item_embedding_fetched media_type={media_type} item_id={item_id} dim={len(arr)}"
             )
 
             return arr
 
         except Exception as e:
             logger.error(
-                "pocket_journal.taste_vector: item_fetch_failed media_type=%s item_id=%s error=%s",
-                media_type,
-                item_id,
-                str(e),
+                f"[ERR][taste_vector] item_fetch_failed media_type={media_type} item_id={item_id} error={str(e)}"
             )
             return None
 
@@ -171,9 +154,7 @@ class TasteVectorService:
 
             if not vector_key:
                 logger.warning(
-                    "pocket_journal.taste_vector: unsupported_media_type uid=%s media_type=%s",
-                    uid,
-                    media_type,
+                    f"[SRV][taste_vector] unsupported_media_type media_type={media_type}"
                 )
                 return None
 
@@ -181,8 +162,7 @@ class TasteVectorService:
 
             if not doc.exists:
                 logger.debug(
-                    "pocket_journal.taste_vector: user_vector_not_found uid=%s",
-                    uid,
+                    f"[SRV][taste_vector] user_vector_not_found"
                 )
                 return None
 
@@ -191,29 +171,21 @@ class TasteVectorService:
 
             if not vector_data:
                 logger.debug(
-                    "pocket_journal.taste_vector: user_vector_missing uid=%s key=%s",
-                    uid,
-                    vector_key,
+                    f"[SRV][taste_vector] user_vector_missing vector_key={vector_key}"
                 )
                 return None
 
             arr = np.asarray(vector_data, dtype=np.float32)
 
             logger.debug(
-                "pocket_journal.taste_vector: user_vector_fetched uid=%s key=%s dim=%d",
-                uid,
-                vector_key,
-                len(arr),
+                f"[SRV][taste_vector] user_vector_fetched vector_key={vector_key} dim={len(arr)}"
             )
 
             return arr
 
         except Exception as e:
             logger.error(
-                "pocket_journal.taste_vector: user_vector_fetch_failed uid=%s media_type=%s error=%s",
-                uid,
-                media_type,
-                str(e),
+                f"[ERR][taste_vector] user_vector_fetch_failed media_type={media_type} error={str(e)}"
             )
             return None
 
@@ -254,9 +226,7 @@ class TasteVectorService:
 
         if not vector_key:
             logger.warning(
-                "pocket_journal.taste_vector: unsupported_media_type uid=%s media_type=%s",
-                uid,
-                media_type,
+                f"[SRV][taste_vector] unsupported_media_type media_type={media_type}"
             )
             return {
                 "status": "skipped",
@@ -269,10 +239,7 @@ class TasteVectorService:
 
         if item_embedding is None:
             logger.debug(
-                "pocket_journal.taste_vector: item_embedding_missing uid=%s media_type=%s item_id=%s",
-                uid,
-                media_type,
-                item_id,
+                f"[SRV][taste_vector] item_embedding_missing media_type={media_type} item_id={item_id}"
             )
             return {
                 "status": "skipped",
@@ -311,12 +278,7 @@ class TasteVectorService:
             self.db.collection("user_vectors").document(uid).set(update_data, merge=True)
 
             logger.info(
-                "pocket_journal.taste_vector: update_success uid=%s media_type=%s item_id=%s weight=%.4f dim=%d",
-                uid,
-                media_type,
-                item_id,
-                weight,
-                len(new_vector),
+                f"[SRV][taste_vector] update_success media_type={media_type} item_id={item_id} weight={weight:.4f} dim={len(new_vector)}"
             )
 
             return {
@@ -330,11 +292,7 @@ class TasteVectorService:
 
         except Exception as e:
             logger.error(
-                "pocket_journal.taste_vector: update_failed uid=%s media_type=%s item_id=%s error=%s",
-                uid,
-                media_type,
-                item_id,
-                str(e),
+                f"[ERR][taste_vector] update_failed media_type={media_type} item_id={item_id} error={str(e)}"
             )
             return {
                 "status": "error",
@@ -378,19 +336,13 @@ class TasteVectorService:
                     favorites_map[item_id] = True
 
             logger.debug(
-                "pocket_journal.taste_vector: favorites_map_built uid=%s media_type=%s count=%d",
-                uid,
-                media_type,
-                len(favorites_map),
+                f"[SRV][taste_vector] favorites_map_built media_type={media_type} count={len(favorites_map)}"
             )
 
             return favorites_map
 
         except Exception as e:
             logger.warning(
-                "pocket_journal.taste_vector: favorites_map_failed uid=%s media_type=%s error=%s",
-                uid,
-                media_type,
-                str(e),
+                f"[SRV][taste_vector] favorites_map_failed media_type={media_type} error={str(e)}"
             )
             return {}

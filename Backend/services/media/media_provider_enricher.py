@@ -17,7 +17,7 @@ import time
 import os
 from typing import Dict, List, Any, Optional
 
-logger = logging.getLogger("pocket_journal.media.enricher")
+logger = logging.getLogger()
 
 # Rate limiting: delay between API calls
 API_CALL_DELAY = 0.2  # seconds
@@ -203,9 +203,10 @@ class GoogleBooksEnricher:
         if external_url := book_item.get("volumeInfo", {}).get("infoLink"):
             extracted["external_url"] = external_url
         
-        # Page count
+        # Page count (only if > 0, as 0 is a placeholder)
         if page_count := vol_info.get("pageCount"):
-            extracted["page_count"] = int(page_count)
+            if int(page_count) > 0:
+                extracted["page_count"] = int(page_count)
         
         # Published date
         if pub_date := vol_info.get("publishedDate"):
@@ -224,6 +225,17 @@ class GoogleBooksEnricher:
         categories = vol_info.get("categories", [])
         if isinstance(categories, list):
             extracted["genres"] = [str(c) for c in categories]
+        
+        # Rating (averageRating from Google Books)
+        if rating := vol_info.get("averageRating"):
+            if rating and rating > 0:
+                extracted["rating"] = float(rating)
+        
+        # Popularity (ratingsCount normalized)
+        if ratings_count := vol_info.get("ratingsCount"):
+            if ratings_count and ratings_count > 0:
+                # Normalize to 0-100 scale
+                extracted["popularity"] = min(100.0, float(ratings_count) / 10.0)
         
         return extracted
 
@@ -274,21 +286,21 @@ def enrich_from_providers(data: Dict[str, Any], media_type: str) -> Dict[str, An
         missing = [f for f in critical_fields if _is_missing(enriched.get(f))]
         
         if missing and title:
-            logger.info(f"📡 TMDb enrichment for movie '{title}': fetching {missing}")
+            logger.info(f"[SRV][media] tmdb_enrichment media_type=movies title={title} fetching={missing}")
             tmdb = TMDbEnricher()
             provider_data = tmdb.fetch_by_title(title)
             
             if provider_data:
-                logger.debug(f"   Provider returned: {list(provider_data.keys())}")
+                logger.debug(f"[SRV][media] tmdb_response provider_fields={list(provider_data.keys())}")
                 for key, value in provider_data.items():
                     if _is_missing(enriched.get(key)):
                         enriched[key] = value
                         fields_added.append(key)
-                        logger.info(f"   ✓ Added {key} from TMDb")
+                        logger.info(f"[SRV][media] field_added field={key} source=tmdb")
                     else:
-                        logger.debug(f"   ⊘ {key}: Already in data, skipping")
+                        logger.debug(f"[SRV][media] field_skipped field={key} reason=already_present")
             else:
-                logger.warning(f"   ⚠️  No data returned from TMDb")
+                logger.warning(f"[SRV][media] tmdb_no_data title={title}")
     
     elif media_type == "books":
         critical_fields = ["image_url", "external_url", "page_count", "contributors"]
@@ -296,52 +308,52 @@ def enrich_from_providers(data: Dict[str, Any], media_type: str) -> Dict[str, An
         
         if missing and title:
             author = enriched.get("author") or enriched.get("creator")
-            logger.info(f"📡 Google Books enrichment for book '{title}': fetching {missing}")
+            logger.info(f"[SRV][media] google_books_enrichment media_type=books title={title} fetching={missing}")
             books = GoogleBooksEnricher()
             provider_data = books.fetch_by_title(title, author=author)
             
             if provider_data:
-                logger.debug(f"   Provider returned: {list(provider_data.keys())}")
+                logger.debug(f"[SRV][media] google_books_response provider_fields={list(provider_data.keys())}")
                 for key, value in provider_data.items():
                     if _is_missing(enriched.get(key)):
                         enriched[key] = value
                         fields_added.append(key)
-                        logger.info(f"   ✓ Added {key} from Google Books")
+                        logger.info(f"[SRV][media] field_added field={key} source=google_books")
                     else:
-                        logger.debug(f"   ⊘ {key}: Already in data, skipping")
+                        logger.debug(f"[SRV][media] field_skipped field={key} reason=already_present")
             else:
-                logger.warning(f"   ⚠️  No data returned from Google Books")
+                logger.warning(f"[SRV][media] google_books_no_data title={title}")
     
     elif media_type == "songs":
         critical_fields = ["external_url"]
         missing = [f for f in critical_fields if _is_missing(enriched.get(f))]
         
         if missing and title:
-            logger.info(f"📡 Spotify enrichment for song '{title}': using fallback strategies")
+            logger.info(f"[SRV][media] spotify_enrichment media_type=songs title={title} fetching={missing}")
             spotify = SpotifyEnricher()
             artist = enriched.get("artist") or enriched.get("creator")
             provider_data = spotify.enrich_song(title, artist=artist)
             
             if provider_data:
-                logger.debug(f"   Provider returned: {list(provider_data.keys())}")
+                logger.debug(f"[SRV][media] spotify_response provider_fields={list(provider_data.keys())}")
                 for key, value in provider_data.items():
                     if _is_missing(enriched.get(key)):
                         enriched[key] = value
                         fields_added.append(key)
-                        logger.info(f"   ✓ Added {key} from Spotify fallback")
+                        logger.info(f"[SRV][media] field_added field={key} source=spotify")
                     else:
-                        logger.debug(f"   ⊘ {key}: Already in data, skipping")
+                        logger.debug(f"[SRV][media] field_skipped field={key} reason=already_present")
             else:
-                logger.warning(f"   ⚠️  No data returned from Spotify fallback")
+                logger.warning(f"[SRV][media] spotify_no_data title={title}")
     
     elif media_type == "podcasts":
         # For podcasts, use existing provider if available
         logger.debug(f"Podcast '{title}': using existing provider data")
     
     if fields_added:
-        logger.info(f"✅ Enrichment added {len(fields_added)} fields: {fields_added}")
+        logger.info(f"[SRV][media] enrichment_complete media_type={media_type} title={title} fields_added={len(fields_added)} fields={fields_added}")
     else:
-        logger.debug(f"No new fields added (already complete or no provider match)")
+        logger.debug(f"[SRV][media] enrichment_skipped media_type={media_type} title={title} reason=complete_or_no_match")
     
     return enriched
 

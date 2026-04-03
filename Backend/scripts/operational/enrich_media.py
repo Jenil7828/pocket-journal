@@ -32,9 +32,9 @@ from typing import Dict, Any, List, Optional, Tuple
 # Setup logging before imports
 logging.basicConfig(
     level=logging.INFO,
-    format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
+    format="[%(asctime)s] %(levelname)s %(message)s",
 )
-logger = logging.getLogger("pocket_journal.enrich_media")
+logger = logging.getLogger()
 
 # Add parent directory to path for imports
 import os
@@ -77,7 +77,7 @@ class MediaEnricher:
         self.verbose = verbose
         
         if verbose:
-            logging.getLogger("pocket_journal").setLevel(logging.DEBUG)
+            logging.getLogger().setLevel(logging.DEBUG)
     
     def collection_name(self, media_type: str) -> str:
         """Get Firestore collection name for media type."""

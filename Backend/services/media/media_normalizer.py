@@ -14,7 +14,7 @@ CRITICAL RULES:
 import logging
 from typing import Dict, List, Any, Optional
 
-logger = logging.getLogger("pocket_journal.media.normalizer")
+logger = logging.getLogger()
 
 
 def _is_missing(value: Any) -> bool:
@@ -304,9 +304,9 @@ def _extract_contributors(data: Dict[str, Any], media_type: str) -> List[str]:
     contributors = []
     
     if media_type == "movies":
-        # Cast from metadata
-        cast = metadata.get("cast") or data.get("cast") or []
-        if isinstance(cast, list):
+        # Cast from metadata or top-level
+        cast = data.get("cast") or metadata.get("cast")
+        if cast and isinstance(cast, list):
             for actor in cast[:5]:  # Top 5 actors
                 if isinstance(actor, dict):
                     name = actor.get("name")
@@ -314,11 +314,24 @@ def _extract_contributors(data: Dict[str, Any], media_type: str) -> List[str]:
                         contributors.append(str(name))
                 elif isinstance(actor, str):
                     contributors.append(actor)
+        
+        # If no cast, try credits or actors
+        if not contributors:
+            credits = metadata.get("credits") or {}
+            cast_list = credits.get("cast") or []
+            if isinstance(cast_list, list):
+                for actor in cast_list[:5]:
+                    if isinstance(actor, dict):
+                        name = actor.get("name")
+                        if name:
+                            contributors.append(str(name))
+                    elif isinstance(actor, str):
+                        contributors.append(actor)
     
     elif media_type == "songs":
-        # Artists
-        artists = data.get("artists") or metadata.get("artists") or data.get("artist_names") or metadata.get("artist_names") or []
-        if isinstance(artists, list):
+        # Artists - check multiple locations
+        artists = data.get("artists") or metadata.get("artists")
+        if artists and isinstance(artists, list):
             for artist in artists:
                 if isinstance(artist, dict):
                     name = artist.get("name")
@@ -326,13 +339,19 @@ def _extract_contributors(data: Dict[str, Any], media_type: str) -> List[str]:
                         contributors.append(str(name))
                 elif isinstance(artist, str):
                     contributors.append(artist)
-        elif isinstance(artists, str):
-            contributors = [artists]
+        
+        # Fallback to artist_names
+        if not contributors:
+            artist_names = data.get("artist_names") or metadata.get("artist_names")
+            if isinstance(artist_names, str):
+                contributors = [artist_names]
+            elif isinstance(artist_names, list):
+                contributors = [str(a) for a in artist_names if a]
     
     elif media_type == "books":
         # Authors
-        authors = data.get("authors") or metadata.get("authors") or []
-        if isinstance(authors, list):
+        authors = data.get("authors") or metadata.get("authors")
+        if authors and isinstance(authors, list):
             for author in authors:
                 if isinstance(author, str):
                     contributors.append(author)
@@ -453,9 +472,17 @@ def _extract_duration(data: Dict[str, Any], media_type: str) -> Optional[int]:
     metadata = data.get("metadata") or {}
     
     if media_type == "movies":
-        # Runtime in minutes → convert to seconds
-        runtime = data.get("runtime") or metadata.get("runtime")
-        if runtime:
+        # Check top-level runtime first (from TMDB provider)
+        runtime = data.get("runtime")
+        if runtime and not _is_missing(runtime):
+            try:
+                return int(runtime) * 60  # Convert minutes to seconds
+            except (ValueError, TypeError):
+                pass
+        
+        # Then check metadata
+        runtime = metadata.get("runtime")
+        if runtime and not _is_missing(runtime):
             try:
                 return int(runtime) * 60  # Convert minutes to seconds
             except (ValueError, TypeError):
@@ -464,7 +491,7 @@ def _extract_duration(data: Dict[str, Any], media_type: str) -> Optional[int]:
     elif media_type == "songs":
         # Duration in milliseconds → convert to seconds
         duration_ms = data.get("duration_ms") or metadata.get("duration_ms")
-        if duration_ms:
+        if duration_ms and not _is_missing(duration_ms):
             try:
                 return int(duration_ms) // 1000
             except (ValueError, TypeError):
@@ -473,7 +500,7 @@ def _extract_duration(data: Dict[str, Any], media_type: str) -> Optional[int]:
     elif media_type == "podcasts":
         # Duration in milliseconds → convert to seconds
         duration_ms = data.get("duration_ms") or metadata.get("duration_ms")
-        if duration_ms:
+        if duration_ms and not _is_missing(duration_ms):
             try:
                 return int(duration_ms) // 1000
             except (ValueError, TypeError):
@@ -483,19 +510,12 @@ def _extract_duration(data: Dict[str, Any], media_type: str) -> Optional[int]:
 
 
 def _extract_page_count(data: Dict[str, Any], media_type: str) -> Optional[int]:
-    """Extract page count (books only)."""
-    
-    # Check if page_count already exists and is valid
-    if data.get("page_count") and not _is_missing(data["page_count"]):
-        try:
-            return int(data["page_count"])
-        except (ValueError, TypeError):
-            pass
+    """Extract page count (books only). Skip zero values as they are placeholders."""
     
     if media_type == "books":
         metadata = data.get("metadata") or {}
         
-        # Try various keys
+        # Try various keys - but ONLY accept non-zero values (0 is a placeholder)
         page_count = (
             data.get("pageCount")
             or data.get("page_count")
@@ -503,7 +523,7 @@ def _extract_page_count(data: Dict[str, Any], media_type: str) -> Optional[int]:
             or metadata.get("page_count")
         )
         
-        if page_count:
+        if page_count and int(page_count) > 0:
             try:
                 return int(page_count)
             except (ValueError, TypeError):
@@ -513,7 +533,7 @@ def _extract_page_count(data: Dict[str, Any], media_type: str) -> Optional[int]:
         vol_info = metadata.get("volumeInfo") or {}
         if isinstance(vol_info, dict):
             pc = vol_info.get("pageCount")
-            if pc:
+            if pc and int(pc) > 0:
                 try:
                     return int(pc)
                 except (ValueError, TypeError):
@@ -596,7 +616,16 @@ def normalize_media(data: Dict[str, Any], media_type: str) -> Dict[str, Any]:
     
     # Enrich rating if missing
     if _is_missing(normalized.get("rating")):
-        rating = data.get("rating") or data.get("vote_average") or (data.get("metadata") or {}).get("vote_average")
+        rating = None
+        
+        # Movies, songs, podcasts: use vote_average
+        if media_type != "books":
+            rating = data.get("rating") or data.get("vote_average") or (data.get("metadata") or {}).get("vote_average")
+        else:
+            # Books: use averageRating from Google Books
+            metadata = data.get("metadata") or {}
+            rating = data.get("averageRating") or data.get("rating") or metadata.get("averageRating")
+        
         if rating and rating != 0:
             try:
                 normalized["rating"] = float(rating)
@@ -605,7 +634,19 @@ def normalize_media(data: Dict[str, Any], media_type: str) -> Dict[str, Any]:
     
     # Enrich popularity if missing
     if _is_missing(normalized.get("popularity")):
-        popularity = data.get("popularity") or (data.get("metadata") or {}).get("popularity")
+        popularity = None
+        
+        # Movies, songs, podcasts: use popularity
+        if media_type != "books":
+            popularity = data.get("popularity") or (data.get("metadata") or {}).get("popularity")
+        else:
+            # Books: use ratingsCount as proxy for popularity
+            metadata = data.get("metadata") or {}
+            ratings_count = data.get("ratingsCount") or metadata.get("ratingsCount")
+            if ratings_count and ratings_count > 0:
+                # Normalize ratingsCount to a 0-100 scale (rough estimate)
+                popularity = min(100.0, float(ratings_count) / 10.0)
+        
         if popularity and popularity != 0:
             try:
                 normalized["popularity"] = float(popularity)

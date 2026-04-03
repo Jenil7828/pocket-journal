@@ -19,8 +19,11 @@ from services.media_recommender.providers.spotify_provider import SpotifyProvide
 from services.media_recommender.providers.books_provider import GoogleBooksProvider
 from services.media_recommender.providers.podcast_provider import PodcastAPIProvider
 from services.embeddings import get_embedding_service
+from services.media.media_normalizer import normalize_media
+from services.media.media_provider_enricher import enrich_from_providers
+from services.media_recommender.response_schema import format_search_response
 
-logger = logging.getLogger("pocket_journal.search_service")
+logger = logging.getLogger()
 _CFG = get_config()
 
 
@@ -64,7 +67,7 @@ class SearchService:
         start_time = time.time()
         
         if not query or not query.strip():
-            logger.warning("search_cache: empty query")
+            logger.warning("[SRV][search] empty_query media_type=%s", media_type)
             return [], metrics
         
         query = query.strip().lower()
@@ -73,7 +76,7 @@ class SearchService:
             cache_language = language if media_type in {"songs", "podcasts"} else None
             cached_items = self.cache_store.read_cache(media_type, language=cache_language)
         except Exception as e:
-            logger.error(f"Cache read failed: {e}")
+            logger.error(f"[ERR][search] cache_read_failed media_type={media_type} error={e}")
             return [], metrics
         
         # Score all items
@@ -104,8 +107,7 @@ class SearchService:
         metrics.cache_latency_ms = (time.time() - start_time) * 1000
         
         logger.info(
-            f"Cache search: {media_type} '{query}' → {len(results)} relevant "
-            f"(avg_score={avg_score:.1f}, max_score={max_score:.1f}, total={len(all_scores)})"
+            f"[SRV][search] cache_search media_type={media_type} query={query} results={len(results)} avg_score={avg_score:.1f} max_score={max_score:.1f} total_cached={len(all_scores)}"
         )
         
         return results, metrics
@@ -202,10 +204,10 @@ class SearchService:
             results = [item for _, item in scored_results[:limit]]
             metrics.provider_latency_ms = (time.time() - start_time) * 1000
             
-            logger.info(f"Provider search: {media_type} '{query}' → {len(results)} results ({metrics.provider_latency_ms:.1f}ms)")
+            logger.info(f"[SRV][search] provider_search media_type={media_type} query={query} results={len(results)} latency_ms={metrics.provider_latency_ms:.1f}")
             return results, metrics
         except Exception as e:
-            logger.error(f"Provider search failed: {e}")
+            logger.error(f"[ERR][search] provider_search_failed media_type={media_type} error={e}")
             metrics.provider_latency_ms = (time.time() - start_time) * 1000
             return [], metrics
 
@@ -277,7 +279,7 @@ class SearchService:
                     "language": item.get("language", "neutral"),
                 }
         except Exception as e:
-            logger.warning(f"Normalization failed: {e}")
+            logger.warning(f"[SRV][search] normalization_failed media_type={media_type} error={e}")
         return None
 
     def _merge_results(self, cache_results: List[Dict[str, Any]], provider_results: List[Dict[str, Any]], media_type: str, limit: int) -> Tuple[List[Dict[str, Any]], int]:
@@ -296,7 +298,7 @@ class SearchService:
         dedup_count = len(cache_results) + len(provider_results) - len(merged)
         final_results = list(merged.values())[:limit]
         
-        logger.info(f"Merged: cache={len(cache_results)}, provider={len(provider_results)}, dedup={dedup_count}, final={len(final_results)}")
+        logger.info(f"[SRV][search] merge_complete cache={len(cache_results)} provider={len(provider_results)} dedup={dedup_count} final={len(final_results)}")
         
         return final_results, dedup_count
 
@@ -308,48 +310,70 @@ class SearchService:
             executor = ThreadPoolExecutor(max_workers=1)
             executor.submit(self._write_cache_worker, media_type, items)
         except Exception as e:
-            logger.error(f"Cache write task failed: {e}")
+            logger.error(f"[ERR][search] cache_write_task_failed media_type={media_type} error={e}")
 
     def _write_cache_worker(self, media_type: str, items: List[Dict[str, Any]]) -> None:
-        """Background cache enrichment."""
+        """Background cache enrichment and normalization."""
         try:
             start_time = time.time()
-            enriched_items = []
+            normalized_items = []
             
             for item in items:
                 if not item:
                     continue
                 try:
-                    text_for_embedding = self._build_embedding_text(item, media_type)
+                    # STEP 1: Enrich the provider data
+                    enriched_item = enrich_from_providers(item, media_type)
+                    
+                    # STEP 2: Normalize to canonical schema
+                    normalized_item = normalize_media(enriched_item, media_type)
+                    
+                    # STEP 3: Add embedding and metadata
+                    text_for_embedding = self._build_embedding_text(normalized_item, media_type)
                     embedding = self.embedding_service.embed_text(text_for_embedding)
-                    item["embedding"] = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
-                    if "language" not in item:
-                        item["language"] = "neutral"
+                    normalized_item["embedding"] = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+                    
+                    if "language" not in normalized_item:
+                        normalized_item["language"] = "neutral"
+                    
                     from datetime import datetime, timezone
-                    item["cached_at"] = datetime.now(timezone.utc).isoformat()
-                    enriched_items.append(item)
+                    normalized_item["cached_at"] = datetime.now(timezone.utc).isoformat()
+                    
+                    normalized_items.append(normalized_item)
                 except Exception as e:
-                    logger.warning(f"Item enrichment failed: {e}")
+                    logger.warning(f"[ERR][search] item_enrichment_failed media_type={media_type} error={e}")
             
-            if enriched_items:
-                self.cache_store.write_cache(media_type, enriched_items)
+            if normalized_items:
+                self.cache_store.write_cache(media_type, normalized_items)
                 elapsed = (time.time() - start_time) * 1000
-                logger.info(f"Cache write: {len(enriched_items)} items ({elapsed:.1f}ms)")
+                logger.info(f"[DB][cache_store] write_complete media_type={media_type} count={len(normalized_items)} duration_ms={elapsed:.1f}")
         except Exception as e:
-            logger.error(f"Cache write worker failed: {e}")
+            logger.error(f"[ERR][cache_store] write_worker_failed error={str(e)}")
 
     def _build_embedding_text(self, item: Dict[str, Any], media_type: str) -> str:
-        """Build text for embedding."""
-        if media_type == "songs":
-            return f"{item.get('title', '')} {item.get('artist_names', '')} {item.get('album_name', '')}"
-        elif media_type == "movies":
-            return f"{item.get('title', '')} {item.get('description', '')}"
-        elif media_type == "books":
-            authors = " ".join(item.get("authors", [])) if isinstance(item.get("authors"), list) else item.get("authors", "")
-            return f"{item.get('title', '')} {authors} {item.get('description', '')}"
-        elif media_type == "podcasts":
-            return f"{item.get('title', '')} {item.get('publisher', '')} {item.get('description', '')}"
-        return str(item)
+        """Build text for embedding from canonical schema fields."""
+        title = item.get('title', '')
+        description = item.get('description', '')
+        
+        # All media types use canonical fields
+        creators = []
+        
+        # Add creator if available
+        if item.get('creator'):
+            creators.append(item['creator'])
+        
+        # Add contributors if available
+        contributors = item.get('contributors', [])
+        if isinstance(contributors, list):
+            creators.extend(contributors[:3])  # Top 3 contributors
+        
+        # Add genres
+        genres = item.get('genres', [])
+        genre_str = ' '.join(genres) if isinstance(genres, list) else ''
+        
+        creator_str = ' '.join(creators)
+        
+        return f"{title} {description} {creator_str} {genre_str}".strip()
 
     def _strip_embeddings(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove embeddings from results for API response."""
@@ -374,7 +398,7 @@ class SearchService:
                 language = None
 
         if not query or not query.strip():
-            return {"results": [], "metrics": {"final_result_count": 0}}
+            return format_search_response([], media_type, query, limit)
 
         provider_results, provider_metrics = self._search_providers(
             media_type, query, language, limit
@@ -386,24 +410,26 @@ class SearchService:
             reverse=True
         )
 
-        final_results = self._strip_embeddings(provider_results[:limit])
+        # STEP 1: Enrich results (fill in missing data from providers)
+        enriched_results = [enrich_from_providers(item, media_type) for item in provider_results[:limit]]
+        
+        # STEP 2: Normalize results to canonical schema
+        normalized_results = [normalize_media(item, media_type) for item in enriched_results]
+        
+        # STEP 3: Strip embeddings for API response
+        final_results = self._strip_embeddings(normalized_results)
 
         logger.info(
-            "Search completed: %s '%s' → %d results (source=provider)",
-            media_type, query, len(final_results)
+            f"[SRV][search] completed media_type={media_type} query={query} results={len(final_results)}"
         )
 
         # Store all results to cache asynchronously so future searches benefit
         if provider_results:
             self._write_cache_async(media_type, provider_results)
 
-        return {
-            "results": final_results,
-            "metrics": {
-                "final_result_count": len(final_results),
-                "provider_latency_ms": provider_metrics.provider_latency_ms,
-            }
-        }
+        return format_search_response(final_results, media_type, query, limit, {
+            "provider_latency_ms": provider_metrics.provider_latency_ms,
+        })
 
 
 

@@ -29,11 +29,15 @@ from config_loader import get_config
 from utils.logging_utils import log_request, log_response
 from services.media_recommender.recommendation_pipeline import get_pipeline
 from services.media_recommender.search_service import SearchService
+from services.media_recommender.response_schema import (
+    format_recommendation_response,
+    normalize_response_list,
+)
 from services.personalization.interaction_service import InteractionService
 from services.personalization.taste_vector_service import TasteVectorService
 
 _CFG = get_config()
-logger = logging.getLogger("pocket_journal.media_domain")
+logger = logging.getLogger()
 _PIPELINE = get_pipeline()
 
 
@@ -87,25 +91,21 @@ def register(app, deps):
                 offset=offset,
             )
             
+            # Normalize results for consistent response schema
+            normalized_results = normalize_response_list(results, "movies")
+            
             log_response(200, start_time)
-            return jsonify({
-                "results": results,
-                "meta": {
-                    "total": total,
-                    "returned": len(results),
-                    "offset": offset,
-                    "limit": limit,
-                    "filters_applied": {
-                        "genre": genre,
-                        "search": search_query,
-                        "mood": mood,
-                        "sort": sort_by
-                    }
-                }
-            }), 200
+            return jsonify(format_recommendation_response(
+                normalized_results,
+                media_type="movies",
+                total=total,
+                offset=offset,
+                limit=limit,
+                filters={"genre": genre, "search": search_query, "mood": mood, "sort": sort_by}
+            )), 200
             
         except Exception as e:
-            logger.exception("pocket_journal.media_domain: recommend_movies_failed uid=%s error=%s", request.user.get("uid"), str(e))
+            logger.error(f"[ERR][media] recommend_movies_failed error={str(e)}")
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
@@ -141,26 +141,21 @@ def register(app, deps):
                 offset=offset,
             )
             
+            # Normalize results for consistent response schema
+            normalized_results = normalize_response_list(results, "songs")
+            
             log_response(200, start_time)
-            return jsonify({
-                "results": results,
-                "meta": {
-                    "total": total,
-                    "returned": len(results),
-                    "offset": offset,
-                    "limit": limit,
-                    "filters_applied": {
-                        "language": language,
-                        "genre": genre,
-                        "search": search_query,
-                        "mood": mood,
-                        "sort": sort_by
-                    }
-                }
-            }), 200
+            return jsonify(format_recommendation_response(
+                normalized_results,
+                media_type="songs",
+                total=total,
+                offset=offset,
+                limit=limit,
+                filters={"language": language, "genre": genre, "search": search_query, "mood": mood, "sort": sort_by}
+            )), 200
             
         except Exception as e:
-            logger.exception("pocket_journal.media_domain: recommend_songs_failed uid=%s error=%s", request.user.get("uid"), str(e))
+            logger.error(f"[ERR][media] recommend_songs_failed error={str(e)}")
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
@@ -195,25 +190,21 @@ def register(app, deps):
                 offset=offset,
             )
             
+            # Normalize results for consistent response schema
+            normalized_results = normalize_response_list(results, "books")
+            
             log_response(200, start_time)
-            return jsonify({
-                "results": results,
-                "meta": {
-                    "total": total,
-                    "returned": len(results),
-                    "offset": offset,
-                    "limit": limit,
-                    "filters_applied": {
-                        "genre": genre,
-                        "search": search_query,
-                        "mood": mood,
-                        "sort": sort_by
-                    }
-                }
-            }), 200
+            return jsonify(format_recommendation_response(
+                normalized_results,
+                media_type="books",
+                total=total,
+                offset=offset,
+                limit=limit,
+                filters={"genre": genre, "search": search_query, "mood": mood, "sort": sort_by}
+            )), 200
             
         except Exception as e:
-            logger.exception("pocket_journal.media_domain: recommend_books_failed uid=%s error=%s", request.user.get("uid"), str(e))
+            logger.error(f"[ERR][media] recommend_books_failed error={str(e)}")
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
@@ -249,26 +240,21 @@ def register(app, deps):
                 offset=offset,
             )
             
+            # Normalize results for consistent response schema
+            normalized_results = normalize_response_list(results, "podcasts")
+            
             log_response(200, start_time)
-            return jsonify({
-                "results": results,
-                "meta": {
-                    "total": total,
-                    "returned": len(results),
-                    "offset": offset,
-                    "limit": limit,
-                    "filters_applied": {
-                        "language": language,
-                        "genre": genre,
-                        "search": search_query,
-                        "mood": mood,
-                        "sort": sort_by
-                    }
-                }
-            }), 200
+            return jsonify(format_recommendation_response(
+                normalized_results,
+                media_type="podcasts",
+                total=total,
+                offset=offset,
+                limit=limit,
+                filters={"language": language, "genre": genre, "search": search_query, "mood": mood, "sort": sort_by}
+            )), 200
             
         except Exception as e:
-            logger.exception("pocket_journal.media_domain: recommend_podcasts_failed uid=%s error=%s", request.user.get("uid"), str(e))
+            logger.error(f"[ERR][media] recommend_podcasts_failed error={str(e)}")
             log_response(500, start_time)
             return jsonify({"error": str(e)}), 500
 
@@ -408,12 +394,7 @@ def register(app, deps):
                         "error": f"Media item '{item_id}' not found in {media_type} cache. Cannot track interaction for non-existent item."
                     }), 400
             except Exception as e:
-                import logging
-                logger = logging.getLogger("pocket_journal.routes.media_domain")
-                logger.warning(
-                    "cache_validation_failed uid=%s media_type=%s item_id=%s error=%s",
-                    uid, media_type, item_id, str(e),
-                )
+                logger.warning(f"[ERR][media] cache_validation_failed media_type={media_type} item_id={item_id} error={str(e)}")
                 log_response(500, start_time)
                 return jsonify({"error": "Failed to validate item in cache"}), 500
 
@@ -452,12 +433,7 @@ def register(app, deps):
                     }), 200
 
             except Exception as e:
-                import logging
-                logger = logging.getLogger("pocket_journal.routes.media_domain")
-                logger.warning(
-                    "rate_limit_check_failed uid=%s media_type=%s error=%s",
-                    uid, media_type, str(e),
-                )
+                logger.warning(f"[ERR][media] rate_limit_check_failed media_type={media_type} error={str(e)}")
                 rate_limited = False
 
             # Update taste vector if not rate limited
@@ -473,12 +449,7 @@ def register(app, deps):
                     )
                     updated = update_result.get("updated", False)
                 except Exception as e:
-                    import logging
-                    logger = logging.getLogger("pocket_journal.routes.media_domain")
-                    logger.warning(
-                        "taste_vector_update_failed uid=%s media_type=%s item_id=%s error=%s",
-                        uid, media_type, item_id, str(e),
-                    )
+                    logger.warning(f"[ERR][media] taste_vector_update_failed media_type={media_type} item_id={item_id} error={str(e)}")
 
             log_response(200, start_time)
             return jsonify({

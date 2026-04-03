@@ -14,7 +14,7 @@ import logging
 from typing import Any, Dict, List, Set, Tuple
 import numpy as np
 
-logger = logging.getLogger("pocket_journal.firestore_serializer")
+logger = logging.getLogger()
 
 # Firestore-supported types
 FIRESTORE_TYPES = (list, dict, float, int, str, bool, type(None))

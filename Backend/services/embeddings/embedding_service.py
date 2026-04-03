@@ -12,7 +12,7 @@ os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 from config_loader import get_config
 from services.utils.suppression import suppress_hf
 
-logger = logging.getLogger("pocket_journal.embedding_service")
+logger = logging.getLogger()
 
 _CFG = get_config()
 
@@ -115,9 +115,9 @@ class EmbeddingService:
         # Log concise embedding creation info (do not log vector contents)
         try:
             dim = int(vec.shape[-1]) if hasattr(vec, "shape") else None
-            logger.info("Created embedding (text_len=%d) dim=%s", len(str(text or "")), dim)
+            logger.info("[SRV][embeddings] embedding_created text_len=%d dim=%s", len(str(text or "")), dim)
         except Exception:
-            logger.info("Created embedding (could not infer dim)")
+            logger.info("[SRV][embeddings] embedding_created dim_inference_failed")
         return vec
 
     def embed_texts(self, texts: List[str]) -> List[np.ndarray]:
@@ -137,7 +137,7 @@ class EmbeddingService:
             vec = self._to_float32(vec)
             vec = self.normalize(vec)
             results.append(vec)
-        logger.info("Created %d embeddings (batch)", len(results))
+        logger.info("[SRV][embeddings] batch_embeddings_created count=%d", len(results))
         return results
 
     @staticmethod

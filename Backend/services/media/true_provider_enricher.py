@@ -13,7 +13,7 @@ import os
 import requests
 from typing import Dict, List, Any, Optional, Tuple
 
-logger = logging.getLogger("pocket_journal.true_enrichment")
+logger = logging.getLogger()
 
 # Rate limiting between API calls
 API_RATE_LIMIT = 0.25  # seconds

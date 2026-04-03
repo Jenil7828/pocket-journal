@@ -25,7 +25,8 @@ from utils.log_formatter import ColoredFormatter
 
 # -------------------- Logging --------------------
 LOG_LEVEL = _CFG["logging"]["app_level"].upper()
-log_fmt = "[%(asctime)s] %(levelname)s %(name)s: %(message)s"
+# Clean format: only message, no logger name repetition
+log_fmt = "[%(asctime)s] %(levelname)s %(message)s"
 logging.basicConfig(level=LOG_LEVEL, format=log_fmt)
 logger = logging.getLogger()
 
@@ -34,7 +35,6 @@ handler = logger.handlers[0] if logger.handlers else None
 if handler:
     handler.setFormatter(ColoredFormatter(log_fmt))
 
-pj_logger = logging.getLogger("pocket_journal")
 # Lower specific external loggers
 logging.getLogger("werkzeug").setLevel(_CFG["logging"]["werkzeug_level"])
 logging.getLogger("firebase_admin").setLevel(_CFG["logging"]["firebase_level"])

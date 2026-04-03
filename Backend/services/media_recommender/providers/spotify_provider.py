@@ -8,7 +8,8 @@ from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM, UnauthorizedEr
 from config_loader import get_config
 _API = get_config()["api"]
 
-logger = logging.getLogger("pocket_journal.media.providers.spotify")
+# Clean root logger - no module prefix
+logger = logging.getLogger()
 
 
 class SpotifyProvider(BaseHTTPProvider):
@@ -64,7 +65,7 @@ class SpotifyProvider(BaseHTTPProvider):
         except Exception:
             payload = {}
         if resp.status_code // 100 != 2:
-            logger.warning("Spotify token request failed status=%s body=%s", resp.status_code, (resp.text or "")[:300])
+            logger.warning(f"[ERR][spotify] token_request_failed status={resp.status_code}")
             raise RuntimeError(f"Spotify token request failed: {resp.status_code}")
 
         token = payload.get("access_token")
@@ -78,7 +79,7 @@ class SpotifyProvider(BaseHTTPProvider):
         except Exception:
             self._access_token_expires_at = time.time() + 3600
 
-        logger.info("Spotify token refreshed")
+        logger.info(f"[SRV][spotify] token_refreshed")
         return token
 
     def _invalidate_token(self) -> None:
@@ -97,7 +98,7 @@ class SpotifyProvider(BaseHTTPProvider):
             payload = self._request("GET", url, headers=headers)
             return payload
         except UnauthorizedError:
-            logger.info("Spotify 401 detected while fetching track details — retrying with refreshed token")
+            logger.info(f"[SRV][spotify] 401_detected_retrying")
             self._invalidate_token()
             try:
                 token = self._get_access_token()
@@ -105,10 +106,10 @@ class SpotifyProvider(BaseHTTPProvider):
                 payload = self._request("GET", url, headers=headers)
                 return payload
             except UnauthorizedError:
-                logger.warning("Spotify track details unauthorized after refresh for id=%s", track_id)
+                logger.warning(f"[ERR][spotify] unauthorized_after_refresh track_id={track_id}")
                 return None
         except Exception as exc:
-            logger.warning("Failed to fetch Spotify track details id=%s: %s", track_id, str(exc))
+            logger.warning(f"[ERR][spotify] fetch_failed track_id={track_id} error={str(exc)}")
             return None
 
     def _search_tracks(self, query: str, limit: int, offset: int = 0, market: Optional[str] = None) -> List[dict]:
@@ -134,7 +135,7 @@ class SpotifyProvider(BaseHTTPProvider):
             )
         except UnauthorizedError:
             # Token likely expired or invalid -> invalidate and retry once
-            logger.info("Spotify 401 detected — retrying with new token")
+            logger.info(f"[SRV][spotify] 401_detected_retrying_search")
             self._invalidate_token()
             # fetch new token and retry request once
             try:
@@ -212,7 +213,7 @@ class SpotifyProvider(BaseHTTPProvider):
             )
             # Debug: log if duration is missing for this track after enrichment
             if logger.isEnabledFor(logging.DEBUG) and (duration_ms_val is None):
-                logger.debug("Spotify track missing duration_ms after enrichment id=%s title=%s keys=%s", t.get("id"), t.get("name"), list(t.keys()))
+                logger.debug(f"[SRV][spotify] track_missing_duration track_id={t.get('id')} title={t.get('name')}")
         return primary
 
     def _dedupe_by_id(self, items: List[STANDARD_MEDIA_ITEM]) -> List[STANDARD_MEDIA_ITEM]:
@@ -303,15 +304,10 @@ class SpotifyProvider(BaseHTTPProvider):
             normalized.append(item)
 
         cleaned = self._dedupe_by_id(self._clean_items(normalized))
-        logger.info(
-            "SpotifyProvider cleaned candidates (queries=%s, market=%s, count=%d)",
-            queries,
-            market,
-            len(cleaned),
-        )
+        logger.info(f"[SRV][spotify] candidates_cleaned count={len(cleaned)}")
 
         if len(cleaned) < 10:
-            logger.warning("Low Spotify candidate pool: %d", len(cleaned))
+            logger.warning(f"[SRV][spotify] low_candidates count={len(cleaned)}")
 
         # Language post-filter
         cleaned = self._filter_by_language(cleaned, lang)

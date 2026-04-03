@@ -6,7 +6,7 @@ from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 from config_loader import get_config
 _API = get_config()["api"]
 
-logger = logging.getLogger("pocket_journal.media.providers.tmdb")
+logger = logging.getLogger()
 
 
 class TMDbProvider(BaseHTTPProvider):

@@ -10,7 +10,8 @@ This layer sits between the recommendation engine and response formatting.
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 
-logger = logging.getLogger("pocket_journal.media.filter_sort_service")
+# Clean root logger - no module prefix
+logger = logging.getLogger()
 
 
 class MediaFilterSortService:

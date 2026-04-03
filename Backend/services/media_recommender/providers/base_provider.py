@@ -7,7 +7,7 @@ _CFG = get_config()
 
 import requests
 
-logger = logging.getLogger("pocket_journal.media.providers")
+logger = logging.getLogger()
 
 
 STANDARD_MEDIA_ITEM = Dict[str, object]
@@ -73,20 +73,20 @@ class BaseHTTPProvider(MediaProvider):
                     try:
                         return resp.json()
                     except Exception:
-                        logger.warning("Non-JSON response from %s %s: %s", method, url, text_snippet)
+                        logger.warning(f"[SRV][provider] non_json_response method={method} url={url}")
                         return None
 
                 if status == 401:
-                    logger.warning("Unauthorized response from %s %s (status=401).", method, url)
+                    logger.warning(f"[ERR][provider] unauthorized method={method} url={url}")
                     # Raise to allow caller to handle token refresh
                     raise UnauthorizedError("Unauthorized (401)")
 
                 if status == 429:
-                    logger.warning("Rate limited by upstream %s %s (status=429). body=%s", method, url, text_snippet)
+                    logger.warning(f"[ERR][provider] rate_limited method={method} url={url}")
                     return None
 
                 if 500 <= status < 600:
-                    logger.warning("Server error from %s %s (status=%s). attempt=%s body=%s", method, url, status, attempt, text_snippet)
+                    logger.warning(f"[ERR][provider] server_error method={method} status={status} attempt={attempt}")
                     last_resp = resp
                     # retry once
                     attempt += 1
@@ -95,14 +95,14 @@ class BaseHTTPProvider(MediaProvider):
                     continue
 
                 # Other client errors: log and return None
-                logger.warning("HTTP %s %s returned non-OK status=%s body=%s", method, url, status, text_snippet)
+                logger.warning(f"[ERR][provider] non_ok_status method={method} status={status}")
                 return None
 
             except UnauthorizedError:
                 # Propagate to caller
                 raise
             except Exception as exc:  # network or other unexpected exceptions
-                logger.warning("HTTP %s %s exception on attempt %s: %s", method, url, attempt, str(exc))
+                logger.warning(f"[ERR][provider] request_exception method={method} attempt={attempt} error={str(exc)}")
                 last_resp = None
                 attempt += 1
                 if attempt > self.max_retries:

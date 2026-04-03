@@ -24,7 +24,7 @@ logging.basicConfig(
     level=logging.INFO,
     format="[%(asctime)s] %(levelname)s %(name)s: %(message)s",
 )
-logger = logging.getLogger("pocket_journal.export_media_cache")
+logger = logging.getLogger()
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
