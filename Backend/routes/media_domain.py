@@ -18,6 +18,9 @@ Domain-specific endpoints:
 Search endpoints:
   GET  /api/v1/{media_type}/search  - Search media (movies|songs|books|podcasts)
 
+Get by ID endpoints:
+  GET  /api/v1/{media_type}/get/{item_id}  - Get media by ID (movies|songs|books|podcasts)
+
 Interaction endpoints:
   POST /api/v1/media/interaction    - Track user interaction
 """
@@ -256,6 +259,74 @@ def register(app, deps):
         except Exception as e:
             logger.error(f"[ERR][media] recommend_podcasts_failed error={str(e)}")
             log_response(500, start_time)
+            return jsonify({"error": str(e)}), 500
+
+    # ==================== GET BY ID (Generic by Media Type) ====================
+
+    @app.route("/api/v1/<media_type>/get/<item_id>", methods=["GET"])
+    @login_required
+    def get_media_by_id(media_type, item_id):
+        """
+        Get a single media item by ID from cache.
+
+        Path parameters:
+        - media_type: songs | movies | books | podcasts
+        - item_id: The media item ID
+
+        Returns: {results: [...], metrics: {...}}
+        """
+        start_time = time.time()
+        log_request()
+
+        try:
+            if not search_service:
+                log_response(500, start_time)
+                return jsonify({"error": "Search service not initialized"}), 500
+
+            # Normalize media_type
+            media_type = media_type.strip().lower()
+            item_id = str(item_id).strip()
+
+            # Validate media_type
+            if media_type not in {"songs", "movies", "books", "podcasts"}:
+                log_response(400, start_time)
+                return jsonify({"error": f"Invalid media_type: {media_type}. Must be one of: songs, movies, books, podcasts"}), 400
+
+            # Validate item_id
+            if not item_id:
+                log_response(400, start_time)
+                return jsonify({"error": "item_id parameter is required"}), 400
+
+            # Get item by ID
+            result = search_service.get_item_by_id(
+                media_type=media_type,
+                item_id=item_id,
+            )
+
+            if not result:
+                log_response(404, start_time)
+                return jsonify({"error": f"Media item '{item_id}' not found in {media_type} collection"}), 404
+
+            # Normalize response for consistent schema
+            from services.media_recommender.response_schema import normalize_response_item
+            normalized_result = normalize_response_item(result, media_type)
+
+            log_response(200, start_time)
+            return jsonify({
+                "results": [normalized_result],
+                "metrics": {
+                    "media_type": media_type,
+                    "item_id": item_id,
+                    "found": True,
+                }
+            }), 200
+
+        except ValueError as e:
+            log_response(400, start_time)
+            return jsonify({"error": str(e)}), 400
+        except Exception as e:
+            log_response(500, start_time)
+            logger.error(f"[ERR][media] get_media_by_id_failed error={str(e)}")
             return jsonify({"error": str(e)}), 500
 
     # ==================== SEARCH (Generic by Media Type) ====================
