@@ -32,7 +32,20 @@ _CFG = get_config()
 _STORE = _CFG["ml"]["model_store"]
 
 # Groups to skip — these are loaded automatically at runtime
-SKIP_GROUPS = {"embedding"}  # sentence-transformers handles embedding model downloads automatically
+# Always skip embedding because sentence-transformers downloads it at runtime.
+SKIP_GROUPS = {"embedding"}
+
+# If insight generation is configured to use Gemini (cloud) then the local
+# insight_generation model (qwen2) should NOT be downloaded into the
+# container cache. Honor the `use_gemini` flag from configuration.
+try:
+    use_gemini = bool(_CFG.get("ml", {}).get("insight_generation", {}).get("use_gemini", False))
+except Exception:
+    use_gemini = False
+
+if use_gemini:
+    SKIP_GROUPS.add("insight_generation")
+    logger.info("INSIGHTS_USE_GEMINI=true — skipping local insight_generation models at startup")
 
 
 def main():

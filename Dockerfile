@@ -50,10 +50,27 @@ RUN mkdir -p /tmp/models
 COPY Backend/scripts/entrypoint.sh /app/scripts/entrypoint.sh
 
 # Fix line endings and set executable bit
-RUN apt-get update && apt-get install -y --no-install-recommends dos2unix \
-    && dos2unix /app/scripts/entrypoint.sh \
-    && chmod +x /app/scripts/entrypoint.sh \
-    && rm -rf /var/lib/apt/lists/*
+# Use a retry loop to work around transient apt mirror sync issues (e.g. "File has unexpected size").
+# This attempts `apt-get update` + install up to 5 times with an exponential backoff and
+# clears apt lists between attempts to avoid stale partial index files.
+RUN set -eux; \
+    max_retries=5; \
+    attempt=0; \
+    while [ "$attempt" -lt "$max_retries" ]; do \
+        attempt=$((attempt + 1)); \
+        echo "apt attempt ${attempt}/${max_retries}"; \
+        rm -rf /var/lib/apt/lists/* || true; \
+        # Use Acquire::Retries to help resolve transient network/mirror issues
+        if apt-get -o Acquire::Retries=3 update && apt-get install -y --no-install-recommends dos2unix; then \
+            break; \
+        fi; \
+        echo "apt-get failed on attempt ${attempt}, retrying..."; \
+        sleep $((attempt * 2)); \
+    done; \
+    # convert line endings and make entrypoint executable
+    dos2unix /app/scripts/entrypoint.sh; \
+    chmod +x /app/scripts/entrypoint.sh; \
+    rm -rf /var/lib/apt/lists/*
 
 EXPOSE 8080
 
