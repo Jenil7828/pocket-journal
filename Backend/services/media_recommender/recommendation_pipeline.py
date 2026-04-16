@@ -107,7 +107,11 @@ class RecommendationPipeline:
             filtered = candidates
         
         # Step 3: Apply personalized ranking to filtered candidates
-        ranked = self._rank_candidates(uid, filtered, media_type)
+        # Pass desired_k (limit + offset) so ranking returns at least as many
+        # items as needed for pagination. Previously top_k was capped to the
+        # config default which caused the API to return only 10 results.
+        desired_k = limit + offset
+        ranked = self._rank_candidates(uid, filtered, media_type, desired_k=desired_k)
         
         # Step 4: Apply sorting
         sorted_items = self._apply_sorting(ranked, sort)
@@ -224,6 +228,7 @@ class RecommendationPipeline:
         uid: str,
         candidates: List[Dict[str, Any]],
         media_type: str,
+        desired_k: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
         """
         Apply personalized ranking to candidates.
@@ -243,11 +248,26 @@ class RecommendationPipeline:
             # Build intent vector from user taste
             intent_vec, emotional_intensity, beta = build_intent_vector(uid, media_type)
             intent_vec = np.asarray(intent_vec, dtype=np.float32).reshape(-1)
-            
+
             logger.debug(
                 f"[SRV][pipeline] ranking_intent_built media_type={media_type} beta={beta:.4f} items={len(candidates)}"
             )
-            
+
+            # Limit number of candidates to a configurable max to avoid pathological
+            # runtime in Phase 5 (MMR and hybrid ranking can be O(n^2)). When no
+            # restrictive filters (e.g., genre) are provided, the candidate pool may
+            # be very large which leads to long response times. Trim by popularity
+            # as a cheap heuristic.
+            try:
+                max_candidates = int(_CFG.get("recommendation", {}).get("ranking", {}).get("max_candidates_for_ranking", 500))
+            except Exception:
+                max_candidates = 500
+
+            if len(candidates) > max_candidates:
+                # Trim to top-N by popularity (descending)
+                candidates = sorted(candidates, key=lambda x: float(x.get("popularity") or 0), reverse=True)[:max_candidates]
+                logger.info(f"[SRV][pipeline] trimmed_candidates_for_ranking media_type={media_type} kept={len(candidates)}")
+
             # Add similarity scores to candidates
             for item in candidates:
                 if item.get("embedding"):
@@ -258,11 +278,18 @@ class RecommendationPipeline:
                         similarity = 0.0
                     item["_embedding"] = item["embedding"]
                     item["similarity"] = similarity
-            
+
             # Apply Phase 5 ranking with MMR + hybrid scoring
             use_phase5 = _CFG.get("recommendation", {}).get("ranking", {}).get("use_phase5", True)
-            
+
             if use_phase5:
+                # Determine how many items Phase5 should return. Ensure we at
+                # minimum return the configured `recommendation.top_k` and also
+                # respect the calling endpoint's requested pagination size
+                # (`desired_k`). Cap to the available candidate count.
+                config_top_k = int(_CFG.get("recommendation", {}).get("top_k", 10))
+                desired_val = int(desired_k) if desired_k is not None else config_top_k
+                top_k = min(len(candidates), max(config_top_k, desired_val))
                 ranked = rank_candidates_phase5(
                     intent_vector=intent_vec,
                     candidates=candidates,
@@ -271,12 +298,12 @@ class RecommendationPipeline:
                     use_mmr=True,
                     use_hybrid=True,
                     use_temporal_decay=True,
-                    top_k=len(candidates),
+                    top_k=top_k,
                 )
             else:
                 # Fallback: sort by similarity
                 ranked = sorted(candidates, key=lambda x: (x.get("similarity") or 0), reverse=True)
-            
+
             logger.debug(
                 f"[SRV][pipeline] candidates_ranked media_type={media_type} count={len(ranked)}"
             )

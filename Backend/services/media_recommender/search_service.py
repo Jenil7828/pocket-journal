@@ -431,7 +431,40 @@ class SearchService:
             "provider_latency_ms": provider_metrics.provider_latency_ms,
         })
 
-
-
-
-
+    def get_item_by_id(self, media_type: str, item_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Get a single media item by ID from cache.
+        
+        Args:
+            media_type: One of: songs, movies, books, podcasts
+            item_id: The item ID to retrieve
+            
+        Returns:
+            Item dict or None if not found
+        """
+        if media_type not in {"movies", "songs", "books", "podcasts"}:
+            raise ValueError(f"Invalid media_type: {media_type}")
+        
+        if not item_id or not str(item_id).strip():
+            return None
+        
+        try:
+            collection_name = self.cache_store.collection_name(media_type)
+            doc = self.db.collection(collection_name).document(str(item_id)).get()
+            
+            if not doc.exists:
+                logger.info(f"[SRV][search] item_not_found media_type={media_type} item_id={item_id}")
+                return None
+            
+            data = doc.to_dict() or {}
+            
+            # Ensure id field is present
+            if "id" not in data:
+                data["id"] = str(item_id)
+            
+            logger.info(f"[SRV][search] item_found media_type={media_type} item_id={item_id}")
+            return data
+            
+        except Exception as e:
+            logger.error(f"[ERR][search] get_item_by_id_failed media_type={media_type} item_id={item_id} error={e}")
+            return None
