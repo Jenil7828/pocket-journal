@@ -28,7 +28,7 @@ jobs:
           echo "short_sha=$short_sha" >> "$GITHUB_OUTPUT"
           echo "repo_lc=$repo_lc" >> "$GITHUB_OUTPUT"
 
-      - name: Pre-flight: validate required secrets
+      - name: Pre-flight validate required secrets
         run: |
           missing=0
           if [ -z "${{ secrets.SONG_ID }}" ]; then echo "Missing required secret: SONG_ID" >&2; missing=1; fi
