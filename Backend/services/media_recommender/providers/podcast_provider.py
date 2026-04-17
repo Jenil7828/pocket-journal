@@ -20,9 +20,10 @@ class PodcastAPIProvider(BaseHTTPProvider):
     token_url = _API["spotify"]["token_endpoint"]
 
     def __init__(self) -> None:
-        client_id = os.getenv("SONG_ID")
-        client_secret = os.getenv("SONG_SECRET")
-        if not client_id or not client_secret:
+        try:
+            client_id = os.environ["SONG_ID"]
+            client_secret = os.environ["SONG_SECRET"]
+        except KeyError:
             raise RuntimeError(
                 "SONG_ID and SONG_SECRET environment variables are required for PodcastAPIProvider"
             )

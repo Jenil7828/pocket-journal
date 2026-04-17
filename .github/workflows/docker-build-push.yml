@@ -34,33 +34,8 @@ jobs:
           owner_lc=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           echo "owner_lc=$owner_lc" >> "$GITHUB_OUTPUT"
 
-      - name: Pre-flight validate required secrets
-        run: |
-          missing=0
-          check_secret() {
-            if [ -z "$1" ]; then
-              echo "Missing required secret: $2" >&2
-              missing=1
-            fi
-          }
-
-          check_secret "${{ secrets.SONG_ID }}" SONG_ID
-          check_secret "${{ secrets.SONG_SECRET }}" SONG_SECRET
-          check_secret "${{ secrets.TMDB_API_KEY }}" TMDB_API_KEY
-          check_secret "${{ secrets.GEMINI_API_KEY }}" GEMINI_API_KEY
-          check_secret "${{ secrets.FIREBASE_WEB_API_KEY }}" FIREBASE_WEB_API_KEY
-
-          # Handle multiline secret safely
-          firebase_json='${{ secrets.FIREBASE_CREDENTIALS_JSON }}'
-          if [ -z "$firebase_json" ]; then
-            echo "Missing required secret: FIREBASE_CREDENTIALS_JSON" >&2
-            missing=1
-          fi
-
-          if [ "$missing" -ne 0 ]; then
-            echo "One or more required secrets are missing. Failing pre-flight." >&2
-            exit 1
-          fi
+      # NOTE: secrets are intentionally NOT supplied at build time.
+      # All secrets must be provided at runtime as environment variables when running the container.
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -82,10 +57,4 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           platforms: linux/amd64
-          secrets: |
-            SONG_ID=${{ secrets.SONG_ID }}
-            SONG_SECRET=${{ secrets.SONG_SECRET }}
-            TMDB_API_KEY=${{ secrets.TMDB_API_KEY }}
-            GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
-            FIREBASE_WEB_API_KEY=${{ secrets.FIREBASE_WEB_API_KEY }}
-            firebase=${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+          # No build-time secrets. Secrets must be provided at container runtime via environment variables.

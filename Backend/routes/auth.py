@@ -107,8 +107,9 @@ def register(app, deps: dict):
             return jsonify({"error": "email and password are required"}), 400
 
         # Use Firebase Identity Toolkit REST API to verify password and get tokens
-        api_key = os.getenv("FIREBASE_WEB_API_KEY")
-        if not api_key:
+        try:
+            api_key = os.environ["FIREBASE_WEB_API_KEY"]
+        except KeyError:
             log_response(500, start_time)
             return jsonify({"error": "server_misconfigured", "details": "FIREBASE_WEB_API_KEY not set"}), 500
 
@@ -168,8 +169,9 @@ def register(app, deps: dict):
             log_response(401, start_time)
             return jsonify({"error": "invalid_user"}), 401
 
-        api_key = os.getenv("FIREBASE_WEB_API_KEY")
-        if not api_key:
+        try:
+            api_key = os.environ["FIREBASE_WEB_API_KEY"]
+        except KeyError:
             log_response(500, start_time)
             return jsonify({"error": "server_misconfigured", "details": "FIREBASE_WEB_API_KEY not set"}), 500
 
