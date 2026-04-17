@@ -50,38 +50,52 @@ for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3"):
 # -------------------- Firebase --------------------
 import firebase_admin
 from firebase_admin import credentials, auth
+import tempfile
 
-# Initialize Firebase at startup (deterministic, fail-fast)
-FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
-if not FIREBASE_JSON:
+# Read Firebase service account from FIREBASE_CREDENTIALS_JSON environment variable
+# Write to a temporary file at startup and initialize Firebase from that file.
+FIREBASE_CREDENTIALS_JSON = os.environ.get("FIREBASE_CREDENTIALS_JSON")
+if not FIREBASE_CREDENTIALS_JSON:
+    # Fallback: if a path is provided (legacy behavior), read the file contents into the JSON variable.
+    firebase_path = os.environ.get("FIREBASE_CREDENTIALS_PATH")
+    if firebase_path:
+        # Resolve relative to module directory or cwd
+        candidate = firebase_path
+        if not os.path.isabs(candidate):
+            module_relative = os.path.join(os.path.dirname(__file__), candidate)
+            cwd_relative = os.path.abspath(candidate)
+            if os.path.exists(module_relative):
+                candidate = os.path.abspath(module_relative)
+            elif os.path.exists(cwd_relative):
+                candidate = cwd_relative
+        if os.path.exists(candidate):
+            try:
+                with open(candidate, "r", encoding="utf-8") as fh:
+                    FIREBASE_CREDENTIALS_JSON = fh.read()
+                logger.info("Loaded Firebase credentials JSON from path: %s", candidate)
+            except Exception as e:
+                logger.exception("Failed to read Firebase credentials file %s: %s", candidate, str(e))
+        else:
+            logger.debug("FIREBASE_CREDENTIALS_PATH provided but file not found: %s", firebase_path)
+
+if not FIREBASE_CREDENTIALS_JSON:
     raise RuntimeError(
-        "FIREBASE_CREDENTIALS_PATH is not set. The application requires a path to the Firebase service account JSON file."
+        "FIREBASE_CREDENTIALS_JSON is not set. The application requires the Firebase service account JSON in this environment variable or a valid FIREBASE_CREDENTIALS_PATH."
     )
 
-# Resolve relative paths: allow the env var to be either absolute or relative to this file
-if not os.path.isabs(FIREBASE_JSON):
-    # Candidate relative to this module's directory (Backend/)
-    module_relative = os.path.join(os.path.dirname(__file__), FIREBASE_JSON)
-    # Candidate relative to the current working directory
-    cwd_relative = os.path.abspath(FIREBASE_JSON)
-    if os.path.exists(module_relative):
-        FIREBASE_JSON = os.path.abspath(module_relative)
-    elif os.path.exists(cwd_relative):
-        FIREBASE_JSON = cwd_relative
-    else:
-        raise RuntimeError(
-            f"Firebase credentials file not found. Checked: {module_relative} and {cwd_relative}"
-        )
-else:
-    FIREBASE_JSON = os.path.abspath(FIREBASE_JSON)
-
 try:
+    # Create a temporary file and write the JSON blob into it. Keep the file path for Firebase init.
+    tf = tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json")
+    tf.write(FIREBASE_CREDENTIALS_JSON)
+    tf.flush()
+    tf.close()
+    FIREBASE_JSON = tf.name
+
     cred = credentials.Certificate(FIREBASE_JSON)
     firebase_admin.initialize_app(cred)
-    logger.info("Initialized Firebase app using credentials from %s", FIREBASE_JSON)
+    logger.info("Initialized Firebase app using temporary credentials file at %s", FIREBASE_JSON)
 except Exception as e:
     logger.exception("Failed to initialize Firebase: %s", str(e))
-    # Crash fast on startup so misconfiguration is visible immediately
     raise
 
 # -------------------- NEW ARCH IMPORTS (FIXED) --------------------
@@ -120,7 +134,7 @@ _insights_predictor = None
 def get_db():
     global _db
     if _db is None:
-        FIREBASE_JSON = os.getenv("FIREBASE_CREDENTIALS_PATH")
+        # Pass the temporary firebase json path created at startup
         _db = DBManager(firebase_json_path=FIREBASE_JSON)
     return _db
 

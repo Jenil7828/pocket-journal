@@ -1,0 +1,33 @@
+services:
+  app:
+    image: ghcr.io/jenil7828/pocket-journal:${IMAGE_TAG}
+    container_name: app
+    gpus: all
+    ports:
+      - "8080:8080"
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      FORCE_COLOR: "1"
+      SONG_ID: ${SONG_ID}
+      SONG_SECRET: ${SONG_SECRET}
+      TMDB_API_KEY: ${TMDB_API_KEY}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      FIREBASE_WEB_API_KEY: ${FIREBASE_WEB_API_KEY}
+      FIREBASE_CREDENTIALS_PATH: /app/secrets/firebase.json
+      TMDIR: /tmp/gunicorn
+      MODEL_SOURCE: local
+      MODEL_STORE_PATH: /models
+      MODEL_CACHE_DIR: /tmp/models
+    volumes:
+      - "D:/Pocket Journal/models:/models"
+      - "D:/Pocket Journal/pocket-journal/Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro"
+      - model-cache:/tmp/models
+      - gunicorn-tmp:/tmp/gunicorn
+    tmpfs:
+      - /tmp
+    restart: unless-stopped
+
+volumes:
+  model-cache:
+  gunicorn-tmp:

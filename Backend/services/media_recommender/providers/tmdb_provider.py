@@ -16,8 +16,9 @@ class TMDbProvider(BaseHTTPProvider):
     """
 
     def __init__(self) -> None:
-        api_key = os.getenv("TMDB_API_KEY")
-        if not api_key:
+        try:
+            api_key = os.environ["TMDB_API_KEY"]
+        except KeyError:
             raise RuntimeError("TMDB_API_KEY environment variable is required for TMDbProvider")
         self.api_key = api_key
 
