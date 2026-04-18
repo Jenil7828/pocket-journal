@@ -39,7 +39,7 @@ services:
       - ./Backend:/app:ro
       - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
       # Mount external models folder into container at /models
-      - D:/Pocket Journal/models:/models:ro
+      - C:/D_Drive/Pocket Journal/models:/models:ro
       # Persistent cache so models are not re-copied on every restart
       - model-cache:/tmp/models
       # Writable volume for gunicorn worker sockets
