@@ -20,8 +20,8 @@ services:
       MODEL_STORE_PATH: /models
       MODEL_CACHE_DIR: /tmp/models
     volumes:
-      - "D:/Pocket Journal/models:/models"
-      - "D:/Pocket Journal/pocket-journal/Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro"
+      - "C:/D_Drive/Pocket Journal/models:/models"
+      - "C:/D_Drive/Pocket Journal/pocket-journal/Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro"
       - model-cache:/tmp/models
       - gunicorn-tmp:/tmp/gunicorn
     tmpfs:
