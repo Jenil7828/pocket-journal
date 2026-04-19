@@ -1,4 +1,6 @@
 import 'package:diary/Login/login.dart';
+import 'package:diary/Login/onboard.dart';
+import 'package:diary/Login/signup.dart';
 import 'package:flutter/material.dart';
 
 class StartScreen extends StatefulWidget {
@@ -90,7 +92,7 @@ class _StartScreenState extends State<StartScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const LoginScreen(),
+                              builder: (context) => const OnboardingScreen(),
                             ),
                           );
                         },

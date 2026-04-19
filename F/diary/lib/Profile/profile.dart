@@ -1,139 +1,449 @@
-import 'package:diary/Profile/goal.dart';
-import 'package:diary/Profile/habbits.dart';
-import 'package:diary/Profile/strength.dart';
-import 'package:diary/Profile/weakness.dart';
+import 'dart:io';
+import 'package:diary/DesignConstraints/navbar.dart';
+import 'package:diary/Profile/profildetails.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:diary/DesignConstraints/appBar.dart';
+import 'package:image_picker/image_picker.dart';
 
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
+class ProfilePage extends StatefulWidget {
+  const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  // 🌿 NEW THEME COLORS
+  final Color primaryColor = const Color(0xFF266533); // Basil
+  final Color bgColor = const Color(0xFFF6F4DC); // Cream
+  final Color cardColor = Colors.white;
+
+  bool moodTracking = false;
+  bool journalReminder = false;
+  List<String> selectedMedia = [];
+
+  bool savedMoodTracking = false;
+  bool savedJournalReminder = false;
+  List<String> savedMedia = [];
+
+  bool isEditing = true;
+
+  File? _image;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _pickImage() async {
+    final picked = await _picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() => _image = File(picked.path));
+    }
+  }
+
+  void _savePreferences() {
+    setState(() {
+      savedMoodTracking = moodTracking;
+      savedJournalReminder = journalReminder;
+      savedMedia = List.from(selectedMedia);
+      isEditing = false;
+    });
+  }
+
+  void _editPreferences() {
+    setState(() {
+      moodTracking = savedMoodTracking;
+      journalReminder = savedJournalReminder;
+      selectedMedia = List.from(savedMedia);
+      isEditing = true;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF9F9FF),
-      appBar: const CustomAppBar(title: "Profile", showBack: true),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-        child: Column(
-          children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 25),
+    final displayMood = isEditing ? moodTracking : savedMoodTracking;
+    final displayJournal = isEditing ? journalReminder : savedJournalReminder;
+    final displayMedia = isEditing ? selectedMedia : savedMedia;
 
-            
-            _buildInsightCard(
-              context,
-              title: "🎯 Your Goals",
-              color: const Color(0xFF7C4DFF),
-              icon: Icons.flag_outlined,
-              page: const GoalPage(),
-            ),
-            _buildInsightCard(
-              context,
-              title: "💪 Strengths",
-              color: const Color(0xFF26A69A),
-              icon: Icons.star_outline,
-              page: const StrengthPage(),
-            ),
-            _buildInsightCard(
-              context,
-              title: "⚡ Weaknesses",
-              color: const Color(0xFFFF7043),
-              icon: Icons.warning_amber_rounded,
-              page: const WeaknessPage(),
-            ),
-            _buildInsightCard(
-              context,
-              title: "🕒 Habits",
-              color: const Color(0xFFFFCA28),
-              icon: Icons.repeat_rounded,
-              page: const HabitPage(),
-            ),
-          ],
+    return Container(
+      color: bgColor,
+      child: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              /// 🌿 HEADER
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [primaryColor, primaryColor.withOpacity(0.85)],
+                      ),
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(60),
+                        bottomRight: Radius.circular(60),
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    top: 20,
+                    left: 16,
+                    right: 16,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Row(
+                          children: [
+                            _iconButton(
+                              Icons.arrow_back,
+                              onTap: () {
+                                CustomBottomNavBar.of(context)?.changeTab(0);
+                              },
+                            ),
+                          ],
+                        ),
+                        const Text(
+                          "Profile",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  Positioned(
+                    bottom: -50,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 4),
+                            boxShadow: [
+                              BoxShadow(
+                                color: primaryColor.withOpacity(0.3),
+                                blurRadius: 15,
+                              ),
+                            ],
+                          ),
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundImage:
+                                _image != null ? FileImage(_image!) : null,
+                            child:
+                                _image == null
+                                    ? Icon(
+                                      Icons.camera_alt,
+                                      color: primaryColor,
+                                    )
+                                    : null,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 70),
+
+              /// 🌿 PROFILE CARD
+              _buildCard(
+                child: Column(
+                  children: [
+                    const Text(
+                      "Stefani Wong",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: const [
+                        Icon(Icons.email, size: 16, color: Colors.grey),
+                        SizedBox(width: 6),
+                        Text(
+                          "stefani.wong@example.com",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => FullProfilePage()),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 10,
+                          horizontal: 20,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(color: primaryColor),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "View Full Profile",
+                              style: TextStyle(
+                                color: primaryColor,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Icon(
+                              Icons.arrow_forward,
+                              size: 16,
+                              color: primaryColor,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              /// 🌿 SETTINGS CARD
+              _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "PREFERENCES",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    _buildToggleTile(
+                      title: "Mood Tracking",
+                      subtitle: "Track your daily emotional state",
+                      value: displayMood,
+                      enabled: isEditing,
+                      onChanged: (val) => setState(() => moodTracking = val),
+                    ),
+
+                    const Divider(),
+
+                    _buildToggleTile(
+                      title: "Daily Journal Reminders",
+                      subtitle: "Get reminded to write each day",
+                      value: displayJournal,
+                      enabled: isEditing,
+                      onChanged: (val) => setState(() => journalReminder = val),
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    const Text(
+                      "Preferred Media Type",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMediaButton(
+                            "Movies",
+                            Icons.movie,
+                            displayMedia,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildMediaButton(
+                            "Songs",
+                            Icons.music_note,
+                            displayMedia,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildMediaButton(
+                            "Books",
+                            Icons.menu_book,
+                            displayMedia,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: _buildMediaButton(
+                            "Podcasts",
+                            Icons.mic,
+                            displayMedia,
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: isEditing ? _savePreferences : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: primaryColor,
+                              foregroundColor: Colors.white,
+                            ),
+                            child: const Text("Save"),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: !isEditing ? _editPreferences : null,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: primaryColor,
+                              side: BorderSide(color: primaryColor),
+                            ),
+                            child: const Text("Edit"),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF7B68EE),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        children: [
-          const CircleAvatar(
-            radius: 45,
-            backgroundColor: Colors.white,
-            child: Icon(Icons.person, color: Color(0xFF7B68EE), size: 50),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            "Jenil Rathod",
-            style: GoogleFonts.poppins(
-              fontSize: 20,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "jenilrathod117@gmail.com",
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.white70),
-          ),
-        ],
-      ),
-    );
-  }
+  Widget _buildMediaButton(
+    String title,
+    IconData icon,
+    List<String> displayMedia,
+  ) {
+    final isSelected = displayMedia.contains(title);
 
-  Widget _buildInsightCard(
-    BuildContext context, {
-    required String title,
-    required Color color,
-    required IconData icon,
-    required Widget page,
-  }) {
     return GestureDetector(
       onTap:
-          () =>
-              Navigator.push(context, MaterialPageRoute(builder: (_) => page)),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+          isEditing
+              ? () {
+                setState(() {
+                  if (selectedMedia.contains(title)) {
+                    selectedMedia.remove(title);
+                  } else {
+                    selectedMedia.add(title);
+                  }
+                });
+              }
+              : null,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade300,
-              blurRadius: 6,
-              offset: const Offset(0, 4),
+          color: isSelected ? primaryColor : const Color(0xFFF1F1F1),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected ? Colors.white : Colors.black54,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              title,
+              style: TextStyle(
+                color: isSelected ? Colors.white : Colors.black54,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ),
-        child: ListTile(
-          leading: CircleAvatar(
-            radius: 25,
-            backgroundColor: color.withOpacity(0.1),
-            child: Icon(icon, color: color, size: 26),
-          ),
-          title: Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
-          ),
-          trailing: const Icon(
-            Icons.arrow_forward_ios_rounded,
-            size: 16,
-            color: Colors.grey,
+      ),
+    );
+  }
+
+  Widget _buildToggleTile({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required bool enabled,
+    required Function(bool) onChanged,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
+              const SizedBox(height: 4),
+              Text(subtitle, style: const TextStyle(color: Colors.grey)),
+            ],
           ),
         ),
+        Switch(
+          value: value,
+          onChanged: enabled ? onChanged : null,
+          activeColor: primaryColor,
+        ),
+      ],
+    );
+  }
+
+  Widget _iconButton(IconData icon, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.3),
+          shape: BoxShape.circle,
+        ),
+        child: Icon(icon, color: Colors.white),
       ),
+    );
+  }
+
+  Widget _buildCard({required Widget child}) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+        ],
+      ),
+      child: child,
     );
   }
 }

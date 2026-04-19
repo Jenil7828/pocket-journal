@@ -1,321 +1,264 @@
+import 'package:diary/DesignConstraints/navbar.dart';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
-import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:developer';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
-class JournalEntryScreen extends StatefulWidget {
-  final DateTime selectedDate;
-
-  const JournalEntryScreen({super.key, required this.selectedDate});
+class Journalentry extends StatefulWidget {
+  const Journalentry({super.key});
 
   @override
-  State<JournalEntryScreen> createState() => _JournalEntryScreenState();
+  State<Journalentry> createState() => _JournalentryState();
 }
 
-class _JournalEntryScreenState extends State<JournalEntryScreen> {
-  late TextEditingController _topicController;
-  late TextEditingController _entryController;
-  bool _isLoading = false;
+class _JournalentryState extends State<Journalentry> {
+  final TextEditingController titleController = TextEditingController();
+  final TextEditingController contentController = TextEditingController();
+  final Color primaryColor = const Color(0xFF6E6E9E);
 
-  final Dio _dio = Dio(
-    BaseOptions(
-     baseUrl: "http://10.252.110.242:5000",
-      headers: {"Content-Type": "application/json"},
-    ),
-  );
-
-  final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  late stt.SpeechToText _speech;
+  bool isListening = false;
 
   @override
   void initState() {
     super.initState();
-    _topicController = TextEditingController();
-    _entryController = TextEditingController(text: "How is today?\n\n");
+    _speech = stt.SpeechToText();
   }
 
-  @override
-  void dispose() {
-    _topicController.dispose();
-    _entryController.dispose();
-    super.dispose();
-  }
+  void _listen() async {
+    if (!isListening) {
+      bool available = await _speech.initialize();
 
-  /// 🌸 Custom snackbar (from LoginScreen)
-  void _showCustomSnackBar(
-    BuildContext context,
-    String message, {
-    bool isError = false,
-  }) {
-    final bgColor = isError ? const Color(0xFFE57373) : const Color(0xFFB39DDB);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: bgColor,
-        elevation: 8,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        content: Text(
-          message,
-          style: const TextStyle(color: Colors.white, fontSize: 16),
-        ),
-      ),
-    );
-  }
+      if (available) {
+        setState(() => isListening = true);
 
-  Future<void> _saveEntry() async {
-    if (_entryController.text.trim().isEmpty) {
-      _showCustomSnackBar(
-        context,
-        "✏️ Please write something before saving.",
-        isError: true,
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final user = _auth.currentUser;
-      if (user == null) {
-        log("⚠️ No user logged in");
-        _showCustomSnackBar(context, "⚠️ No user logged in.", isError: true);
-        return;
-      }
-
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('idToken');
-
-      // 🔹 Step 1: Save to Firestore
-      final docRef = await _firestore.collection('journal_entries').add({
-        'uid': user.uid,
-        'entry_text': _entryController.text.trim(),
-        'topic': _topicController.text.trim(),
-        'created_at': widget.selectedDate,
-        'updated_at': DateTime.now(),
-      });
-
-      log("✅ Entry saved to Firestore: ${docRef.id}");
-
-      // 🔹 Step 2: Send to backend for analysis
-      if (token != null) {
-        final response = await _dio.post(
-          "/process_entry",
-          data: {"entry_text": _entryController.text.trim()},
-          options: Options(headers: {"Authorization": "Bearer $token"}),
-        );
-
-        if (response.statusCode == 200) {
-          log("✅ Backend processed successfully: ${response.data}");
-          _showCustomSnackBar(
-            context,
-            "✅ Entry added successfully!",
-            isError: false,
-          );
-          Navigator.pop(context);
-        } else {
-          log("⚠️ Backend failed: ${response.statusCode}");
-          _showCustomSnackBar(
-            context,
-            "⚠️ Failed to process entry (Code: ${response.statusCode})",
-            isError: true,
-          );
-        }
-      } else {
-        log("⚠️ No token found in SharedPreferences");
-        _showCustomSnackBar(
-          context,
-          "⚠️ Unable to find login token. Please re-login.",
-          isError: true,
+        _speech.listen(
+          onResult: (result) {
+            setState(() {
+              contentController.text = result.recognizedWords;
+            });
+          },
         );
       }
-    } catch (e) {
-      log("❌ Error saving entry: $e");
-      _showCustomSnackBar(
-        context,
-        "❌ Something went wrong. Try again.",
-        isError: true,
-      );
-    } finally {
-      setState(() => _isLoading = false);
+    } else {
+      setState(() => isListening = false);
+      _speech.stop();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    String formattedDate = DateFormat.yMMMd().format(widget.selectedDate);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFBCAAA4),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Transform.rotate(
-                      angle: -0.05,
-                      child: _diaryPage(const Color(0xFFD7CCC8)),
-                    ),
-                    Transform.rotate(
-                      angle: 0.03,
-                      child: _diaryPage(const Color(0xFFEDE7F6)),
-                    ),
-                    _mainDiaryPage(formattedDate),
-                  ],
-                ),
-              ),
-            ),
+      backgroundColor: const Color.fromARGB(255, 213, 220, 246),
 
-            // ---------- Buttons ----------
-            Padding(
-              padding: const EdgeInsets.only(bottom: 30),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _roundedButton(
-                    label: "Cancel",
-                    color: const Color(0xFFD7CCC8),
-                    textColor: Colors.brown.shade700,
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  const SizedBox(width: 30),
-                  _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : _roundedButton(
-                        label: "Save",
-                        color: const Color(0xFFF8F3FF),
-                        textColor: Colors.brown.shade700,
-                        onTap: _saveEntry,
-                      ),
-                ],
-              ),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
             ),
-          ],
+            child: Icon(Icons.arrow_back, color: primaryColor),
+          ),
         ),
-      ),
-    );
-  }
-
-  Widget _roundedButton({
-    required String label,
-    required Color color,
-    required Color textColor,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 110,
-        height: 45,
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(color: Colors.brown.shade700, width: 1.5),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.brown.withOpacity(0.2),
-              blurRadius: 5,
-              offset: const Offset(2, 3),
-            ),
-          ],
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 15,
+        centerTitle: true,
+        title: const Text(
+          "New Entry",
+          style: TextStyle(
+            fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: textColor,
+            color: Colors.black,
           ),
         ),
       ),
-    );
-  }
 
-  Widget _diaryPage(Color color) {
-    return Container(
-      height: 500,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.brown.withOpacity(0.3),
-            blurRadius: 10,
-            offset: const Offset(5, 5),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _mainDiaryPage(String formattedDate) {
-    return Container(
-      height: 500,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8F3FF),
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.brown.withOpacity(0.4),
-            blurRadius: 15,
-            offset: const Offset(5, 8),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          Row(
-            children: [
-              const Icon(Icons.lightbulb_outline, color: Colors.black54),
-              const SizedBox(width: 10),
-              Expanded(
-                child: TextField(
-                  controller: _topicController,
-                  decoration: InputDecoration(
-                    hintText: "Enter the topic",
-                    hintStyle: GoogleFonts.poppins(color: Colors.black54),
-                    border: InputBorder.none,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Container(
+                  margin: const EdgeInsets.all(3),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(27),
                   ),
-                  style: GoogleFonts.poppins(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 10),
+
+                      // HEADER
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "March 14, 2024",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                          SizedBox(height: 5),
+                          Text(
+                            "Today's Story",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // 🆕 TITLE FIELD
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(
+                            hintText: "Title",
+                            border: InputBorder.none,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      // 📝 TEXT + 🎤 MIC
+                      Container(
+                        height: 180,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Stack(
+                          children: [
+                            TextField(
+                              controller: contentController,
+                              maxLines: null,
+                              decoration: const InputDecoration(
+                                hintText: "What's on your mind?",
+                                border: InputBorder.none,
+                              ),
+                            ),
+
+                            // 🎤 MIC BUTTON
+                            Positioned(
+                              right: 0,
+                              bottom: 0,
+                              child: GestureDetector(
+                                onTap: _listen,
+                                child: CircleAvatar(
+                                  radius: 22,
+                                  backgroundColor:
+                                      isListening
+                                          ? Colors.red
+                                          : Colors.deepPurple,
+                                  child: Icon(
+                                    isListening ? Icons.mic : Icons.mic_none,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      const Row(
+                        children: [
+                          Icon(Icons.flash_on, color: Colors.orange),
+                          SizedBox(width: 8),
+                          Text(
+                            "Need a Spark?",
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 10),
+
+                      _sparkButton("What made you smile today?"),
+                      _sparkButton("One thing you're grateful for..."),
+                      _sparkButton("A lesson you learned lately"),
+                    ],
                   ),
                 ),
               ),
-            ],
-          ),
-          Padding(
-            padding: const EdgeInsets.only(left: 10.0, top: 4),
-            child: Text(
-              formattedDate,
-              style: GoogleFonts.poppins(color: Colors.black54, fontSize: 14),
             ),
           ),
-          const SizedBox(height: 10),
-          Expanded(
-            child: TextField(
-              controller: _entryController,
-              maxLines: null,
-              expands: true,
-              keyboardType: TextInputType.multiline,
-              decoration: const InputDecoration(
-                hintText: "Start writing...",
-                border: InputBorder.none,
-              ),
-              style: GoogleFonts.poppins(fontSize: 16),
+
+          // SAVE SECTION
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      print("Title: ${titleController.text}");
+                      print("Content: ${contentController.text}");
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                    ),
+                    child: const Text(
+                      "Save Entry",
+                      style: TextStyle(fontSize: 16, color: Colors.white),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 10),
+
+                const Text(
+                  "Your mood will be automatically detected when you save 💙",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Colors.grey),
+                ),
+              ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  static Widget _sparkButton(String text) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Center(
+        child: Text(
+          text,
+          style: const TextStyle(
+            color: Colors.orange,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }

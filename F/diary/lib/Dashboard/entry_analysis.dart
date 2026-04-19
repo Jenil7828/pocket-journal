@@ -1,213 +1,307 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'dart:developer';
+import 'dart:math';
 
 class EntryAnalysisPage extends StatefulWidget {
-  final String entryId; // passed from tapped entry
-  const EntryAnalysisPage({super.key, required this.entryId});
+  const EntryAnalysisPage({super.key});
 
   @override
   State<EntryAnalysisPage> createState() => _EntryAnalysisPageState();
 }
 
-class _EntryAnalysisPageState extends State<EntryAnalysisPage> {
-  bool isLoading = true;
-  Map<String, dynamic>? moodData;
-  String? summary;
+class _EntryAnalysisPageState extends State<EntryAnalysisPage>
+    with SingleTickerProviderStateMixin {
+  final Map<String, double> moodData = {
+    "anger": 0.015,
+    "disgust": 0.057,
+    "fear": 0.009,
+    "happy": 0.011,
+    "neutral": 0.396,
+    "sad": 0.321,
+    "surprise": 0.002,
+  };
+
+  late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
-    fetchAnalysisFromFirestore();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    );
+    _controller.forward();
   }
 
-  Future<void> fetchAnalysisFromFirestore() async {
-    try {
-      final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        log("⚠️ No logged-in user found");
-        setState(() => isLoading = false);
-        return;
-      }
+  @override
+  void dispose() {
+    _controller.dispose(); // ✅ IMPORTANT
+    super.dispose();
+  }
 
-      final userId = user.uid;
-      log(
-        "🔹 Fetching Firestore analysis for user: $userId, entry: ${widget.entryId}",
-      );
+  // 🔥 BACK FUNCTION (MAIN FIX)
+  void handleBack() {
+    Navigator.pop(context);
+  }
 
-      // Fetch from top-level collection `entry_analysis`
-      final snapshot =
-          await FirebaseFirestore.instance
-              .collection('entry_analysis')
-              .where('entry_id', isEqualTo: widget.entryId)
-              .get();
+  // 🎭 Emoji
+  String getEmoji(String mood) {
+    switch (mood) {
+      case "happy":
+        return "😊";
+      case "sad":
+        return "😢";
+      case "anger":
+        return "😡";
+      case "fear":
+        return "😨";
+      case "surprise":
+        return "😲";
+      case "disgust":
+        return "🤢";
+      default:
+        return "😐";
+    }
+  }
 
-      if (snapshot.docs.isNotEmpty) {
-        final doc = snapshot.docs.first;
-        final data = doc.data();
+  // 🎨 Color
+  Color getMoodColor(String mood) {
+    switch (mood) {
+      case "happy":
+        return Colors.green;
+      case "sad":
+        return Colors.blue;
+      case "anger":
+        return Colors.red;
+      case "fear":
+        return Colors.purple;
+      case "surprise":
+        return Colors.orange;
+      case "disgust":
+        return Colors.brown;
+      default:
+        return Colors.grey;
+    }
+  }
 
-        setState(() {
-          moodData = data['mood'] ?? {};
-          summary = data['summary'] ?? "No summary available.";
-          isLoading = false;
-        });
-
-        log(
-          "✅ Analysis loaded successfully from Firestore: ${data['entry_id']}",
-        );
-      } else {
-        log("⚠️ No matching entry found for ID: ${widget.entryId}");
-        setState(() => isLoading = false);
-      }
-    } catch (e) {
-      log("❌ Firestore fetch error: $e");
-      setState(() => isLoading = false);
+  // 🏷️ Full Name
+  String getFullMoodName(String mood) {
+    switch (mood) {
+      case "anger":
+        return "Anger";
+      case "disgust":
+        return "Disgust";
+      case "fear":
+        return "Fear";
+      case "happy":
+        return "Happy";
+      case "neutral":
+        return "Neutral";
+      case "sad":
+        return "Sad";
+      case "surprise":
+        return "Surprise";
+      default:
+        return mood;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final Color primaryColor = const Color(0xFF6E6E9E);
+    final highest = moodData.entries.reduce(
+      (a, b) => a.value > b.value ? a : b,
+    );
+
     return Scaffold(
-      backgroundColor: const Color(0xFFFFF8F6),
+      backgroundColor: const Color(0xFFF5F6FA),
+
+      // 🔥 CUSTOM APPBAR WITH BACK BUTTON
       appBar: AppBar(
         backgroundColor: Colors.white,
-        elevation: 1,
-        title: Text(
-          "Mood Analysis",
-          style: GoogleFonts.poppins(
-            color: Colors.black87,
+        elevation: 0,
+        leading: GestureDetector(
+          onTap: () => Navigator.pop(context),
+          child: Container(
+            margin: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.arrow_back, color: primaryColor),
+          ),
+        ),
+        centerTitle: true,
+        title: const Text(
+          "Entry Analysis",
+          style: TextStyle(
+            fontSize: 20,
             fontWeight: FontWeight.w600,
+            color: Colors.black,
           ),
         ),
       ),
-      body:
-          isLoading
-              ? const Center(
-                child: CircularProgressIndicator(color: Colors.pink),
-              )
-              : Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  children: [
-                    if (summary != null)
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.pink[50],
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          "📝 $summary",
-                          style: GoogleFonts.poppins(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 20),
-                    Expanded(
-                      child: GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                              childAspectRatio: 0.9,
-                            ),
-                        itemCount: moodData?.length ?? 0,
-                        itemBuilder: (context, index) {
-                          final moodName = moodData!.keys.elementAt(index);
-                          final moodValue = moodData![moodName];
-                          return MoodCard(
-                            mood: moodName,
-                            accuracy: (moodValue * 100).toStringAsFixed(
-                              1,
-                            ), // percent
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            _card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    "A beautiful morning walk",
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 10),
+                  Divider(),
+                  SizedBox(height: 10),
+                  Text(
+                    "This morning I went for a walk in the park. The fresh air made me feel peaceful...",
+                    style: TextStyle(height: 1.5),
+                  ),
+                ],
               ),
+            ),
+
+            const SizedBox(height: 16),
+
+            _card(
+              color: const Color(0xFFEDEBFF),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Icon(Icons.psychology, color: Colors.deepPurple),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      "This entry shows a positive and reflective mindset. You're appreciating small joys.",
+                      style: TextStyle(height: 1.5),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            _card(
+              child: Row(
+                children: [
+                  Text(
+                    getEmoji(highest.key),
+                    style: const TextStyle(fontSize: 32),
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Top Mood",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                      Text(
+                        getFullMoodName(highest.key),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: getMoodColor(highest.key),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            _card(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    "Mood Analysis",
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+
+                  SizedBox(
+                    height: 220,
+                    child: AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children:
+                              moodData.entries.map((entry) {
+                                final isHighest = entry.key == highest.key;
+                                double animatedValue =
+                                    entry.value * _controller.value;
+
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      "${(entry.value * 100).toStringAsFixed(1)}%",
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight:
+                                            isHighest
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+
+                                    Container(
+                                      height: max(8, animatedValue * 180),
+                                      width: isHighest ? 22 : 16,
+                                      decoration: BoxDecoration(
+                                        color: getMoodColor(entry.key),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 6),
+
+                                    Text(
+                                      getFullMoodName(entry.key),
+                                      style: const TextStyle(fontSize: 10),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
-}
 
-class MoodCard extends StatelessWidget {
-  final String mood;
-  final String accuracy;
-
-  const MoodCard({super.key, required this.mood, required this.accuracy});
-
-  String get imagePath {
-    switch (mood.toLowerCase()) {
-      case 'happy':
-        return 'Assets/home/happy.png';
-      case 'sad':
-        return 'Assets/home/sad.png';
-      case 'angry':
-        return 'Assets/home/angry.png';
-      case 'fear':
-        return 'Assets/home/fear.png';
-      case 'disgust':
-        return 'Assets/home/disgust.png';
-      case 'surprise':
-        return 'Assets/home/shocked.png';
-      default:
-        return 'Assets/home/normal.png';
-    }
-  }
-
-  Color get backgroundColor {
-    switch (mood.toLowerCase()) {
-      case 'happy':
-        return const Color(0xFFFFD6D1);
-      case 'sad':
-        return const Color(0xFFBFD7ED);
-      case 'angry':
-        return const Color(0xFFFFB3B3);
-      case 'fear':
-        return const Color(0xFFFFE4B5);
-      case 'disgust':
-        return const Color(0xFFD1F7C4);
-      case 'surprise':
-        return const Color(0xFFFFE0F0);
-      default:
-        return const Color(0xFFEAEAEA);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _card({required Widget child, Color? color}) {
     return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: backgroundColor,
-        borderRadius: BorderRadius.circular(25),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Expanded(child: Image.asset(imagePath, fit: BoxFit.contain)),
-          const SizedBox(height: 10),
-          Text(
-            mood[0].toUpperCase() + mood.substring(1),
-            style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "$accuracy%",
-            style: GoogleFonts.poppins(fontSize: 14, color: Colors.black54),
+        color: color ?? Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
           ),
         ],
       ),
+      child: child,
     );
   }
 }

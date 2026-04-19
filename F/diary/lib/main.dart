@@ -1,4 +1,7 @@
+import 'package:diary/Dashboard/entry_analysis.dart';
+import 'package:diary/DesignConstraints/navbar.dart';
 import 'package:diary/Login/Splash.dart';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'dart:developer';
@@ -23,7 +26,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: StartScreen(),
+      home: CustomBottomNavBar(),
+      //home: EntryAnalysisPage(),
     );
   }
 }
+
