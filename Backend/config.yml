@@ -144,7 +144,7 @@ ml:
     temperature: 0.7                   # INSIGHTS_TEMPERATURE
     batch_size: 5                      # INSIGHTS_BATCH_SIZE
     max_new_tokens: 4096               # INSIGHTS_MAX_NEW_TOKENS
-    gemini_model_name: "gemini-2.0-flash" # INSIGHTS_GEMINI_MODEL_NAME
+    gemini_model_name: "gemini-2.5-flash" # INSIGHTS_GEMINI_MODEL_NAME
     gemini_max_retries: 2             # INSIGHTS_GEMINI_MAX_RETRIES
 
   # Model store — controls where model weights are loaded from
