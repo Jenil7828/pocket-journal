@@ -23,6 +23,17 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True, in
 
     if not enable_llm or not enable_insights:
         return {"insights": [], "note": "LLM/insights disabled; enable to generate insights"}, 200
+    
+    # Check user's weekly_insights_enabled setting
+    try:
+        user_doc = db.db.collection("users").document(uid).get()
+        if user_doc.exists:
+            user_data = user_doc.to_dict() or {}
+            settings = user_data.get("settings", {}) or {}
+            if not settings.get("weekly_insights_enabled", True):
+                return {"insights": [], "note": "Weekly insights disabled in user settings"}, 200
+    except Exception as e:
+        logger.debug("Failed to check user settings for insights: %s", str(e))
 
     try:
         from config_loader import get_config
