@@ -1,11 +1,11 @@
 {
   "info": {
-    "_postman_id": "289393c4-44a6-4a88-b239-8e20fc60c29f",
+    "_postman_id": "312960d9-bdea-489a-bddc-a8ff995bbadc",
     "name": "B.E. API Collection",
-    "description": "Complete SoulPause (Pocket Journal) API collection with 61+ endpoints. Includes: Journal CRUD (12), Insights (4), Media recommendations (15), Statistics (4), Streak (1), Interactions (1), User & Account Management (9), Dashboard (3), Jobs (8), Export (2), Authentication (3), System/Health (5). All endpoints are production-ready with timezone-aware datetime handling, optimized Firestore queries, dual-format preference support, and granular notification control.",
+    "description": "Complete SoulPause (Pocket Journal) API collection with 60+ endpoints. Includes: Journal CRUD (12), Insights (4), Media recommendations (15), Statistics (4), Streak (1), Interactions (1), User & Account Management (9), Jobs (8), Export (2), Authentication (3), System/Health (5). All endpoints are production-ready with timezone-aware datetime handling, optimized Firestore queries, dual-format preference support, and granular notification control.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
-    "_collection_link": "https://go.postman.co/collection/49178362-289393c4-44a6-4a88-b239-8e20fc60c29f?source=collection_link"
+    "_collection_link": "https://go.postman.co/collection/49178362-312960d9-bdea-489a-bddc-a8ff995bbadc?source=collection_link"
   },
   "item": [
     {
@@ -498,6 +498,134 @@
       "description": "Journal entry management (12 endpoints)"
     },
     {
+      "name": "🏠 Dashboard",
+      "item": [
+        {
+          "name": "Get Home Dashboard",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_id}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/dashboard?period=30d",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "dashboard"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "30d"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Journey Screen",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_id}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/journey?period=7d",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "journey"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "7d"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Recent Activity Screen",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token_id}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/activity?limit=10",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "activity"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
       "name": "⭐ Streak",
       "item": [
         {
@@ -679,7 +807,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/movies/recommend?limit=30&genre=Science Fiction&sort=rating",
+              "raw": "{{baseURL}}/api/v1/movies/recommend?limit=30&sort=rating",
               "host": [
                 "{{baseURL}}"
               ],
@@ -696,7 +824,8 @@
                 },
                 {
                   "key": "genre",
-                  "value": "Science Fiction"
+                  "value": "Science Fiction",
+                  "disabled": true
                 },
                 {
                   "key": "sort",
@@ -1028,7 +1157,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/podcasts/search?query=technology&limit=20",
+              "raw": "{{baseURL}}/api/v1/podcasts/search?query=Raj Shamani&limit=20",
               "host": [
                 "{{baseURL}}"
               ],
@@ -1041,7 +1170,7 @@
               "query": [
                 {
                   "key": "query",
-                  "value": "technology"
+                  "value": "Raj Shamani"
                 },
                 {
                   "key": "limit",
@@ -1100,7 +1229,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"media_type\": \"movies\",\n  \"item_id\": \"19625\",\n  \"signal\": \"click\",\n  \"context\": \"search\"\n}"
+              "raw": "{\n  \"media_type\": \"songs\",\n  \"item_id\": \"464gxyow4GJ7Wuz3cHrdBB\",\n  \"signal\": \"click\",\n  \"context\": \"search\"\n}"
             },
             "url": {
               "raw": "{{baseURL}}/api/v1/media/interaction",
@@ -1120,276 +1249,276 @@
       ],
       "description": "Track user media interactions"
     },
-     {
-       "name": "👤 User & Account",
-       "item": [
-         {
-           "name": "Get Complete Profile",
-           "request": {
-             "method": "GET",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               }
-             ],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Update Profile (Name/Email)",
-           "request": {
-             "method": "PUT",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "application/json"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\"\n}"
-             },
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/profile",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "profile"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Get Preferences",
-           "request": {
-             "method": "GET",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               }
-             ],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/preferences",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "preferences"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Update Preferences (New Format)",
-           "request": {
-             "method": "PUT",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "application/json"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"preferred_media_types\": [\"movies\", \"music\", \"books\"],\n  \"genres\": {\n    \"movies\": [\"Drama\", \"Thriller\"],\n    \"music\": [\"Jazz\", \"Blues\"],\n    \"books\": [\"Fiction\", \"Mystery\"],\n    \"podcasts\": []\n  },\n  \"filters\": {\n    \"languages\": [\"english\", \"spanish\"],\n    \"content_intensity\": \"moderate\"\n  }\n}"
-             },
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/preferences",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "preferences"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Update Preferences (Legacy Format)",
-           "request": {
-             "method": "PUT",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "application/json"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"music\": [\"Jazz\", \"Blues\"],\n  \"movies\": [\"Drama\", \"Thriller\"],\n  \"books\": [\"Fiction\"],\n  \"languages\": [\"english\"]\n}"
-             },
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/preferences",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "preferences"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Get Settings",
-           "request": {
-             "method": "GET",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               }
-             ],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/settings",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "settings"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Update Settings",
-           "request": {
-             "method": "PUT",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "application/json"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"mood_tracking_enabled\": true,\n  \"weekly_insights_enabled\": true\n}"
-             },
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/settings",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "settings"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Get Notifications",
-           "request": {
-             "method": "GET",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               }
-             ],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/notifications",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "notifications"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "Update Notifications",
-           "request": {
-             "method": "PUT",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               },
-               {
-                 "key": "Content-Type",
-                 "value": "application/json"
-               }
-             ],
-             "body": {
-               "mode": "raw",
-               "raw": "{\n  \"email_notifications\": true,\n  \"push_notifications\": true,\n  \"daily_reminder\": true,\n  \"reminder_time\": \"09:00\",\n  \"weekly_insights\": true,\n  \"media_recommendations\": true\n}"
-             },
-             "url": {
-               "raw": "{{baseURL}}/api/v1/me/notifications",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "me",
-                 "notifications"
-               ]
-             }
-           },
-           "response": []
-         }
-       ],
-       "description": "User profile, preferences, settings, and notifications (9 endpoints)"
-     },
+    {
+      "name": "👤 User & Account",
+      "item": [
+        {
+          "name": "Get Complete Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Profile (Name/Email)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jenil Rathod\",\n  \"email\": \"jenilrathod114@gmail.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/profile",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Preferences",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/preferences",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "preferences"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Preferences (New Format)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"preferred_media_types\": [\"movies\", \"music\", \"books\"],\n  \"genres\": {\n    \"movies\": [\"Drama\", \"Thriller\"],\n    \"music\": [\"Jazz\", \"Blues\"],\n    \"books\": [\"Fiction\", \"Mystery\"],\n    \"podcasts\": []\n  },\n  \"filters\": {\n    \"languages\": [\"english\", \"spanish\"],\n    \"content_intensity\": \"moderate\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/preferences",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "preferences"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Preferences (Legacy Format)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"music\": [\"Jazz\", \"Blues\"],\n  \"movies\": [\"Drama\", \"Thriller\"],\n  \"books\": [\"Fiction\"],\n  \"languages\": [\"english\"]\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/preferences",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "preferences"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/settings",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "settings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mood_tracking_enabled\": true,\n  \"weekly_insights_enabled\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/settings",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "settings"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/notifications",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Notifications",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email_notifications\": true,\n  \"push_notifications\": true,\n  \"daily_reminder\": true,\n  \"reminder_time\": \"09:00\",\n  \"weekly_insights\": true,\n  \"media_recommendations\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseURL}}/api/v1/me/notifications",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "me",
+                "notifications"
+              ]
+            }
+          },
+          "response": []
+        }
+      ],
+      "description": "User profile, preferences, settings, and notifications (9 endpoints)"
+    },
     {
       "name": "📊 Statistics",
       "item": [
@@ -1497,41 +1626,11 @@
           },
           "response": []
         }
-       ],
-       "description": "Analytics and statistics (4 endpoints with timezone-aware datetime)"
-     },
-     {
-       "name": "🏠 Dashboard",
-       "item": [
-         {
-           "name": "Get Home Dashboard",
-           "request": {
-             "method": "GET",
-             "header": [
-               {
-                 "key": "Authorization",
-                 "value": "Bearer {{token_id}}"
-               }
-             ],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/dashboard",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "dashboard"
-               ]
-             }
-           },
-           "response": []
-         }
-       ],
-       "description": "Backend-for-Frontend (BFF) home screen aggregation (1 endpoint that fetches stats, streaks, recent entries, mood trends, recommendations, and insights in parallel)"
-     },
-     {
-       "name": "💾 Export",
+      ],
+      "description": "Analytics and statistics (4 endpoints with timezone-aware datetime)"
+    },
+    {
+      "name": "💾 Export",
       "item": [
         {
           "name": "Export Entries",
@@ -1790,6 +1889,38 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Dashboard Cache",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/job/v1/dashboard/cache/generate?limit=100",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "job",
+                "v1",
+                "dashboard",
+                "cache",
+                "generate"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            }
+          },
+          "response": []
         }
       ],
       "description": "Background job management (8+ endpoints including media-specific cache jobs)"
@@ -1836,46 +1967,46 @@
           },
           "response": []
         },
-         {
-           "name": "App Terms",
-           "request": {
-             "method": "GET",
-             "header": [],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/app/terms",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "app",
-                 "terms"
-               ]
-             }
-           },
-           "response": []
-         },
-         {
-           "name": "App Privacy Policy",
-           "request": {
-             "method": "GET",
-             "header": [],
-             "url": {
-               "raw": "{{baseURL}}/api/v1/app/privacy",
-               "host": [
-                 "{{baseURL}}"
-               ],
-               "path": [
-                 "api",
-                 "v1",
-                 "app",
-                 "privacy"
-               ]
-             }
-           },
-           "response": []
-         },
+        {
+          "name": "App Terms",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/app/terms",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "terms"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "App Privacy Policy",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/app/privacy",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "app",
+                "privacy"
+              ]
+            }
+          },
+          "response": []
+        },
         {
           "name": "Home",
           "request": {
@@ -1891,7 +2022,7 @@
           "response": []
         }
       ],
-       "description": "Health checks and system information (5 endpoints)"
+      "description": "Health checks and system information (5 endpoints)"
     }
   ],
   "event": [
