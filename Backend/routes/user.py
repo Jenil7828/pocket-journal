@@ -1,8 +1,13 @@
 # routes/user.py
 from flask import request, jsonify
 import logging
+import time
 from firebase_admin import firestore as fa_firestore
 from utils.logging_utils import log_request, log_response
+from services import user_service
+from services import preferences_service
+from services import settings_service
+from services import notification_service
 
 logger = logging.getLogger()
 
@@ -13,154 +18,295 @@ def register(app, deps: dict):
     Expects deps to contain:
       - get_db: callable returning DBManager
       - login_required: decorator
+      - get_embedding_service: optional embedding service callable
     """
     get_db = deps.get("get_db")
     login_required = deps.get("login_required")
-    # embedding service dependency (optional; embedder will be created lazily in app if available)
     get_embedding_service = deps.get("get_embedding_service")
 
     @app.route("/api/v1/me", methods=["GET"])
     @login_required
     def get_profile():
+        """Get complete user profile with preferences, settings, and stats."""
+        start_time = time.time()
+        log_request()
+        
         user = getattr(request, "user", None) or {}
         uid = user.get("uid")
         if not uid:
+            log_response(401, start_time)
             return jsonify({"error": "invalid_user"}), 401
 
-        dbmgr = get_db() if get_db else None
-        fs = dbmgr.db if dbmgr else fa_firestore.client()
-
+        dbmgr = get_db()
+        
         try:
-            doc = fs.collection("users").document(uid).get()
-            if not doc.exists:
-                return jsonify({"error": "user_not_found"}), 404
-            data = doc.to_dict()
-            return jsonify({
-                "uid": data.get("uid"),
-                "name": data.get("name"),
-                "email": data.get("email"),
-                "createdAt": data.get("createdAt"),
-                "preferences": data.get("preferences"),
-                "settings": data.get("settings"),
-            }), 200
+            # Get user profile with all settings
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(404 if error == "User not found" else 500, start_time)
+                return jsonify({"error": error}), 404 if error == "User not found" else 500
+            
+            # Get user stats
+            stats = user_service.get_user_stats(uid, dbmgr)
+            
+            response = {
+                "uid": uid,
+                "name": user_data.get("name"),
+                "email": user_data.get("email"),
+                "createdAt": user_data.get("createdAt"),
+                "preferences": user_data.get("preferences"),
+                "settings": user_data.get("settings"),
+                "notification_settings": user_data.get("notification_settings"),
+                "stats": stats
+            }
+            
+            log_response(200, start_time)
+            return jsonify(response), 200
         except Exception as e:
             logger.exception("Failed to fetch user profile uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
             return jsonify({"error": "failed_to_fetch_profile", "details": str(e)}), 500
+
+    @app.route("/api/v1/me/profile", methods=["PUT"])
+    @login_required
+    def update_profile():
+        """Update user profile (name, email)."""
+        start_time = time.time()
+        log_request()
+        
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        if not uid:
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_user"}), 401
+
+        data = request.get_json(force=True, silent=True)
+        if data is None or not isinstance(data, dict):
+            log_response(400, start_time)
+            return jsonify({"error": "Request body must be JSON object"}), 400
+
+        dbmgr = get_db()
+        
+        try:
+            success, error = user_service.update_user_profile(uid, dbmgr, data)
+            if not success:
+                log_response(400, start_time)
+                return jsonify({"error": error}), 400
+            
+            # Return updated profile
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(500, start_time)
+                return jsonify({"error": error}), 500
+            
+            log_response(200, start_time)
+            return jsonify({
+                "uid": uid,
+                "name": user_data.get("name"),
+                "email": user_data.get("email")
+            }), 200
+        except Exception as e:
+            logger.exception("Failed to update user profile uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
+            return jsonify({"error": "failed_to_update_profile", "details": str(e)}), 500
+    @app.route("/api/v1/me/preferences", methods=["GET"])
+    @login_required
+    def get_preferences():
+        """Get user preferences."""
+        start_time = time.time()
+        log_request()
+        
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        if not uid:
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_user"}), 401
+
+        dbmgr = get_db()
+        
+        try:
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(404 if error == "User not found" else 500, start_time)
+                return jsonify({"error": error}), 404 if error == "User not found" else 500
+            
+            log_response(200, start_time)
+            return jsonify(user_data.get("preferences", preferences_service.get_default_preferences())), 200
+        except Exception as e:
+            logger.exception("Failed to fetch preferences uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
+            return jsonify({"error": "failed_to_fetch_preferences", "details": str(e)}), 500
 
     @app.route("/api/v1/me/preferences", methods=["PUT"])
     @login_required
     def update_preferences():
+        """Update user preferences (supports legacy and new formats)."""
+        start_time = time.time()
+        log_request()
+        
         user = getattr(request, "user", None) or {}
         uid = user.get("uid")
         if not uid:
+            log_response(401, start_time)
             return jsonify({"error": "invalid_user"}), 401
 
         new_prefs = request.get_json(force=True, silent=True)
         if new_prefs is None or not isinstance(new_prefs, dict):
+            log_response(400, start_time)
             return jsonify({"error": "preferences must be a JSON object"}), 400
 
-        dbmgr = get_db() if get_db else None
-        fs = dbmgr.db if dbmgr else fa_firestore.client()
-
+        dbmgr = get_db()
+        
         try:
-            # Update main user preferences
-            fs.collection("users").document(uid).update({"preferences": new_prefs})
-
-            # Build domain-specific persona texts and store embeddings in user_vectors
-            try:
-                embedder = get_embedding_service() if callable(get_embedding_service) else None
-            except Exception:
-                embedder = None
-
-            # Helper to build persona text from preferences for a domain using the
-            # user's existing preference fields (movies, music, books, podcasts).
-            # Keep backward compatibility with older keys (favorite_*).
-            def build_persona_for_domain(prefs: dict, pref_keys: list) -> str:
-                if not prefs or not isinstance(prefs, dict):
-                    return ""
-                parts = []
-                for k in pref_keys:
-                    v = prefs.get(k)
-                    if not v:
-                        continue
-                    # If value is list, join; otherwise stringify
-                    if isinstance(v, (list, tuple)):
-                        joined = " ".join([str(x) for x in v if x])
-                        if joined:
-                            parts.append(joined)
-                    else:
-                        sv = str(v).strip()
-                        if sv:
-                            parts.append(sv)
-                return " | ".join(parts)
-
-            # Map canonical domain -> list of preference keys to consider (new keys first)
-            domain_map = {
-                # use 'movies' preference if present; fallback to legacy keys
-                "movies": ["movies", "favorite_movie_genres", "favorite_movies", "movie_directors", "movie_actors"],
-                # map songs domain to the 'music' preference field used by the client
-                "songs": ["music", "favorite_music_genres", "favorite_songs", "favorite_artists"],
-                "books": ["books", "favorite_book_genres", "favorite_books", "favorite_authors"],
-                "podcasts": ["podcasts", "favorite_podcast_topics", "favorite_podcasts", "favorite_hosts"],
-            }
-
-            if embedder is not None:
-                # Fetch or create user_vectors doc
-                uv_ref = fs.collection("user_vectors").document(uid)
-                uv_doc = uv_ref.get()
-                existing = uv_doc.to_dict() if uv_doc.exists else {}
-
-                updates = {}
-                for domain, keys in domain_map.items():
-                    persona = build_persona_for_domain(new_prefs, keys)
-                    if not persona:
-                        # skip empty persona (do not overwrite existing domain vector)
-                        continue
-                    try:
-                        vec = embedder.embed_text(persona)
-                        # Ensure we have a numpy vector; store as list of floats
-                        updates[f"{domain}_vector"] = vec.tolist() if getattr(vec, "size", 0) else []
-                        # Log embedding creation concisely
-                        logger.debug(f"[SRV][user] embedded_persona domain={domain} persona_len={len(persona)}")
-                    except Exception as e:
-                        # Log concise warning and keep stacktrace at debug level
-                        logger.warning(f"[SRV][user] embed_persona_failed domain={domain} error={str(e)}")
-                        logger.debug("%s", __import__('traceback').format_exc())
-
-                # Write updates preserving other domains
-                if updates:
-                    updates["updated_at"] = fa_firestore.SERVER_TIMESTAMP
-                    # Use set with merge to overwrite only provided fields
-                    uv_ref.set(updates, merge=True)
-                    # Log an info per domain vector written (exclude updated_at)
-                    written_domains = [k for k in updates.keys() if k.endswith("_vector")]
-                    for d in written_domains:
-                        logger.info(f"[SRV][user] persisted_user_vectors domain={d}")
-
-            return jsonify({"uid": uid, "preferences": new_prefs}), 200
+            success, error = user_service.update_preferences(
+                uid,
+                dbmgr,
+                new_prefs,
+                get_embedding_service
+            )
+            
+            if not success:
+                log_response(400, start_time)
+                return jsonify({"error": error}), 400
+            
+            log_response(200, start_time)
+            return jsonify({"uid": uid, "preferences": preferences_service.normalize_preferences(new_prefs)}), 200
         except Exception as e:
             logger.error(f"[ERR][user] failed_update_preferences error={str(e)}")
+            log_response(500, start_time)
             return jsonify({"error": "failed_to_update_preferences", "details": str(e)}), 500
+
+    @app.route("/api/v1/me/settings", methods=["GET"])
+    @login_required
+    def get_settings():
+        """Get user settings."""
+        start_time = time.time()
+        log_request()
+        
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        if not uid:
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_user"}), 401
+
+        dbmgr = get_db()
+        
+        try:
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(404 if error == "User not found" else 500, start_time)
+                return jsonify({"error": error}), 404 if error == "User not found" else 500
+            
+            log_response(200, start_time)
+            return jsonify(user_data.get("settings", settings_service.get_default_settings())), 200
+        except Exception as e:
+            logger.exception("Failed to fetch settings uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
+            return jsonify({"error": "failed_to_fetch_settings", "details": str(e)}), 500
 
     @app.route("/api/v1/me/settings", methods=["PUT"])
     @login_required
     def update_settings():
+        """Update user settings (mood_tracking_enabled, weekly_insights_enabled)."""
+        start_time = time.time()
+        log_request()
+        
         user = getattr(request, "user", None) or {}
         uid = user.get("uid")
         if not uid:
+            log_response(401, start_time)
             return jsonify({"error": "invalid_user"}), 401
 
         new_settings = request.get_json(force=True, silent=True)
         if new_settings is None or not isinstance(new_settings, dict):
+            log_response(400, start_time)
             return jsonify({"error": "settings must be a JSON object"}), 400
 
-        dbmgr = get_db() if get_db else None
-        fs = dbmgr.db if dbmgr else fa_firestore.client()
-
+        dbmgr = get_db()
+        
         try:
-            fs.collection("users").document(uid).update({"settings": new_settings})
-            return jsonify({"uid": uid, "settings": new_settings}), 200
+            success, error = user_service.update_settings(uid, dbmgr, new_settings)
+            if not success:
+                log_response(400, start_time)
+                return jsonify({"error": error}), 400
+            
+            # Return updated settings
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(500, start_time)
+                return jsonify({"error": error}), 500
+            
+            log_response(200, start_time)
+            return jsonify({"uid": uid, "settings": user_data.get("settings")}), 200
         except Exception as e:
             logger.exception("Failed to update settings for uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
             return jsonify({"error": "failed_to_update_settings", "details": str(e)}), 500
+
+    @app.route("/api/v1/me/notifications", methods=["GET"])
+    @login_required
+    def get_notifications():
+        """Get user notification settings."""
+        start_time = time.time()
+        log_request()
+        
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        if not uid:
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_user"}), 401
+
+        dbmgr = get_db()
+        
+        try:
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(404 if error == "User not found" else 500, start_time)
+                return jsonify({"error": error}), 404 if error == "User not found" else 500
+            
+            log_response(200, start_time)
+            return jsonify(user_data.get("notification_settings", notification_service.get_default_notification_settings())), 200
+        except Exception as e:
+            logger.exception("Failed to fetch notifications uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
+            return jsonify({"error": "failed_to_fetch_notifications", "details": str(e)}), 500
+
+    @app.route("/api/v1/me/notifications", methods=["PUT"])
+    @login_required
+    def update_notifications():
+        """Update user notification settings."""
+        start_time = time.time()
+        log_request()
+        
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        if not uid:
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_user"}), 401
+
+        new_notifications = request.get_json(force=True, silent=True)
+        if new_notifications is None or not isinstance(new_notifications, dict):
+            log_response(400, start_time)
+            return jsonify({"error": "notification settings must be a JSON object"}), 400
+
+        dbmgr = get_db()
+        
+        try:
+            success, error = user_service.update_notification_settings(uid, dbmgr, new_notifications)
+            if not success:
+                log_response(400, start_time)
+                return jsonify({"error": error}), 400
+            
+            # Return updated notifications
+            user_data, error = user_service.get_user_profile(uid, dbmgr)
+            if error:
+                log_response(500, start_time)
+                return jsonify({"error": error}), 500
+            
+            log_response(200, start_time)
+            return jsonify({"uid": uid, "notification_settings": user_data.get("notification_settings")}), 200
+        except Exception as e:
+            logger.exception("Failed to update notifications for uid=%s: %s", uid, str(e))
+            log_response(500, start_time)
+            return jsonify({"error": "failed_to_update_notifications", "details": str(e)}), 500
 

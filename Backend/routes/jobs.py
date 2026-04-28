@@ -151,3 +151,61 @@ def register(app, deps: dict):
         data = cache_store.get_cache_stats(mt) if cache_store is not None else {}
         return jsonify(data), 200
 
+    @app.route("/job/v1/dashboard/cache/generate", methods=["POST"])
+    def dashboard_cache_generate():
+        """Generate AI cache for all eligible users."""
+        triggered_at = _utc_now_iso()
+        job = "dashboard_cache_generate"
+        start_time = time.time()
+        
+        # Get optional limit from query params
+        limit = 500
+        try:
+            limit_param = request.args.get("limit") or (request.get_json(silent=True) or {}).get("limit")
+            if limit_param:
+                limit = int(limit_param)
+                if limit < 1 or limit > 2000:
+                    limit = 500
+        except (ValueError, TypeError):
+            pass
+        
+        logger.info(f"[REQ][jobs] started job={job} limit={limit} triggered_at={triggered_at}")
+        
+        try:
+            from services.dashboard_cache_job import generate_ai_cache_for_all_users
+            
+            _db = deps.get("get_db")()
+            stats = generate_ai_cache_for_all_users(_db, limit=limit)
+            
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.info(f"[RES][jobs] completed job={job} duration_ms={duration_ms} stats={stats}")
+            
+            return (
+                jsonify(
+                    {
+                        "status": "completed",
+                        "job": "dashboard_cache_generate",
+                        "message": "Dashboard AI cache generated",
+                        "limit": limit,
+                        "processed": stats.get("processed", 0),
+                        "failed": stats.get("failed", 0),
+                        "completed_at": _utc_now_iso(),
+                    }
+                ),
+                200,
+            )
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.error(f"[ERR][jobs] failed job={job} error={str(e)} duration_ms={duration_ms}")
+            
+            return (
+                jsonify(
+                    {
+                        "status": "failed",
+                        "job": "dashboard_cache_generate",
+                        "error": str(e),
+                    }
+                ),
+                500,
+            )
+

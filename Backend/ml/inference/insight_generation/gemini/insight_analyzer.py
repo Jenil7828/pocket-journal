@@ -7,6 +7,8 @@ import os
 import re
 import json
 import logging
+import time
+from datetime import datetime
 from typing import Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -15,6 +17,21 @@ from config_loader import get_config
 from persistence.db_manager import DBManager
 
 logger = logging.getLogger()
+
+
+def fallback_insight(uid, start_date, end_date):
+    return {
+        "insights": [
+            {
+                "insight_id": "fallback",
+                "appreciation": "You're beginning to reflect on your patterns more consistently.",
+                "negative_behaviors": [],
+                "conflicts": [],
+                "goals": [],
+                "created_at": datetime.now().isoformat(),
+            }
+        ]
+    }
 
 
 class InsightsGenerator:
@@ -159,11 +176,33 @@ class InsightsGenerator:
         )
 
         prompt = self.prompt_template.replace("{entries}", all_entries_text)
-        response = self.llm.invoke(prompt)
+        response = None
+        for attempt in range(2):
+            try:
+                response = self.llm.invoke(prompt)
+                break
+            except Exception as e:
+                if attempt == 1:
+                    logger.warning("Gemini failed, fallback used: %s", str(e))
+                    return fallback_insight(uid, start_date, end_date)
+                time.sleep(1)
+
+        if response is None:
+            logger.warning("Gemini failed, fallback used")
+            return fallback_insight(uid, start_date, end_date)
+
         raw_text = response.content if hasattr(response, "content") else str(response)
         logger.info("Gemini response received length=%d", len(raw_text or ""))
 
         insights = self.parse_response(raw_text)
+        if not isinstance(insights, dict):
+            logger.warning("Gemini failed, fallback used")
+            return fallback_insight(uid, start_date, end_date)
+
+        if not any(insights.get(key) for key in ["goals", "progress", "negative_behaviors", "remedies", "appreciation", "conflicts"]):
+            logger.warning("Gemini failed, fallback used")
+            return fallback_insight(uid, start_date, end_date)
+
         if isinstance(insights.get("goals"), list):
             combined["goals"] = insights["goals"][:4]
 

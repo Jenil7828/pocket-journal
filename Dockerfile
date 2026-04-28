@@ -30,10 +30,9 @@ RUN pip install --no-cache-dir \
     safetensors>=0.4.5 \
     huggingface-hub>=0.28.0 \
     protobuf==5.28.3 \
-    optimum[onnxruntime-gpu] \
     google-cloud-storage \
     boto3
-
+#    optimum[onnxruntime-gpu] \
 # Copy lightweight app requirements
 COPY Backend/requirements.txt .
 

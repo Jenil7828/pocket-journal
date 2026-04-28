@@ -106,6 +106,9 @@ class RecommendationPipeline:
             )
             filtered = candidates
         
+        # Step 2.5: Apply user preferences as filters
+        filtered = self._apply_user_preference_filters(uid, filtered, media_type)
+        
         # Step 3: Apply personalized ranking to filtered candidates
         # Pass desired_k (limit + offset) so ranking returns at least as many
         # items as needed for pagination. Previously top_k was capped to the
@@ -387,6 +390,88 @@ class RecommendationPipeline:
             Cleaned items without embeddings or internal scores
         """
         return strip_internal_fields_list(items)
+    
+    def _apply_user_preference_filters(
+        self,
+        uid: str,
+        items: List[Dict[str, Any]],
+        media_type: str
+    ) -> List[Dict[str, Any]]:
+        """
+        Apply user preferences as filters to candidate items.
+        
+        Filters by:
+        - Media type (if user has preferred_media_types set)
+        - Languages (if user has language preferences)
+        - Content intensity (optional)
+        
+        Args:
+            uid: User ID
+            items: Candidate items to filter
+            media_type: Current media type being filtered
+            
+        Returns:
+            Items after applying preference filters
+        """
+        if not items or not uid:
+            return items
+        
+        try:
+            # Fetch user preferences
+            from services import user_service
+            
+            if not self.cache_store or not self.cache_store.firestore_client:
+                return items
+            
+            user_data = self.cache_store.firestore_client.collection("users").document(uid).get()
+            if not user_data.exists:
+                return items
+            
+            user_dict = user_data.to_dict()
+            user_profile, _ = user_service.get_user_profile(uid, self._get_db_manager())
+            if not user_profile:
+                return items
+            
+            prefs = user_profile.get("preferences", {})
+            if not prefs:
+                return items
+            
+            # Filter by language preference if specified
+            preferred_languages = prefs.get("filters", {}).get("languages", [])
+            if preferred_languages and any(l.lower() for l in preferred_languages):
+                before_count = len(items)
+                items = [
+                    item for item in items
+                    if (item.get("language", "english").lower() in [l.lower() for l in preferred_languages])
+                       or (item.get("language") is None)
+                ]
+                if before_count != len(items):
+                    logger.debug(
+                        f"[SRV][pipeline] language_filter_applied uid={uid} media_type={media_type} "
+                        f"before={before_count} after={len(items)}"
+                    )
+            
+            # Note: Genre filtering is already handled by explicit genre parameter
+            # This is just preference-based filtering
+            
+            return items
+            
+        except Exception as e:
+            logger.debug(
+                f"[SRV][pipeline] apply_preference_filters_failed uid={uid} error={str(e)}"
+            )
+            return items
+    
+    def _get_db_manager(self):
+        """Helper to get DBManager instance (cached or new)."""
+        try:
+            if hasattr(self, '_db_manager_cache'):
+                return self._db_manager_cache
+            from persistence.db_manager import DBManager
+            self._db_manager_cache = DBManager(firebase_json_path=None)
+            return self._db_manager_cache
+        except Exception:
+            return None
 
 
 # Singleton instance
@@ -399,6 +484,3 @@ def get_pipeline() -> RecommendationPipeline:
     if _pipeline is None:
         _pipeline = RecommendationPipeline()
     return _pipeline
-
-
-
