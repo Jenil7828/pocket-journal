@@ -4,6 +4,17 @@ import logging
 logger = logging.getLogger()
 
 
+def _fallback_clean_insights() -> dict:
+    return {
+        "goals": [],
+        "progress": "",
+        "negative_behaviors": [],
+        "remedies": [],
+        "appreciation": "You're beginning to reflect on your patterns more consistently.",
+        "conflicts": [],
+    }
+
+
 def _clean_insight_response(data: dict) -> dict:
     """Return only the insight content fields. Internal fields stay in DB but are not sent to client."""
     return {
@@ -41,18 +52,45 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True, in
 
         if use_gemini:
             logger.info("Insights backend: Gemini")
-            from ml.inference.insight_generation.gemini.insight_analyzer import InsightsGenerator
+            from ml.inference.insight_generation.gemini.insight_analyzer import InsightsGenerator, fallback_insight
             generator = InsightsGenerator(db)
         else:
             logger.info("Insights backend: Local model (Qwen2)")
             from ml.inference.insight_generation.qwen2.insight_analyzer import InsightsGenerator
             generator = InsightsGenerator(db, insights_predictor=insights_predictor)
 
-        insights = generator.generate_insights(uid, start_date, end_date)
-        return _clean_insight_response(insights), 200
-    except Exception as e:
-        logger.exception("Failed to generate insights for uid=%s", uid)
-        return {"error": "Failed to generate insights", "details": str(e)}, 500
+        try:
+            insights = generator.generate_insights(uid, start_date, end_date)
+        except Exception:
+            logger.warning("AI failed, fallback used")
+            if use_gemini:
+                fallback_body = fallback_insight(uid, start_date, end_date)
+                insight_item = (fallback_body.get("insights") or [{}])[0] or {}
+                return _clean_insight_response({
+                    "goals": insight_item.get("goals", []),
+                    "progress": "",
+                    "negative_behaviors": insight_item.get("negative_behaviors", []),
+                    "remedies": [],
+                    "appreciation": insight_item.get("appreciation", ""),
+                    "conflicts": insight_item.get("conflicts", []),
+                }), 200
+            insights = _fallback_clean_insights()
+
+        if isinstance(insights, dict) and "insights" in insights:
+            insight_item = (insights.get("insights") or [{}])[0] or {}
+            insights = {
+                "goals": insight_item.get("goals", []),
+                "progress": insight_item.get("progress", ""),
+                "negative_behaviors": insight_item.get("negative_behaviors", []),
+                "remedies": insight_item.get("remedies", []),
+                "appreciation": insight_item.get("appreciation", ""),
+                "conflicts": insight_item.get("conflicts", []),
+            }
+
+        return _clean_insight_response(insights or _fallback_clean_insights()), 200
+    except Exception:
+        logger.warning("AI failed, fallback used")
+        return _clean_insight_response(_fallback_clean_insights()), 200
 
 
 def get_insights(uid, limit, offset, db):
