@@ -4,7 +4,7 @@ venv/
 .venv/
 env/
 .env/
-
+eval_env/
 # --- Python Cache & Compiled Files ---
 # Ignore compiled Python files and cache folders
 __pycache__/
