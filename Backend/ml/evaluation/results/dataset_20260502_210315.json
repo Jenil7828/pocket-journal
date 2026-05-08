@@ -1,0 +1,674 @@
+[
+  {
+    "entry_id": "NTCD0ZatV0BIBSR9feVQ",
+    "title": "Tired of Juile",
+    "entry_text": "Came back from Virar thinking I'll work properly, but to my suprise it the lady that I met living above my mama's house is constantly calling and disturbing me and feels like a headache now i have asked Jinal for help me save from her by finding some solution but no response",
+    "created_at": "2026-04-25T13:21:24.365132+00:00",
+    "ground_truth": {
+      "dominant_emotion": "anger",
+      "emotion_labels": {
+        "anger": 1,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.3,
+        "anger": 0.7,
+        "fear": 0.1,
+        "surprise": 0.6,
+        "disgust": 0.0,
+        "neutral": 0.1
+      },
+      "reference_summary": "The user is being constantly disturbed by a lady they met, which is preventing them from working and causing stress. They sought help from Jinal to resolve the issue but have not yet received a response."
+    }
+  },
+  {
+    "entry_id": "dOcxFglgBJfnrgPmt7SW",
+    "title": "LOR and Project Work",
+    "entry_text": "Today the morning I got a text from my dad's friend about the enquiry that i hads asked him for my Master's in AI in Monash Univeristy which I asked him to do days ago getting excited for it I went to collect the LOR which I had applied for in my college but had to return with disappointment as the letter of recommendation was not ready then i cooked lunch and ordered some ice-cream, chips and soft-drinks and started working on the project while Watching Pokemon",
+    "created_at": "2026-04-27T12:05:37.488534+00:00",
+    "ground_truth": {
+      "dominant_emotion": "sad",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 1,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.6,
+        "sad": 0.8,
+        "anger": 0.3,
+        "fear": 0.0,
+        "surprise": 0.2,
+        "disgust": 0.0,
+        "neutral": 0.5
+      },
+      "reference_summary": "The user received an exciting update regarding their Master's application but then faced disappointment when their letter of recommendation was not ready. They coped by cooking, ordering comfort food, and working on a project while watching Pokemon."
+    }
+  },
+  {
+    "entry_id": "yDgi7DWxgyrmc31rhWV5",
+    "title": "Demise of Sister",
+    "entry_text": "Came back to Plaghar from Virar and spent the daye completing journal and had pav bhaji for dinner and got a call that my has passes away and was not sure what just happened ran to catch a train to virar to see what has happenend.",
+    "created_at": "2026-04-14T11:51:52.148417+00:00",
+    "ground_truth": {
+      "dominant_emotion": "sad",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 1,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.9,
+        "anger": 0.0,
+        "fear": 0.6,
+        "surprise": 0.8,
+        "disgust": 0.0,
+        "neutral": 0.1
+      },
+      "reference_summary": "The user returned home, completed their journal, and had dinner, but their day was abruptly interrupted by a call informing them of someone's passing, leading them to rush back to Virar in shock and distress."
+    }
+  },
+  {
+    "entry_id": "Hwn4v0iTHK1lZKzLOF1K",
+    "title": "Relaxing Day",
+    "entry_text": "Got to know that our Placement Co-ordinator left the college and our placement is now gauranted and after that worked on the project and then went to my shop manage customers and orders and stocking the shop from goddown and got to know I got selected for TCS Digital which offers a 7-7.3 LPA offer after that went for lunch and slept for few hours had dinner and the filled the TCS form and started watching movies along with working with projecct.",
+    "created_at": "2026-04-02T20:50:23.932766+00:00",
+    "ground_truth": {
+      "dominant_emotion": "happy",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 1,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.9,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 0.1,
+        "surprise": 0.4,
+        "disgust": 0.0,
+        "neutral": 0.3
+      },
+      "reference_summary": "The user had a very positive day, learning that their college placement is now guaranteed and receiving a job offer from TCS Digital. They also managed their shop, worked on a project, and completed the TCS application form."
+    }
+  },
+  {
+    "entry_id": "CJejOt9aPl5dwwpbTEZO",
+    "title": "Got to know that our Placement Co-ordinator left the college and our placement is now gauranted and after that worked on the project and then went to my shop manage customers and orders and stocking the shop from goddown and got to know I got selected for TCS Digital which offers a 7-7.3 LPA offer after that went for lunch and slept for few hours had dinner and the filled the TCS form and started watching movies along with working with projecct.",
+    "entry_text": "Relaxing Day",
+    "created_at": "2026-04-02T20:49:43.726796+00:00",
+    "ground_truth": {
+      "dominant_emotion": "happy",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 1,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.9,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 0.0,
+        "surprise": 0.0,
+        "disgust": 0.0,
+        "neutral": 0.1
+      },
+      "reference_summary": "The user describes their day as relaxing."
+    }
+  },
+  {
+    "entry_id": "FAWrnQ4rWRYArHQC2Yc3",
+    "title": "Synthetic Anger 1",
+    "entry_text": "I am absolutely livid right now. I just found out that my group partners for the final AI project haven't even started their modules, and the submission is tomorrow morning! I've been working my tail off for weeks, attending every lab, debugging my code until 3 AM, and they have the nerve to tell me they were 'too busy' with other stuff. This project determines 40% of our grade. I feel like I'm about to explode. I told them exactly what I think of their laziness in the group chat, but they haven't even replied. It's so unfair that my GPA might suffer because of these incompetent slackers. I'm sitting here in the Monash library, hands shaking with rage, trying to finish their parts myself. I hate being in this position. Why do I always end up doing all the work while others just coast along? It's just disrespectful to my time and effort.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "anger",
+      "emotion_labels": {
+        "anger": 1,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.7,
+        "anger": 1.0,
+        "fear": 0.6,
+        "surprise": 0.3,
+        "disgust": 0.4,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user is extremely angry and frustrated because their AI project group partners haven't started their work for a critical submission due tomorrow, despite the user's extensive efforts. Feeling disrespected and worried about their GPA, the user is now scrambling to complete their partners' sections."
+    }
+  },
+  {
+    "entry_id": "PT6EFThofnbcUtEutvBm",
+    "title": "Synthetic Anger 2",
+    "entry_text": "The traffic in Mumbai is getting worse every single day and today was the absolute breaking point. It took me two and a half hours to get from Andheri to Colaba for an important meeting. Some idiot in a rickshaw decided to cut me off without signaling, and then had the audacity to yell at ME when I honked! I was fuming the entire way. By the time I reached the office, I was so angry I could barely speak professionally. Then, to top it all off, the security guard was being difficult about my parking pass which I've had for a year. I'm just sick of people's incompetence and the general chaos of this city sometimes. I just want one day where things work properly and people follow the basic rules of the road. My head is throbbing and I'm just sitting at my desk now, trying to calm down before I start my work.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "anger",
+      "emotion_labels": {
+        "anger": 1,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.2,
+        "anger": 1.0,
+        "fear": 0.0,
+        "surprise": 0.0,
+        "disgust": 0.7,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user experienced an extremely frustrating commute in Mumbai, dealing with severe traffic, a reckless rickshaw driver, and a difficult security guard, which left them fuming and struggling to calm down before starting work."
+    }
+  },
+  {
+    "entry_id": "6BTgYwXzC8U4n0r8LQlI",
+    "title": "Synthetic Anger 3",
+    "entry_text": "I can't believe the audacity of my landlord. He just informed me that he's increasing the rent by 25% starting next month, even though the elevator has been broken for three weeks and there's a persistent leak in the bathroom that he refuses to fix. I've been a perfect tenant, always paying on time, and this is how I'm treated? It's pure greed. I spent an hour on the phone arguing with him, but he just kept giving me these vague excuses about 'market rates.' I'm so frustrated I could scream. It's not just about the money; it's the principle of it. He's taking advantage of the housing shortage in Pune, and it makes me sick. I'm already looking for new places, but the whole situation has just ruined my mood. I feel like I'm being backed into a corner and I hate that feeling of being powerless against someone else's unfair decisions.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "anger",
+      "emotion_labels": {
+        "anger": 1,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.7,
+        "anger": 1.0,
+        "fear": 0.6,
+        "surprise": 0.4,
+        "disgust": 0.8,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user is extremely frustrated and angry about their landlord's 25% rent increase, especially given ongoing maintenance issues and the landlord's refusal to fix them. They feel taken advantage of, powerless, and are actively looking for new housing."
+    }
+  },
+  {
+    "entry_id": "RoDJBpyaM5z5CzuyQ8rw",
+    "title": "Synthetic Anger 4",
+    "entry_text": "My manager took credit for my entire backend optimization strategy during the board meeting today. I was sitting right there, and he presented my slides as if he had stayed up all weekend writing them. I am beyond words. I put in so much effort to reduce the latency by 40%, and he just stole the spotlight without even mentioning my name once. I wanted to stand up and call him out right then and there, but I knew it would look unprofessional. Now I'm just sitting at my desk, staring at my computer, and I can't focus on anything because I'm so angry. This isn't the first time he's done something like this, but it's definitely the biggest. I feel completely betrayed and undervalued. What's the point of working so hard if someone else is going to reap the rewards? I'm honestly thinking about updating my resume tonight and looking for a team that actually respects its developers.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "anger",
+      "emotion_labels": {
+        "anger": 1,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.6,
+        "anger": 1.0,
+        "fear": 0.0,
+        "surprise": 0.2,
+        "disgust": 0.4,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user's manager took full credit for their backend optimization strategy during a board meeting, causing the user to feel intensely angry, betrayed, and undervalued. This is a recurring issue, and the user is now considering updating their resume and looking for a new job."
+    }
+  },
+  {
+    "entry_id": "wZ3YFdPw2QE80eF0SQfp",
+    "title": "Synthetic Anger 5",
+    "entry_text": "I've been waiting for my food delivery for over two hours now. The app says the driver is 'nearby' but he's been in the same spot on the map for forty-five minutes. When I finally reached the restaurant, they told me they gave the order to the wrong person! How does that even happen? I'm starving, I've had a long day, and now I have to wait another hour for a refund or a re-order. The customer support agent was useless, just giving me automated scripts instead of actually solving the problem. I'm so annoyed with the lack of accountability in these services. Everything is supposed to be 'convenient' but it ends up being more stressful than just cooking myself. I ended up canceling everything and I'm just eating cold leftovers now, still fuming about the waste of time and money. Some days it feels like everything is working against you.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "anger",
+      "emotion_labels": {
+        "anger": 1,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.3,
+        "anger": 0.9,
+        "fear": 0.0,
+        "surprise": 0.5,
+        "disgust": 0.2,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user experienced a highly frustrating food delivery ordeal where their order was delayed for over two hours, given to the wrong person by the restaurant, and customer support was unhelpful. They ultimately canceled the order, ate leftovers, and are left feeling annoyed and fuming about the wasted time and money."
+    }
+  },
+  {
+    "entry_id": "x5NtyA7ojIgOUZRppW6i",
+    "title": "Synthetic Disgust 1",
+    "entry_text": "I had to take the local train during peak hours today and it was a genuinely revolting experience. The compartment was so packed that I was literally pressed against three other people, all of whom were drenched in sweat. The smell was overpowering\u2014a mix of stale perspiration, damp clothes from the rain, and someone's very strong, cheap cologne. I felt like I couldn't breathe. Then, someone behind me started coughing without covering their mouth, and I could actually feel the droplets on the back of my neck. It was absolutely disgusting. I felt so contaminated. As soon as I got home, I threw all my clothes into the washing machine and took a long, hot shower, scrubbing my skin until it was red. I still feel like I can smell that train carriage. I really need to find a way to avoid the local during these hours; it's just not worth the mental toll of feeling that dirty.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "disgust",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 1,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.3,
+        "anger": 0.5,
+        "fear": 0.6,
+        "surprise": 0.0,
+        "disgust": 1.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user describes a highly unpleasant peak-hour train journey, characterized by extreme crowding, overpowering smells, and unhygienic behavior, which left them feeling deeply contaminated. They immediately engaged in extensive cleaning rituals and expressed a strong desire to avoid similar experiences due to the significant mental toll."
+    }
+  },
+  {
+    "entry_id": "DdfVwbz83JV8rWjkJjSm",
+    "title": "Synthetic Disgust 2",
+    "entry_text": "I went to a new cafe in Koregaon Park today because it looked 'aesthetic' on Instagram, but the reality was horrifying. As I was about to take a sip of my coffee, I noticed a small cockroach crawling along the edge of the counter, right near the sugar packets. I looked down at my table and it was covered in a sticky residue that clearly hadn't been wiped in days. The bathroom was even worse\u2014the floor was wet with something I didn't want to identify, and there was no soap or paper towels. It's shocking how a place can charge so much and have such appalling hygiene standards. I left my full coffee on the table and walked out immediately. I still feel a bit nauseous just thinking about it. How do people even work in conditions like that? I'm definitely writing a scathing review on Zomato. No amount of pretty decor can make up for a lack of basic cleanliness. I'm home now, still feeling grossed out.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "disgust",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 1,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.0,
+        "anger": 0.8,
+        "fear": 0.4,
+        "surprise": 0.6,
+        "disgust": 1.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user visited a new cafe that looked aesthetic online but was horrified by its appalling hygiene, including a cockroach and filthy facilities. They left immediately, feeling nauseous, and plan to write a scathing review."
+    }
+  },
+  {
+    "entry_id": "xTUGVDLY9Big3RyWfqGm",
+    "title": "Synthetic Disgust 3",
+    "entry_text": "I saw someone throw a massive bag of trash right into the Mula-Mutha river this morning while I was crossing the bridge. It wasn't even a small piece of litter; it was a full black garbage bag. The river is already so polluted and choked with plastic, and seeing that just made my stomach turn. It's so disappointing to see how little some people care about the environment we all live in. The water looked dark and greasy, with literal layers of scum on the surface, and that extra bag just floated there like a symbol of everything wrong with our civic sense. It's repulsive. I wanted to shout at them, but they just drove away on their bike like it was nothing. I feel a mix of anger and pure revulsion. We're destroying our own city, and some people are doing it with a smile on their faces. I really wish there were stricter penalties for this kind of behavior. It's just sickening.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "disgust",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 1,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.6,
+        "anger": 0.9,
+        "fear": 0.0,
+        "surprise": 0.2,
+        "disgust": 1.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user witnessed someone dumping a large bag of trash into the already heavily polluted Mula-Mutha river, which evoked strong feelings of anger, disappointment, and profound disgust at the lack of environmental care and civic responsibility."
+    }
+  },
+  {
+    "entry_id": "UHlQNVbBn1p2DzYPvpsZ",
+    "title": "Synthetic Disgust 4",
+    "entry_text": "I was at a wedding reception last night and the behavior of some of the guests at the buffet was truly off-putting. People were using their own used spoons to serve themselves from the communal dishes, and I saw one man literally pick up a piece of chicken with his hands, change his mind, and put it back. I was so repulsed that I lost my appetite immediately. I spent the rest of the evening just drinking water and making polite conversation, but inside I was cringing. The whole 'grand' event felt cheapened by such a lack of basic manners and hygiene. It's supposed to be a celebration, but seeing that level of selfishness and sloppiness just made me want to leave. I don't understand how people can be so oblivious to others around them. I'm just staying in tonight and cooking my own dinner where I know exactly who has touched the food. Some social situations are just a test of one's patience and stomach.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "disgust",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 1,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.0,
+        "anger": 0.6,
+        "fear": 0.0,
+        "surprise": 0.2,
+        "disgust": 1.0,
+        "neutral": 0.1
+      },
+      "reference_summary": "The user attended a wedding reception where they were deeply repulsed by the unhygienic behavior of other guests at the buffet, leading them to lose their appetite and feel disgusted by the event. They opted to stay home and cook their own food the following night to avoid similar situations."
+    }
+  },
+  {
+    "entry_id": "3AI7oOHnZ5IXySAj8O4O",
+    "title": "Synthetic Disgust 5",
+    "entry_text": "I opened the fridge in the office breakroom today to put my lunch in, and the smell that hit me was like something had died in there. I looked around and found a Tupperware container in the back that was so covered in green and black mold that it was hard to tell what it used to be. It must have been sitting there for months. I can't believe none of my coworkers thought to clean it out. The thought that my fresh sandwich was sitting inches away from that biohazard for even five minutes made me not want to eat it. It's so inconsiderate to leave rotting food in a shared space. I ended up cleaning the shelf myself because I couldn't stand the sight of it, but the whole process was so gross I had to wear a mask and double up on gloves. I'm just going to start keeping my lunch in an insulated bag at my desk from now on. People are genuinely messy and it's exhausting.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "disgust",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 1,
+        "fear": 0,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.1,
+        "anger": 0.8,
+        "fear": 0.3,
+        "surprise": 0.5,
+        "disgust": 0.9,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user discovered a severely moldy container in the office fridge, causing intense disgust and anger at their coworkers' inconsideration. They cleaned the biohazard themselves but decided to avoid using the shared fridge in the future due to others' messiness."
+    }
+  },
+  {
+    "entry_id": "gbcAFIsHe4N0qSMRbkAl",
+    "title": "Synthetic Fear 1",
+    "entry_text": "I'm sitting in my room right now and my heart is racing. I just got an email from the university stating that my student visa status is 'under review' due to a clerical error in my documents. If this isn't resolved by next week, I might actually be deported or at least forced to suspend my Master's in AI. I've spent so much money and effort to get here to Monash, and the thought of it all being taken away because of a typo is terrifying. I tried calling the international student office but they're closed for the weekend. I can't stop thinking about the 'what ifs.' What if I have to go back to India with nothing to show for it? What will my parents say? I feel like my whole future is hanging by a thread. Every time my phone pings, I jump, hoping it's an update but also being afraid it's bad news. I tried to do some coding to distract myself, but I can't even focus on a simple loop. I just feel paralyzed by this uncertainty.",
+    "created_at": "2026-05-02T21:03:16.287410",
+    "ground_truth": {
+      "dominant_emotion": "fear",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 1,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.6,
+        "anger": 0.1,
+        "fear": 0.9,
+        "surprise": 0.4,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user's student visa status is under review due to a clerical error, threatening their Master's program and potential deportation. They are experiencing intense fear, anxiety, and paralysis due to the uncertainty, especially as they cannot contact the international student office until next week."
+    }
+  },
+  {
+    "entry_id": "pLM7ZzIn3IRCWv7oyqKM",
+    "title": "Synthetic Fear 2",
+    "entry_text": "The storm outside tonight is absolutely terrifying. The wind is howling so loudly it sounds like a literal monster, and the old trees near my balcony are swaying so much I'm afraid one might crash through the glass. We've already had two power cuts, and sitting here in the pitch black makes every noise sound ten times louder. I heard a loud thud on the roof a few minutes ago and I'm too scared to go out and check what it was. I'm worried about the flooding too; I live on the ground floor and I can see the water level rising in the street. I've moved my laptop and some important documents to the top shelf just in case, but I'm honestly shaking. I'm all alone in the apartment because my roommate is stuck at work due to the rain. I just want the morning to come so I can see the damage and know I'm safe. Every lightning strike makes me flinch. I've never felt this vulnerable in my own home before.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "fear",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 1,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 1.0,
+        "surprise": 0.2,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user is experiencing intense fear and vulnerability due to a severe storm, with howling winds, swaying trees, power cuts, and loud noises. They are worried about flooding in their ground-floor apartment and feel isolated, wishing for the morning to arrive."
+    }
+  },
+  {
+    "entry_id": "3cAZ6M3JoOrXuwQZQITU",
+    "title": "Synthetic Fear 3",
+    "entry_text": "I'm really worried about my health lately. I've been having these weird chest pains for the last few days, and of course, I made the mistake of Googling the symptoms. Now I'm convinced I have some serious heart condition even though I'm only 24. I have an appointment with the doctor tomorrow morning, but I'm absolutely dreading it. I'm scared of what he might find. What if it's something I can't fix? I keep checking my pulse every five minutes and my anxiety is just making the physical sensations worse. I haven't told my family yet because I don't want to panic them, but keeping it to myself is making it feel even more real. I'm trying to tell myself it's just stress from my job, but the fear is always there in the back of my mind, cold and heavy. I just want to feel normal again. Tonight is going to be a very long and sleepless night. I keep thinking about all the things I still want to do with my life.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "fear",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 1,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.6,
+        "anger": 0.0,
+        "fear": 1.0,
+        "surprise": 0.0,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user is experiencing intense health anxiety due to unexplained chest pains, which has been exacerbated by self-diagnosing a serious heart condition after Googling symptoms. They are dreading an upcoming doctor's appointment, fearing a severe diagnosis, and are struggling with constant worry and sleeplessness while keeping their fears from family."
+    }
+  },
+  {
+    "entry_id": "wIiE4QSkl8bPrQo6SmZE",
+    "title": "Synthetic Fear 4",
+    "entry_text": "I had to walk home alone from the library tonight because the last bus was canceled, and it was the most frightening twenty minutes of my life. The streetlights in my neighborhood were mostly out, and it was so dark I could barely see the sidewalk. I felt like someone was following me the entire time. I heard footsteps behind me twice, and when I turned around, I couldn't see anyone. I started walking faster, almost running, with my keys clutched in my hand like a weapon. Every shadow looked like a person waiting to jump out. When I finally reached my building, I was so out of breath I could barely unlock the main door. I'm inside now, with all the doors locked and the lights on, but I'm still trembling. Mumbai is supposed to be safe, but at 2 AM in a dark alley, it feels very different. I'm never staying at the library that late again without a guaranteed ride home. The fear was so physical, like a knot in my stomach that won't go away.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "fear",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 1,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 1.0,
+        "surprise": 0.1,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user experienced an intensely frightening walk home alone late at night after their bus was canceled, feeling followed in the dark and now remains shaken and trembling from the physical effects of fear."
+    }
+  },
+  {
+    "entry_id": "k5sxgitKHBMNlavVqVv9",
+    "title": "Synthetic Fear 5",
+    "entry_text": "I have my final technical interview with TCS Digital tomorrow, and I'm absolutely terrified of failing. This job means everything to me\u2014it's my chance at financial independence and a real career in AI. I've been preparing for months, but suddenly I feel like I've forgotten everything I ever knew about data structures and algorithms. My mind keeps going blank every time I try to solve a practice problem. I'm scared I'll freeze up during the live coding session and look like a total fraud. The pressure is immense because my parents are expecting so much from me. I can't sleep, I can't eat, and I keep imagining the interviewer's disappointed face when I can't answer a simple question. It feels like my entire identity is tied to this one hour-long call. I just want it to be over, but I'm also terrified of the result. What if I'm just not good enough? The imposter syndrome is hitting me harder than ever before. I'm just a mess of nerves and doubt right now.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "fear",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 1,
+        "happy": 0,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 0.0,
+        "sad": 0.7,
+        "anger": 0.0,
+        "fear": 1.0,
+        "surprise": 0.0,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user is experiencing extreme anxiety and imposter syndrome ahead of a crucial final technical interview for an AI role, fearing failure and the disappointment of their parents, which is impacting their sleep, appetite, and mental clarity."
+    }
+  },
+  {
+    "entry_id": "M4IVSAFqd6Wi212fzB8u",
+    "title": "Synthetic Happy 1",
+    "entry_text": "I am over the moon right now! I just got the official offer letter from TCS Digital for the AI Developer role, and the salary is even higher than I expected\u20147.5 LPA! All those months of late-night coding, the endless technical rounds, and the anxiety were totally worth it. I immediately called my parents and my mom was actually crying with joy. It's the best feeling in the world to know that I've made them proud and that my career is finally taking off. We're going out for a grand dinner at a fancy place tonight to celebrate. I feel so light and energetic, like I could run a marathon. Even the Mumbai rain looks beautiful today! I keep re-reading the email just to make sure it's real. This is the start of a whole new chapter for me, and I couldn't be more excited. I'm going to work so hard and prove that they made the right choice. Everything feels possible right now. Today is truly a perfect day.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "happy",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 1,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 1.0,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 0.0,
+        "surprise": 0.7,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user is ecstatic after receiving an official job offer from TCS Digital for an AI Developer role with a higher-than-expected salary. They feel immense pride and joy, celebrating with family, and are highly motivated for this new chapter in their career."
+    }
+  },
+  {
+    "entry_id": "0aKDBbSjARKQRIOADkfh",
+    "title": "Synthetic Happy 2",
+    "entry_text": "Today was such a wonderful day spent with my old school friends. We all met up at our favorite spot near FC Road after almost a year of not seeing each other. We spent hours just talking, laughing about old memories, and catching up on everyone's lives. It's amazing how even though we've all changed so much, the bond we have is still exactly the same. We had the most delicious misal pav and then went for a long walk on the university campus. The weather was perfect\u2014cool and breezy with a hint of sunshine. I feel so refreshed and full of life. It's so important to have people who really know you and support you. I'm sitting at home now, looking at the photos we took, and I can't stop smiling. It was the perfect break from my stressful project work. I feel so grateful for these friendships. Days like this remind me of what's truly important in life. I'm going to sleep with a very happy heart tonight.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "happy",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 1,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 1.0,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 0.0,
+        "surprise": 0.1,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The author had a wonderful day reuniting with old school friends, spending hours talking, laughing, and catching up, which provided a much-needed break from stressful project work. They feel refreshed, grateful, and happy, appreciating the enduring bond and the importance of these friendships."
+    }
+  },
+  {
+    "entry_id": "BYzMT5h79z8hjDVZMk9g",
+    "title": "Synthetic Happy 3",
+    "entry_text": "I finally fixed that massive bug in my recommendation engine that's been bothering me for three weeks! It was a simple logic error in the cosine similarity calculation, and when the results finally started making sense, I literally jumped for joy in my room. It feels like such a huge weight has been lifted off my shoulders. I've been working on this project for a year, and this was the last major hurdle before I could say it's 'complete.' I feel so proud of myself for not giving up even when it was frustrating. I celebrated by making myself a really nice cup of coffee and watching an episode of Pokemon without feeling guilty. It's the little victories that make the long hours worth it. I'm so excited to finally demo this to my mentor. I feel so much more confident in my skills as a developer now. Hard work really does pay off! I'm definitely going to have a relaxing evening now and maybe even start planning my next big project. Life is good.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "happy",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 1,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 1.0,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 0.0,
+        "surprise": 0.4,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The user successfully fixed a major bug in their recommendation engine after three weeks of effort, feeling immense relief, pride, and excitement. They celebrated their achievement and are now looking forward to demonstrating their completed project."
+    }
+  },
+  {
+    "entry_id": "zTinZ0bPUGDxdXQ4dCrS",
+    "title": "Synthetic Happy 4",
+    "entry_text": "The surprise party we planned for my sister's birthday was a huge success! She had absolutely no idea. When she walked into the room and everyone shouted 'Surprise!', the look of pure shock and then delight on her face was priceless. We spent the whole evening eating cake, dancing to her favorite songs, and just enjoying each other's company. My whole family was there, and seeing everyone so happy and relaxed together was the best part. I put a lot of effort into the decorations and the playlist, and seeing it all come together so perfectly made me feel so satisfied. My sister kept saying it was her best birthday ever. I feel so lucky to have such a close-knit and loving family. It's these moments of connection and joy that I'll cherish forever. I'm tired from all the planning, but it's that good kind of tired where you know you've done something meaningful for someone you love. My heart is very full tonight.",
+    "created_at": "2026-05-02T21:03:16.287968",
+    "ground_truth": {
+      "dominant_emotion": "happy",
+      "emotion_labels": {
+        "anger": 0,
+        "disgust": 0,
+        "fear": 0,
+        "happy": 1,
+        "neutral": 0,
+        "sad": 0,
+        "surprise": 0
+      },
+      "mood": {
+        "happy": 1.0,
+        "sad": 0.0,
+        "anger": 0.0,
+        "fear": 0.0,
+        "surprise": 0.1,
+        "disgust": 0.0,
+        "neutral": 0.0
+      },
+      "reference_summary": "The author recounts the successful surprise birthday party for their sister, highlighting the joy, connection, and delight experienced by the entire family. They express deep satisfaction and gratitude for creating such a meaningful and cherished memory."
+    }
+  }
+]

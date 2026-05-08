@@ -21,8 +21,21 @@ def process_entry(user, data, db, predictor, summarizer):
     # Insert the entry first (title is optional and backward compatible)
     entry_id = db.insert_entry(uid, text, title=title)
 
-    # Summarize (optional)
-    summary = summarizer.summarize(text) if summarizer else text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
+    # Use the new emotional pipeline to produce segment-level analysis and calibrated mood
+    try:
+        from services.journal_entries.emotional_pipeline import process_entry as run_pipeline
+        from services.embeddings import get_embedding_service
+        embedder = get_embedding_service()
+        interpreted, raw_analysis = run_pipeline(user, text, predictor, summarizer, embedder, db=db)
+        # prefer factual_summary as legacy summary field
+        summary = raw_analysis.get("summary") if isinstance(raw_analysis, dict) else ""
+        mood_probs = raw_analysis.get("mood") if isinstance(raw_analysis, dict) else {}
+    except Exception:
+        # Fallback to legacy flow if pipeline fails
+        logger.exception("Emotional pipeline failed; falling back to legacy summarization/prediction")
+        summary = summarizer.summarize(text) if summarizer else text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
+        mood_result = predictor.predict(text) if predictor else {}
+        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
 
     # Determine whether mood detection is enabled for the user (default from config)
     mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
@@ -39,17 +52,13 @@ def process_entry(user, data, db, predictor, summarizer):
         # If anything goes wrong while reading settings, default to config value
         mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
-    # Use original entry text for mood detection per design
-    if mood_enabled:
-        mood_result = predictor.predict(text, threshold=0.25) if predictor else {}
-        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
-    else:
-        # Mood tracking disabled: do not call predictor; keep mood empty
+    # If mood tracking is disabled for the user, clear mood_probs before persisting
+    if not mood_enabled:
         mood_probs = {}
 
     logger.debug("process_entry: entry_id=%s, analyzed_text_preview=%s", entry_id, (text or "")[:200])
 
-    # Build flat analysis (legacy shape)
+    # Build flat analysis (legacy shape) from pipeline outputs
     flat_analysis = {
         "entry_id": entry_id,
         "mood": mood_probs,
@@ -68,7 +77,12 @@ def process_entry(user, data, db, predictor, summarizer):
 
     # Persist the flat analysis using legacy DB signature
     try:
-        analysis_doc_id = db.insert_analysis(entry_id, summary, mood=mood_probs)
+        # Prefer new interpreted-response style when available
+        if 'interpreted' in locals() and isinstance(interpreted, dict):
+            db.insert_analysis(entry_id, interpreted, raw_analysis=raw_analysis)
+            analysis_doc_id = None
+        else:
+            analysis_doc_id = db.insert_analysis(entry_id, summary, mood=mood_probs)
     except Exception as e:
         logger.exception("Failed to insert analysis for entry_id=%s: %s", entry_id, str(e))
         return {"error": "Failed to persist analysis", "details": str(e)}, 500

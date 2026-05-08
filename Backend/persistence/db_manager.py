@@ -72,33 +72,67 @@ class DBManager:
         """
         now = datetime.now(self.tz)
 
-        # Detect new call style: interpreted_response_or_summary is a dict with emotional_state
-        doc = {"entry_id": entry_id, "created_at": now}
-        if isinstance(interpreted_response_or_summary, dict) and "emotional_state" in interpreted_response_or_summary:
-            interpreted = interpreted_response_or_summary
-            # store top-level interpreted fields
-            for k in ["emotional_state", "semantic_context", "temporal_context", "recommendation_strategy"]:
-                if k in interpreted:
-                    doc[k] = interpreted[k]
-            # also keep entry_id reference and optionally raw_analysis
-            if raw_analysis:
-                doc["raw_analysis"] = raw_analysis
-                # Backcompat: copy common raw fields into top-level keys for older code
-                if isinstance(raw_analysis, dict):
-                    if "mood" in raw_analysis:
-                        doc["mood"] = raw_analysis["mood"]
-                    if "mood_probs" in raw_analysis:
-                        doc["mood"] = raw_analysis["mood_probs"]
-                    if "summary" in raw_analysis:
-                        doc["summary"] = raw_analysis["summary"]
-        else:
-            # backwards compatible: (entry_id, summary, mood)
-            summary = interpreted_response_or_summary if isinstance(interpreted_response_or_summary, str) else ""
-            doc["summary"] = summary
-            if mood is not None:
-                doc["mood"] = mood
+        # Build lightweight entry_analysis doc (fast read path)
+        ea_doc = {"entry_id": entry_id, "created_at": now}
 
-        self.db.collection(_COLS["entry_analysis"]).document().set(doc)
+        # Determine mood and summary robustly from provided args
+        mood_probs = None
+        summary_text = None
+
+        if isinstance(interpreted_response_or_summary, dict):
+            interpreted = interpreted_response_or_summary
+            # try common locations
+            mood_probs = (
+                interpreted.get("emotional_state", {}).get("mood_distribution")
+                or interpreted.get("emotional_state", {}).get("mood")
+                or None
+            )
+            summary_text = (
+                interpreted.get("semantic_context", {}).get("summaries", {}).get("factual_summary")
+                or interpreted.get("semantic_context", {}).get("summary")
+                or None
+            )
+        else:
+            # interpreted_response_or_summary may be a legacy string summary
+            summary_text = interpreted_response_or_summary if isinstance(interpreted_response_or_summary, str) else None
+
+        # raw_analysis overrides where appropriate (but raw_analysis is expected to be lightweight)
+        if isinstance(raw_analysis, dict):
+            # prefer raw_analysis fields if present
+            if "mood" in raw_analysis:
+                mood_probs = raw_analysis.get("mood")
+            if "summary" in raw_analysis:
+                summary_text = raw_analysis.get("summary")
+
+        # fallback to mood parameter
+        if mood_probs is None and mood is not None:
+            mood_probs = mood
+
+        if summary_text:
+            ea_doc["summary"] = summary_text
+        if mood_probs is not None:
+            ea_doc["mood"] = mood_probs
+
+        # Persist lightweight entry_analysis doc
+        self.db.collection(_COLS["entry_analysis"]).document().set(ea_doc)
+
+        # Persist heavy analysis metadata into separate cold-storage collection if raw_analysis or interpreted provided
+        # This is optional and intended for debugging/analytics; do not use this for primary read-path
+        meta = {"entry_id": entry_id, "created_at": now}
+        meta_added = False
+        if isinstance(interpreted_response_or_summary, dict):
+            meta.update(interpreted_response_or_summary)
+            meta_added = True
+        if isinstance(raw_analysis, dict):
+            # keep raw_analysis under metadata but avoid embedding storage here
+            meta["raw_analysis"] = raw_analysis
+            meta_added = True
+        if meta_added:
+            # write to analysis_metadata collection
+            try:
+                self.db.collection(_COLS.get("analysis_metadata", "analysis_metadata")).document().set(meta)
+            except Exception:
+                logger.exception("Failed to persist analysis metadata for entry_id=%s", entry_id)
 
     def insert_insights(
         self,
