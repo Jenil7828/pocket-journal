@@ -18,7 +18,7 @@ Usage:
         --rec_limit 5 \
         --cleanup
 
-    python -m ml.evaluation.ieee_evaluation --dataset ml/evaluation/results/dataset_20260502_210315.json --email jenilrathod114@gmail.com --password BetterPass123! --base-url http://localhost:5000 --output-dir ml/evaluation/results/ieee_figures
+    python -m ml.evaluation.ieee_evaluation --dataset ml/evaluation/results/dataset_20260502_210315.json --email "user@example.com" --password "<password>" --base-url http://localhost:5000 --output-dir ml/evaluation/results/ieee_figures
 """
 import argparse
 import json
