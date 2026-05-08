@@ -78,7 +78,12 @@ class Segmenter:
         except Exception:
             # Fallback: if embedding fails, treat whole text as one segment
             logger.warning("Segmenter: embedding failed, returning single segment")
-            return [{"text": text, "sentences": sentences, "embedding": self.embedder.embed_text(text)}]
+            try:
+                fallback_embedding = self.embedder.embed_text(text)
+            except Exception:
+                logger.warning("Segmenter: fallback embedding failed, returning single segment without embedding")
+                fallback_embedding = None
+            return [{"text": text, "sentences": sentences, "embedding": fallback_embedding}]
 
         segments: List[Dict[str, Any]] = []
         cur_sentences = [sentences[0]]
