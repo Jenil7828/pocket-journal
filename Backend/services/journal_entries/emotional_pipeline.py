@@ -676,15 +676,16 @@ def process_entry(user: dict | None, text: str, predictor, summarizer, embedder,
             selected.add(i)
 
     # 5. Selective summarization (parallel)
-    with ThreadPoolExecutor(max_workers=min(6, max(1, len(selected)))) as ex:
-        futs = {ex.submit(summarizer.summarize, segments[i]["text"]): i for i in selected}
-        for fut in as_completed(futs):
-            i = futs[fut]
-            try:
-                segments[i]["summary"] = fut.result()
-            except Exception:
-                logger.exception("Failed to summarize segment %s", i)
-                segments[i]["summary"] = segments[i]["text"][:200] + ("..." if len(segments[i]["text"]) > 200 else "")
+    if summarizer is not None and hasattr(summarizer, "summarize"):
+        with ThreadPoolExecutor(max_workers=min(6, max(1, len(selected)))) as ex:
+            futs = {ex.submit(summarizer.summarize, segments[i]["text"]): i for i in selected}
+            for fut in as_completed(futs):
+                i = futs[fut]
+                try:
+                    segments[i]["summary"] = fut.result()
+                except Exception:
+                    logger.exception("Failed to summarize segment %s", i)
+                    segments[i]["summary"] = segments[i]["text"][:200] + ("..." if len(segments[i]["text"]) > 200 else "")
 
     # ensure non-selected have short excerpt only (avoid heavy summaries)
     for i in range(n):
