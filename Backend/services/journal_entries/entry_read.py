@@ -42,24 +42,33 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
         analysis_doc.reference.delete()
         old_analysis_ids.append(analysis_doc.id)
 
-    summary = summarizer.summarize(entry_text) if summarizer else entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
-
-    # Check user's mood tracking setting; default True
-    mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
+    # Run full emotional pipeline (preferred) with graceful fallback
     try:
-        user_doc = db.db.collection(_COLS["users"]).document(uid).get()
-        if user_doc.exists:
-            user_data = user_doc.to_dict() or {}
-            settings = user_data.get("settings", {}) or {}
-            mood_enabled = settings.get("mood_tracking_enabled", True)
+        from services.journal_entries.emotional_pipeline import process_entry as run_pipeline
+        from services.embeddings import get_embedding_service
+        embedder = get_embedding_service()
+        interpreted, raw_analysis = run_pipeline(None, entry_text, predictor, summarizer, embedder, db=db)
+        summary = raw_analysis.get("summary") if isinstance(raw_analysis, dict) else ""
+        mood_probs = raw_analysis.get("mood") if isinstance(raw_analysis, dict) else {}
     except Exception:
+        logger.exception("Emotional pipeline failed during reanalysis; falling back to legacy")
+        summary = summarizer.summarize(entry_text) if summarizer else entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
+        # Check user's mood tracking setting; default True
         mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
+        try:
+            user_doc = db.db.collection(_COLS["users"]).document(uid).get()
+            if user_doc.exists:
+                user_data = user_doc.to_dict() or {}
+                settings = user_data.get("settings", {}) or {}
+                mood_enabled = settings.get("mood_tracking_enabled", True)
+        except Exception:
+            mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
-    if mood_enabled:
-        mood_result = predictor.predict(entry_text) if predictor else {}
-        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
-    else:
-        mood_probs = {}
+        if mood_enabled:
+            mood_result = predictor.predict(entry_text) if predictor else {}
+            mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+        else:
+            mood_probs = {}
 
     logger.debug("reanalyze_entry: entry_id=%s", entry_id)
 
@@ -76,7 +85,12 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
         pass
 
     try:
-        analysis_doc_id = db.insert_analysis(entry_id, summary, mood=mood_probs)
+        # Prefer storing the interpreted response when pipeline succeeded
+        if 'interpreted' in locals() and isinstance(interpreted, dict):
+            db.insert_analysis(entry_id, interpreted, raw_analysis=raw_analysis)
+            analysis_doc_id = None
+        else:
+            analysis_doc_id = db.insert_analysis(entry_id, summary, mood=mood_probs)
     except Exception as e:
         logger.exception("Failed to insert analysis during reanalyze for entry_id=%s: %s", entry_id, str(e))
         return {"error": "Failed to persist reanalysis", "details": str(e)}, 500

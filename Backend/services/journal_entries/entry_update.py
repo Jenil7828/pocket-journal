@@ -31,9 +31,20 @@ def update_entry(entry_id, uid, data, db, predictor, summarizer):
             return {"error": result.get("error", "Failed to update entry")}, 400
 
         # Perform analysis deterministically on the NEW text
-        summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
-        mood_result = predictor.predict(new_entry_text) if predictor else {}
-        mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+        try:
+            from services.journal_entries.emotional_pipeline import process_entry as run_pipeline
+            from services.embeddings import get_embedding_service
+            embedder = get_embedding_service()
+            interpreted, raw_analysis = run_pipeline(None, new_entry_text, predictor, summarizer, embedder, db=db)
+            summary = raw_analysis.get("summary") if isinstance(raw_analysis, dict) else ""
+            mood_probs = raw_analysis.get("mood") if isinstance(raw_analysis, dict) else {}
+            # attach interpreted response for return
+            interpreted_response = interpreted
+        except Exception:
+            logger.exception("Emotional pipeline failed during update; falling back to legacy summarization/prediction")
+            summary = summarizer.summarize(new_entry_text) if summarizer else new_entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
+            mood_result = predictor.predict(new_entry_text) if predictor else {}
+            mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
 
         logger.debug("update_entry (regenerate): entry_id=%s, analyzed_text_preview=%s", entry_id, new_entry_text[:200])
 
@@ -53,7 +64,11 @@ def update_entry(entry_id, uid, data, db, predictor, summarizer):
             pass
 
         try:
-            analysis_doc_id = db.insert_analysis(entry_id, summary, mood=mood_probs)
+            if 'interpreted_response' in locals() and isinstance(interpreted_response, dict):
+                db.insert_analysis(entry_id, interpreted_response, raw_analysis=raw_analysis)
+                analysis_doc_id = None
+            else:
+                analysis_doc_id = db.insert_analysis(entry_id, summary, mood=mood_probs)
         except Exception as e:
             logger.exception("Failed to insert analysis during update for entry_id=%s: %s", entry_id, str(e))
             return {"error": "Failed to persist updated analysis", "details": str(e)}, 500

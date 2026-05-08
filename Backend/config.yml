@@ -51,6 +51,7 @@ firestore:
     users: "users"
     journal_embeddings: "journal_embeddings"
     user_vectors: "user_vectors"
+    analysis_metadata: "analysis_metadata"
 
 
 # ── API ──────────────────────────────────────────────────────────
@@ -406,37 +407,5 @@ system:
     similarity_precision: "float32"     # Similarity computation precision
     min_similarity_value: -1.0          # Min cosine similarity
     max_similarity_value: 1.0           # Max cosine similarity
-
-
-# ── Firestore Configuration ──────────────────────────────────────
-firestore:
-  # Collection names (already defined)
-  collections:
-    journal_entries: "journal_entries"
-    entry_analysis: "entry_analysis"
-    insights: "insights"
-    insight_entry_mapping: "insight_entry_mapping"
-    users: "users"
-    journal_embeddings: "journal_embeddings"
-    user_vectors: "user_vectors"
-    user_interactions: "user_interactions"
-    media_cache_movies: "media_cache_movies"
-    media_cache_songs: "media_cache_songs"
-    media_cache_books: "media_cache_books"
-    media_cache_podcasts: "media_cache_podcasts"
-  
-  # Query limits
-  query_batch_size: 100                 # Firestore batch query size
-  max_write_batch_size: 500             # Max docs per write batch
-  
-  # Index hints
-  indexes_required:
-    - collection: "user_interactions"
-      fields: ["uid", "media_type", "timestamp"]
-    - collection: "journal_embeddings"
-      fields: ["uid", "created_at"]
-
-
-
 
 

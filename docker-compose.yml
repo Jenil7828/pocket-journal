@@ -36,7 +36,7 @@ services:
       - MODEL_QWEN2_VERSION=v1
     # Mount volumes for models, secrets, and cache
     volumes:
-      - ./Backend:/app:ro
+#      - ./Backend:/app:ro
       - ./Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:ro
       # Mount external models folder into container at /models
       - C:/D_Drive/Pocket Journal/models:/models:ro
