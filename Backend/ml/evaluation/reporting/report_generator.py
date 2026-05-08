@@ -42,17 +42,37 @@ class ReportGenerator:
         logger.info("Saved CSV metrics to %s", path)
         return path
 
+    def _normalize_emotion_results(self, roberta_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate evaluator output into the schema expected by IEEEPlotter."""
+        normalized = dict(roberta_results or {})
+        normalized.setdefault("per_emotion", {})
+        normalized.setdefault("roc_data", {})
+        normalized.setdefault("distribution", normalized.get("class_distribution", {}))
+        normalized.setdefault("confusion_matrix", normalized.get("confusion", []))
+        normalized.setdefault("raw", {})
+        normalized.setdefault("latency_raw", [])
+        return normalized
+
+    def _normalize_summarization_results(self, bart_results: Dict[str, Any]) -> Dict[str, Any]:
+        """Translate summarization output into the schema expected by IEEEPlotter."""
+        normalized = dict(bart_results or {})
+        normalized.setdefault("raw", {})
+        return normalized
+
     def generate_plots(self, roberta_results: Dict[str, Any], bart_results: Dict[str, Any]):
         """Delegates to IEEEPlotter for 300-DPI publication-quality plots."""
         from ml.evaluation.ieee_evaluation import IEEEPlotter
         plotter = IEEEPlotter(self.output_dir, self.timestamp)
-        
+
+        emotion_metrics = self._normalize_emotion_results(roberta_results)
+        summarization_metrics = self._normalize_summarization_results(bart_results)
+
         # Format results to match IEEEPlotter expected schema
         combined_results = {
-            "emotion_metrics": roberta_results,
-            "summarization_metrics": bart_results,
-            "summarization_raw": bart_results.get("raw", {}),
-            "latency_raw": roberta_results.get("latency_raw", []),
+            "emotion_metrics": emotion_metrics,
+            "summarization_metrics": summarization_metrics,
+            "summarization_raw": summarization_metrics["raw"],
+            "latency_raw": emotion_metrics["latency_raw"],
             "run_id": self.timestamp
         }
         return plotter.plot_all(combined_results)
