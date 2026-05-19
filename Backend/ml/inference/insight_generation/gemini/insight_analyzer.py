@@ -7,6 +7,8 @@ import os
 import re
 import json
 import logging
+import time
+from datetime import datetime
 from typing import Dict
 
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -14,7 +16,22 @@ from ml.inference.insight_generation.gemini.guards import setup_gemini_env
 from config_loader import get_config
 from persistence.db_manager import DBManager
 
-logger = logging.getLogger("pocket_journal.insights.gemini")
+logger = logging.getLogger()
+
+
+def fallback_insight(uid, start_date, end_date):
+    return {
+        "insights": [
+            {
+                "insight_id": "fallback",
+                "appreciation": "You're beginning to reflect on your patterns more consistently.",
+                "negative_behaviors": [],
+                "conflicts": [],
+                "goals": [],
+                "created_at": datetime.now().isoformat(),
+            }
+        ]
+    }
 
 
 class InsightsGenerator:
@@ -31,10 +48,7 @@ class InsightsGenerator:
 
         gemini = setup_gemini_env()
         if not gemini["enabled"]:
-            raise RuntimeError(
-                "Gemini is disabled or missing API key. "
-                "Set GEMINI_API_KEY in .env or set insights.use_gemini=false in config.yml to use local model."
-            )
+            raise RuntimeError("Gemini is required. Fallback models are disabled.")
         self.llm = ChatGoogleGenerativeAI(
             model=model_name or cfg["gemini_model_name"],
             temperature=temperature or float(cfg.get("temperature", 0.7)),
@@ -48,26 +62,94 @@ class InsightsGenerator:
         with open(prompt_path, "r", encoding="utf-8") as f:
             self.prompt_template = f.read()
 
-        logger.info("Gemini InsightsGenerator initialized model=%s", model_name or "gemini-2.0-flash")
+        logger.info("Gemini InsightsGenerator initialized model=%s", model_name or "gemini-2.5-flash")
 
     @staticmethod
     def parse_response(raw_text: str) -> Dict:
-        """Defensive JSON extractor. Never raises."""
+        """Extract, clean, and normalize LLM output. Never raises."""
         if not raw_text or not isinstance(raw_text, str):
-            return {}
+            return InsightsGenerator._empty_insights()
+        
+        # Extract JSON
         cleaned = re.sub(r"```(?:json)?", "", raw_text, flags=re.IGNORECASE)
         cleaned = re.sub(r"```", "", cleaned).strip()
         match = re.search(r"\{[\s\S]*\}", cleaned)
         if not match:
-            return {}
+            return InsightsGenerator._empty_insights()
+        
         try:
             parsed = json.loads(match.group(0))
-            return parsed if isinstance(parsed, dict) else {}
+            if not isinstance(parsed, dict):
+                return InsightsGenerator._empty_insights()
         except Exception:
-            return {}
+            return InsightsGenerator._empty_insights()
+        
+        # Normalize stringified JSON fields
+        for field in ["progress", "negative_behaviors", "remedies", "appreciation", "conflicts"]:
+            if field in parsed and isinstance(parsed[field], str):
+                try:
+                    parsed[field] = json.loads(parsed[field])
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        
+        # Normalize language: replace "user"/"the user" with "you"
+        normalize_text = lambda text: re.sub(
+            r"\b(?:the\s+)?user\b", "you", 
+            text if isinstance(text, str) else "", 
+            flags=re.IGNORECASE
+        ) if isinstance(text, str) else text
+        
+        # Apply normalization to string fields
+        parsed["progress"] = normalize_text(parsed.get("progress", ""))
+        parsed["negative_behaviors"] = normalize_text(parsed.get("negative_behaviors", ""))
+        parsed["remedies"] = normalize_text(parsed.get("remedies", ""))
+        parsed["appreciation"] = normalize_text(parsed.get("appreciation", ""))
+        parsed["conflicts"] = normalize_text(parsed.get("conflicts", ""))
+        
+        # Handle goals: ensure list, max 4, fill missing fields
+        goals = parsed.get("goals", [])
+        if not isinstance(goals, list):
+            goals = []
+        goals = goals[:4]
+        for goal in goals:
+            if not isinstance(goal, dict):
+                goal = {}
+            goal.setdefault("title", "")
+            goal.setdefault("description", "")
+            goal.setdefault("status", "")
+            goal.setdefault("evidence", "")
+            goal.setdefault("next_step", "")
+            # Normalize language in goal descriptions
+            goal["description"] = normalize_text(goal.get("description", ""))
+            goal["evidence"] = normalize_text(goal.get("evidence", ""))
+        
+        parsed["goals"] = goals
+        
+        # Ensure all required fields exist
+        return {
+            "goals": parsed.get("goals", []),
+            "progress": parsed.get("progress", ""),
+            "negative_behaviors": parsed.get("negative_behaviors", ""),
+            "remedies": parsed.get("remedies", ""),
+            "appreciation": parsed.get("appreciation", ""),
+            "conflicts": parsed.get("conflicts", ""),
+        }
+    
+    @staticmethod
+    def _empty_insights() -> Dict:
+        """Return empty insights structure."""
+        return {
+            "goals": [],
+            "progress": "",
+            "negative_behaviors": "",
+            "remedies": "",
+            "appreciation": "",
+            "conflicts": "",
+        }
 
     def generate_insights(self, uid: str, start_date: str = None, end_date: str = None) -> Dict:
         entries = self.db.fetch_entries_with_analysis(uid, start_date, end_date)
+        entries = entries[-10:]
 
         combined = {
             "goals": [], "progress": "", "negative_behaviors": "",
@@ -94,16 +176,42 @@ class InsightsGenerator:
         )
 
         prompt = self.prompt_template.replace("{entries}", all_entries_text)
-        response = self.llm.invoke(prompt)
+        response = None
+        for attempt in range(2):
+            try:
+                response = self.llm.invoke(prompt)
+                break
+            except Exception as e:
+                if attempt == 1:
+                    logger.warning("Gemini failed, fallback used: %s", str(e))
+                    return fallback_insight(uid, start_date, end_date)
+                time.sleep(1)
+
+        if response is None:
+            logger.warning("Gemini failed, fallback used")
+            return fallback_insight(uid, start_date, end_date)
+
         raw_text = response.content if hasattr(response, "content") else str(response)
         logger.info("Gemini response received length=%d", len(raw_text or ""))
 
         insights = self.parse_response(raw_text)
+        if not isinstance(insights, dict):
+            logger.warning("Gemini failed, fallback used")
+            return fallback_insight(uid, start_date, end_date)
+
+        if not any(insights.get(key) for key in ["goals", "progress", "negative_behaviors", "remedies", "appreciation", "conflicts"]):
+            logger.warning("Gemini failed, fallback used")
+            return fallback_insight(uid, start_date, end_date)
+
         if isinstance(insights.get("goals"), list):
             combined["goals"] = insights["goals"][:4]
-        for key in ["progress", "negative_behaviors", "remedies", "appreciation", "conflicts"]:
-            if isinstance(insights.get(key), str) and insights[key].strip():
-                combined[key] = insights[key]
+
+        # Convert structured outputs to strings for DB compatibility
+        combined["progress"] = json.dumps(insights.get("progress", ""), ensure_ascii=False)
+        combined["negative_behaviors"] = json.dumps(insights.get("negative_behaviors", ""), ensure_ascii=False)
+        combined["remedies"] = json.dumps(insights.get("remedies", ""), ensure_ascii=False)
+        combined["appreciation"] = json.dumps(insights.get("appreciation", ""), ensure_ascii=False)
+        combined["conflicts"] = json.dumps(insights.get("conflicts", ""), ensure_ascii=False)
 
         self.db.insert_insights(
             uid=uid, start_date=start_date, end_date=end_date,

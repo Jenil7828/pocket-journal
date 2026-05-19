@@ -19,13 +19,16 @@ services:
       MODEL_SOURCE: local
       MODEL_STORE_PATH: /models
       MODEL_CACHE_DIR: /tmp/models
+
     volumes:
       - "S:/College Practicals/models/models:/models"
       - "S:/College Practicals/pocket-journal/Backend/secrets/pocket-journal-be-firebase-adminsdk-fbsvc-b311d88edc.json:/app/secrets/firebase.json:ro"
       - model-cache:/tmp/models
       - gunicorn-tmp:/tmp/gunicorn
+
     tmpfs:
       - /tmp
+
     restart: unless-stopped
 
 volumes:

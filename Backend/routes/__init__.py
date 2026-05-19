@@ -19,6 +19,7 @@ def register_all(app, deps: dict):
     - export_route.py      → /api/v1/export/... (2 endpoints)
     - home.py              → / (1 endpoint)
     - app_meta.py          → /api/v1/app-meta/... (1+ endpoint)
+    - dashboard.py         → /api/v1/dashboard (1 endpoint - BFF)
     - jobs.py              → /job/v1/... (8+ endpoints)
 
     DEPRECATED ENDPOINTS REMOVED: 12 endpoints
@@ -26,7 +27,7 @@ def register_all(app, deps: dict):
     - 1 insights deprecated (generate_insights)
     - 5 media deprecated (media/recommend, movie/recommend, song/recommend, book/recommend, podcast/recommend)
     
-    TOTAL: 11 route modules, 44+ endpoints
+    TOTAL: 12 route modules, 45+ endpoints
     
     deps: dependencies dict with all required services
     """
@@ -45,6 +46,7 @@ def register_all(app, deps: dict):
     from . import export_route as _export_route
     from . import home as _home
     from . import app_meta as _app_meta
+    from . import dashboard as _dashboard
     from . import jobs as _jobs
     
     # ==================== REGISTER ROUTES ====================
@@ -62,4 +64,5 @@ def register_all(app, deps: dict):
     _export_route.register(app, deps)
     _home.register(app, deps)
     _app_meta.register(app, deps)
+    _dashboard.register(app, deps)
     _jobs.register(app, deps)

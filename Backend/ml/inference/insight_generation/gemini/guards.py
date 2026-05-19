@@ -6,7 +6,7 @@ Checks for GEMINI_API_KEY and validates configuration.
 import os
 import logging
 
-logger = logging.getLogger("pocket_journal.insights.gemini.guards")
+logger = logging.getLogger()
 
 
 def setup_gemini_env():

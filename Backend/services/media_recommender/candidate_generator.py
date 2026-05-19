@@ -7,7 +7,7 @@ from config_loader import get_config
 from services.embeddings import get_embedding_service
 from .providers.base_provider import MediaProvider, STANDARD_MEDIA_ITEM
 
-logger = logging.getLogger("pocket_journal.media.candidates")
+logger = logging.getLogger()
 
 _CFG = get_config()
 
@@ -31,7 +31,7 @@ def generate_candidates(
     before_count = len(raw_candidates)
 
     if not raw_candidates:
-        logger.info("pocket_journal.media.filters: candidates before_clean=%d after_clean=0", before_count)
+        logger.info(f"[SRV][candidates] cleaned before={0} after={0}")
         return []
 
     cleaned: List[STANDARD_MEDIA_ITEM] = []
@@ -66,11 +66,7 @@ def generate_candidates(
             continue
 
     after_count = len(cleaned)
-    logger.info(
-        "pocket_journal.media.filters: semantic_query_cleaning before=%d after=%d",
-        before_count,
-        after_count,
-    )
+    logger.info(f"[SRV][candidates] cleaned before={before_count} after={after_count}")
 
     return cleaned
 
@@ -131,16 +127,11 @@ def refine_candidates(
         top_sims.append(sim)
 
     # Log refined stats
-    logger.info(
-        "pocket_journal.media.candidates: refined_pool_size=%d from_raw=%d top_k=%d",
-        len(refined),
-        len(raw_candidates),
-        k,
-    )
+    logger.info(f"[SRV][candidates] refined_pool_size={len(refined)} from_raw={len(raw_candidates)} top_k={k}")
 
     # Log top 3 similarity scores for observability
     top3 = top_sims[:3]
-    logger.info("pocket_journal.media.candidates: top3_similarities=%s", top3)
+    logger.info(f"[SRV][candidates] top3_similarities={top3}")
 
     return refined
 

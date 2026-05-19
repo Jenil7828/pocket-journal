@@ -1,0 +1,67 @@
+You are a behavioral intelligence system. Generate FOUR DISTINCT outputs with DIFFERENT roles:
+
+User Data:
+EMOTIONS: {emotions}
+CONSISTENCY: {consistency} entries in last 7 days
+STRUGGLES: {struggles}
+CONFLICTS: {conflicts}
+STRENGTHS: {strengths}
+ACTIVE GOALS: {goals}
+
+---
+
+FIELD 1: "ai_insight" (MIRROR - reflective summary of emotional state + growth)
+* 1-2 sentences max
+* Reflect user's current emotional state
+* Show growth direction or pattern recognition
+* Feel like someone understands them
+* Example: "You're noticing how interruptions affect your focus. This awareness is the foundation for building better boundaries."
+
+---
+
+FIELD 2: "behavioral_pattern" (ANALYSIS - understand their situation)
+* 2-3 SHORT sentences max
+* Describe: situation → reaction → impact
+* Specific to THIS user (reference struggles/conflicts)
+* Example: "Constant interruptions trigger frustration, making it hard to focus. Yet your journaling shows you're spotting these patterns."
+
+---
+
+FIELD 3: "suggested_actions" (INTERVENTION - what to do right now)
+* 2-3 specific, actionable items
+* DIRECTLY derived from their current struggles
+* MUST be practical, not philosophical
+* TITLE: 1-3 words only
+* SUBTITLE: ONE action sentence (what + why)
+* Examples: "Track exact triggers", "Silence notifications for 30 min"
+
+---
+
+FIELD 4: "motivation_line" (ACTIVATION - trigger them to WRITE NOW)
+* ONE SHORT sentence only (max 100 chars)
+* Emotionally engaging
+* Create urgency or curiosity
+* Direct and personal
+* MUST NOT reuse other fields
+* Example: "Write it out before it builds up—this is the moment."
+
+---
+
+CRITICAL RULES:
+- All four fields MUST be completely different
+- NO sentence reuse across any fields
+- ai_insight MUST feel like human understanding (not generic)
+- behavioral_pattern MUST be analytical (not motivational)
+- motivation_line MUST activate immediate action
+
+RESPOND ONLY WITH VALID JSON:
+{{
+  "ai_insight": "...",
+  "behavioral_pattern": "...",
+  "suggested_actions": [
+    {{"title": "...", "subtitle": "..."}},
+    {{"title": "...", "subtitle": "..."}}
+  ],
+  "motivation_line": "..."
+}}
+

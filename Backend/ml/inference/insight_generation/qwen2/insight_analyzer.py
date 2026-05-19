@@ -15,7 +15,7 @@ from services.utils.suppression import suppress_hf
 
 from persistence.db_manager import DBManager
 
-logger = logging.getLogger("pocket_journal.insights.qwen2")
+logger = logging.getLogger()
 
 
 class LocalLLM:
@@ -26,7 +26,7 @@ class LocalLLM:
     """
 
     def __init__(self, predictor=None, ollama_model=None, ollama_base_url=None):
-        self.logger = logging.getLogger("pocket_journal.insights.local_llm")
+        self.logger = logging.getLogger()
         self._predictor = predictor
         self._ollama_model = ollama_model
         self._ollama_base_url = (ollama_base_url or "").rstrip("/")

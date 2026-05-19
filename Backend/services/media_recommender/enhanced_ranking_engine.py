@@ -23,7 +23,7 @@ from services.media_recommender.advanced_ranking import (
     compute_temporal_decay,
 )
 
-logger = logging.getLogger("pocket_journal.ranking.enhanced")
+logger = logging.getLogger()
 
 _CFG = get_config()
 
@@ -69,11 +69,7 @@ def rank_candidates_phase5(
         return []
     
     logger.info(
-        "pocket_journal.ranking.phase5: start uid=%s num_candidates=%d use_mmr=%s use_hybrid=%s",
-        uid or "unknown",
-        len(candidates),
-        use_mmr,
-        use_hybrid,
+        f"[SRV][ranking] phase5_start num_candidates={len(candidates)} use_mmr={use_mmr} use_hybrid={use_hybrid}"
     )
     
     try:
@@ -218,11 +214,7 @@ def rank_candidates_phase5(
             avg_diversity = np.mean([r["ranking_info"]["components"].get("mood_multiplier", 1.0) for r in ranked])
             
             logger.info(
-                "pocket_journal.ranking.phase5: complete uid=%s results=%d avg_similarity=%.4f diversity_score=%.4f",
-                uid or "unknown",
-                len(ranked),
-                avg_similarity,
-                avg_diversity,
+                f"[SRV][ranking] phase5_complete results={len(ranked)} avg_similarity={avg_similarity:.4f} diversity_score={avg_diversity:.4f}"
             )
         
         return ranked

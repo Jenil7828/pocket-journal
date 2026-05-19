@@ -1,0 +1,434 @@
+{
+  "325f09d8659e11772616704f20b55b2b": {
+    "summary": "The user is being constantly disturbed by a lady they met, which is preventing them from working and causing stress. They sought help from Jinal to resolve the issue but have not yet received a response.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.3,
+      "anger": 0.7,
+      "fear": 0.1,
+      "surprise": 0.6,
+      "disgust": 0.0,
+      "neutral": 0.1
+    },
+    "primary_emotion": "anger",
+    "insight": {
+      "core_issue": "The user is experiencing persistent unwanted contact and disturbance from an acquaintance, which is causing stress and hindering their ability to focus on work.",
+      "behavior_pattern": "The user is seeking external help (from Jinal) to resolve the issue of unwanted contact rather than directly confronting the person or implementing personal boundaries.",
+      "recommendation_intent": "Strategies for managing unwanted contact, setting personal boundaries, and potentially blocking communication from the disturbing individual."
+    }
+  },
+  "945d7620515664d3cfe7416effd7d932": {
+    "summary": "The user received an exciting update regarding their Master's application but then faced disappointment when their letter of recommendation was not ready. They coped by cooking, ordering comfort food, and working on a project while watching Pokemon.",
+    "emotions": {
+      "happy": 0.6,
+      "sad": 0.8,
+      "anger": 0.3,
+      "fear": 0.0,
+      "surprise": 0.2,
+      "disgust": 0.0,
+      "neutral": 0.5
+    },
+    "primary_emotion": "sad",
+    "insight": {
+      "core_issue": "The user is experiencing a setback and disappointment in their Master's application process due to a delay in obtaining a crucial document (Letter of Recommendation).",
+      "behavior_pattern": "The user tends to seek comfort and distraction through food (ice-cream, chips, soft-drinks) and engaging in routine activities (working on a project, watching TV) as a coping mechanism after experiencing disappointment.",
+      "recommendation_intent": "Recommendations could focus on strategies for managing expectations and follow-ups for important documents, as well as healthy coping mechanisms for dealing with setbacks and disappointment."
+    }
+  },
+  "ec10e9f64f721f715480088d18a3c2cb": {
+    "summary": "The user returned home, completed their journal, and had dinner, but their day was abruptly interrupted by a call informing them of someone's passing, leading them to rush back to Virar in shock and distress.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.9,
+      "anger": 0.0,
+      "fear": 0.6,
+      "surprise": 0.8,
+      "disgust": 0.0,
+      "neutral": 0.1
+    },
+    "primary_emotion": "sad",
+    "insight": {
+      "core_issue": "Coping with the sudden and unexpected news of a death, leading to shock, grief, and an urgent need to understand or be present.",
+      "behavior_pattern": "An immediate, urgent, and disoriented response to sudden tragic news, characterized by rushing to the location to confirm or understand the situation.",
+      "recommendation_intent": "Emotional support for grief and shock, resources for coping with sudden loss, and practical guidance during bereavement."
+    }
+  },
+  "8f0ad02c7a0a08fa09a4e98858f4e49b": {
+    "summary": "The user had a very positive day, learning that their college placement is now guaranteed and receiving a job offer from TCS Digital. They also managed their shop, worked on a project, and completed the TCS application form.",
+    "emotions": {
+      "happy": 0.9,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 0.1,
+      "surprise": 0.4,
+      "disgust": 0.0,
+      "neutral": 0.3
+    },
+    "primary_emotion": "happy",
+    "insight": {
+      "core_issue": "The main theme is career progression and significant personal achievement, with previous uncertainties about placement being resolved positively.",
+      "behavior_pattern": "The user demonstrates a diligent and multi-faceted approach to life, balancing academic projects, entrepreneurial responsibilities (managing a shop), and active job seeking.",
+      "recommendation_intent": "Support in celebrating recent successes, planning for the next steps in their career (TCS Digital), and managing their various commitments effectively."
+    }
+  },
+  "bd7cda4606f817b60f6db609c57bbebc": {
+    "summary": "The user describes their day as relaxing.",
+    "emotions": {
+      "happy": 0.9,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 0.0,
+      "surprise": 0.0,
+      "disgust": 0.0,
+      "neutral": 0.1
+    },
+    "primary_emotion": "happy",
+    "insight": {
+      "core_issue": "The user experienced a day of relaxation and well-being.",
+      "behavior_pattern": "None described in this entry.",
+      "recommendation_intent": "Suggestions for maintaining or enhancing well-being and relaxation."
+    }
+  },
+  "817b1667c3db865a06d61ad5dc4b9636": {
+    "summary": "The user is extremely angry and frustrated because their AI project group partners haven't started their work for a critical submission due tomorrow, despite the user's extensive efforts. Feeling disrespected and worried about their GPA, the user is now scrambling to complete their partners' sections.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.7,
+      "anger": 1.0,
+      "fear": 0.6,
+      "surprise": 0.3,
+      "disgust": 0.4,
+      "neutral": 0.0
+    },
+    "primary_emotion": "anger",
+    "insight": {
+      "core_issue": "The user is experiencing significant stress and anger due to the unequal distribution of workload and lack of accountability from group members, which directly threatens their academic performance and feels like a personal disrespect of their effort.",
+      "behavior_pattern": "The user consistently takes on the burden of completing group work when others fail to contribute, often leading to feelings of resentment and being taken advantage of. They also express their frustration directly, though it often goes unaddressed.",
+      "recommendation_intent": "The user would benefit from strategies to address uncooperative group members, manage academic stress, and potentially seek intervention from academic authorities (e.g., professor) to resolve the immediate project crisis and prevent future occurrences."
+    }
+  },
+  "2afa7076e7644ffba0e028e729905b65": {
+    "summary": "The user experienced an extremely frustrating commute in Mumbai, dealing with severe traffic, a reckless rickshaw driver, and a difficult security guard, which left them fuming and struggling to calm down before starting work.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.2,
+      "anger": 1.0,
+      "fear": 0.0,
+      "surprise": 0.0,
+      "disgust": 0.7,
+      "neutral": 0.0
+    },
+    "primary_emotion": "anger",
+    "insight": {
+      "core_issue": "The user is overwhelmed and deeply frustrated by the daily chaos, incompetence, and lack of adherence to basic rules in their environment, particularly during their commute, leading to significant stress and anger.",
+      "behavior_pattern": "The user frequently encounters and reacts with intense anger and frustration to external factors like traffic, reckless drivers, and bureaucratic difficulties, struggling to calm down afterward.",
+      "recommendation_intent": "The user would benefit from strategies for stress management, emotional regulation in the face of uncontrollable external factors, and potentially practical solutions to mitigate commute-related frustrations."
+    }
+  },
+  "ac851eec14c829080fcb81ba774fa52e": {
+    "summary": "The user is extremely frustrated and angry about their landlord's 25% rent increase, especially given ongoing maintenance issues and the landlord's refusal to fix them. They feel taken advantage of, powerless, and are actively looking for new housing.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.7,
+      "anger": 1.0,
+      "fear": 0.6,
+      "surprise": 0.4,
+      "disgust": 0.8,
+      "neutral": 0.0
+    },
+    "primary_emotion": "anger",
+    "insight": {
+      "core_issue": "The user is experiencing an unfair and exploitative rent increase by their landlord, who is also neglecting property maintenance, leading to feelings of injustice, frustration, and powerlessness.",
+      "behavior_pattern": "The user confronted the landlord verbally (arguing on the phone) and is now actively seeking alternative housing.",
+      "recommendation_intent": "The user would benefit from information on tenant rights, legal recourse regarding rent increases and neglected repairs, strategies for finding new housing, and coping mechanisms for stress and feelings of powerlessness."
+    }
+  },
+  "03ae9986213e5d2f8394ef4387d58710": {
+    "summary": "The user's manager took full credit for their backend optimization strategy during a board meeting, causing the user to feel intensely angry, betrayed, and undervalued. This is a recurring issue, and the user is now considering updating their resume and looking for a new job.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.6,
+      "anger": 1.0,
+      "fear": 0.0,
+      "surprise": 0.2,
+      "disgust": 0.4,
+      "neutral": 0.0
+    },
+    "primary_emotion": "anger",
+    "insight": {
+      "core_issue": "The user is experiencing professional misconduct and lack of recognition from their manager, who repeatedly takes credit for their work, leading to feelings of betrayal, undervaluation, and a desire to leave the company.",
+      "behavior_pattern": "The manager has a pattern of taking credit for the user's work. The user's pattern is to suppress immediate confrontation for professionalism, leading to internal anger and frustration, and eventually considering leaving the organization.",
+      "recommendation_intent": "The user needs guidance on how to address workplace credit-stealing and lack of recognition, strategies for professional boundary setting, conflict resolution (or escalation), and career planning, including job search support."
+    }
+  },
+  "dc5205c5cc9f9e9e3052bf9e1b2186cb": {
+    "summary": "The user experienced a highly frustrating food delivery ordeal where their order was delayed for over two hours, given to the wrong person by the restaurant, and customer support was unhelpful. They ultimately canceled the order, ate leftovers, and are left feeling annoyed and fuming about the wasted time and money.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.3,
+      "anger": 0.9,
+      "fear": 0.0,
+      "surprise": 0.5,
+      "disgust": 0.2,
+      "neutral": 0.0
+    },
+    "primary_emotion": "anger",
+    "insight": {
+      "core_issue": "The core issue is the profound frustration and stress caused by the failure of a supposedly convenient service, exacerbated by poor customer support and a perceived lack of accountability, leading to wasted time and money.",
+      "behavior_pattern": "The user's immediate reaction to extreme frustration and unhelpful service is to cancel the order and resort to alternatives, rather than continuing to engage with the problematic service.",
+      "recommendation_intent": "The user would benefit from recommendations that validate their frustration, offer strategies for managing stress and anger in similar situations, and potentially provide guidance on how to seek effective recourse or find more reliable service alternatives."
+    }
+  },
+  "ee764d6b289d984710a70e0357e57dd5": {
+    "summary": "The user describes a highly unpleasant peak-hour train journey, characterized by extreme crowding, overpowering smells, and unhygienic behavior, which left them feeling deeply contaminated. They immediately engaged in extensive cleaning rituals and expressed a strong desire to avoid similar experiences due to the significant mental toll.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.3,
+      "anger": 0.5,
+      "fear": 0.6,
+      "surprise": 0.0,
+      "disgust": 1.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "disgust",
+    "insight": {
+      "core_issue": "The user experiences severe distress and feelings of contamination from unhygienic and overcrowded public transport conditions, leading to a significant mental toll.",
+      "behavior_pattern": "Engages in immediate and intense self-cleaning rituals (washing clothes, showering, scrubbing skin) after exposure to perceived contamination.",
+      "recommendation_intent": "Strategies or alternatives to avoid peak-hour public transport, or coping mechanisms for managing sensory overload and contamination anxiety during unavoidable commutes."
+    }
+  },
+  "838e0fa53084da26085e24e364cc720a": {
+    "summary": "The user visited a new cafe that looked aesthetic online but was horrified by its appalling hygiene, including a cockroach and filthy facilities. They left immediately, feeling nauseous, and plan to write a scathing review.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.0,
+      "anger": 0.8,
+      "fear": 0.4,
+      "surprise": 0.6,
+      "disgust": 1.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "disgust",
+    "insight": {
+      "core_issue": "The severe discrepancy between a business's online presentation/pricing and its actual, appalling hygiene standards, leading to a deeply negative customer experience.",
+      "behavior_pattern": "The user reacts to extreme unsanitary conditions by immediately disengaging from the situation (leaving) and planning to take public action (writing a scathing review) to warn others.",
+      "recommendation_intent": "The user would benefit from guidance on how to effectively channel their anger and disgust into a constructive and impactful review, or information on reporting hygiene violations to relevant authorities."
+    }
+  },
+  "363a94ff1de43b3688802d00c405240e": {
+    "summary": "The user witnessed someone dumping a large bag of trash into the already heavily polluted Mula-Mutha river, which evoked strong feelings of anger, disappointment, and profound disgust at the lack of environmental care and civic responsibility.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.6,
+      "anger": 0.9,
+      "fear": 0.0,
+      "surprise": 0.2,
+      "disgust": 1.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "disgust",
+    "insight": {
+      "core_issue": "Environmental degradation caused by a pervasive lack of civic responsibility and disregard for public spaces and natural resources.",
+      "behavior_pattern": "The deliberate and casual dumping of large amounts of trash into natural bodies of water, reflecting a severe lack of environmental consciousness.",
+      "recommendation_intent": "Recommendations focused on implementing and enforcing stricter environmental regulations, increasing penalties for littering, and fostering public awareness and education on civic responsibility and environmental protection."
+    }
+  },
+  "e63c26d3c144f5efcbc2a4c58230313e": {
+    "summary": "The user attended a wedding reception where they were deeply repulsed by the unhygienic behavior of other guests at the buffet, leading them to lose their appetite and feel disgusted by the event. They opted to stay home and cook their own food the following night to avoid similar situations.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.0,
+      "anger": 0.6,
+      "fear": 0.0,
+      "surprise": 0.2,
+      "disgust": 1.0,
+      "neutral": 0.1
+    },
+    "primary_emotion": "disgust",
+    "insight": {
+      "core_issue": "The user has a strong aversion to unhygienic and inconsiderate behavior, particularly in communal food settings, which significantly impacts their comfort and enjoyment of social events.",
+      "behavior_pattern": "When faced with unhygienic or inconsiderate behavior, the user tends to withdraw (lose appetite, want to leave, stay home) and seeks to control their immediate environment (cooking their own food) to ensure hygiene.",
+      "recommendation_intent": "Strategies for coping with social situations involving communal food and hygiene concerns, managing feelings of disgust and frustration in public, or setting personal boundaries in such environments."
+    }
+  },
+  "b7a289e689c048d5bcdf207e973290a0": {
+    "summary": "The user discovered a severely moldy container in the office fridge, causing intense disgust and anger at their coworkers' inconsideration. They cleaned the biohazard themselves but decided to avoid using the shared fridge in the future due to others' messiness.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.1,
+      "anger": 0.8,
+      "fear": 0.3,
+      "surprise": 0.5,
+      "disgust": 0.9,
+      "neutral": 0.0
+    },
+    "primary_emotion": "disgust",
+    "insight": {
+      "core_issue": "Lack of shared responsibility and consideration for maintaining cleanliness in communal office spaces, leading to unsanitary conditions and frustration for conscientious individuals.",
+      "behavior_pattern": "The user feels compelled to clean up others' messes when they become unbearable, but ultimately resorts to an avoidance strategy (not using the fridge) rather than directly addressing the root cause or the responsible parties.",
+      "recommendation_intent": "Strategies for addressing communal space etiquette with coworkers or management, setting clear expectations for shared responsibilities, or tools for managing frustration when others are inconsiderate."
+    }
+  },
+  "fd4aa8ae8c1c5bec1e24b04b219ab9b6": {
+    "summary": "The user's student visa status is under review due to a clerical error, threatening their Master's program and potential deportation. They are experiencing intense fear, anxiety, and paralysis due to the uncertainty, especially as they cannot contact the international student office until next week.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.6,
+      "anger": 0.1,
+      "fear": 0.9,
+      "surprise": 0.4,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "fear",
+    "insight": {
+      "core_issue": "The user is facing a severe threat to their academic and immigration status due to an administrative clerical error, leading to potential deportation or suspension of their Master's program.",
+      "behavior_pattern": "The user is exhibiting rumination on worst-case scenarios ('what ifs'), hypervigilance for updates (jumping at phone pings), and difficulty concentrating on tasks, leading to a feeling of paralysis due to uncertainty.",
+      "recommendation_intent": "Support for managing acute anxiety and overwhelming uncertainty, practical guidance on immediate next steps for visa resolution, and strategies for coping with potential adverse outcomes and parental expectations."
+    }
+  },
+  "cb2262a3d5062a4b5459b28f1fe0efe0": {
+    "summary": "The user is experiencing intense fear and vulnerability due to a severe storm, with howling winds, swaying trees, power cuts, and loud noises. They are worried about flooding in their ground-floor apartment and feel isolated, wishing for the morning to arrive.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 1.0,
+      "surprise": 0.2,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "fear",
+    "insight": {
+      "core_issue": "Overwhelming fear and vulnerability caused by a severe storm, potential property damage (trees, flooding), and feeling isolated in their home.",
+      "behavior_pattern": "Exhibiting physical signs of fear (shaking, flinching), taking precautionary measures (moving valuables), and avoiding direct confrontation with potential dangers (not checking noises).",
+      "recommendation_intent": "Support for managing acute fear and anxiety during a crisis, reassurance, and potentially practical advice for immediate safety or post-storm actions."
+    }
+  },
+  "e9fcfa2597117ffa8739169aa0687422": {
+    "summary": "The user is experiencing intense health anxiety due to unexplained chest pains, which has been exacerbated by self-diagnosing a serious heart condition after Googling symptoms. They are dreading an upcoming doctor's appointment, fearing a severe diagnosis, and are struggling with constant worry and sleeplessness while keeping their fears from family.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.6,
+      "anger": 0.0,
+      "fear": 1.0,
+      "surprise": 0.0,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "fear",
+    "insight": {
+      "core_issue": "Intense health anxiety triggered by unexplained physical symptoms (chest pains) and amplified by self-diagnosis through internet searches, leading to a profound fear of serious illness and potential loss of future.",
+      "behavior_pattern": "Googling symptoms, frequent self-monitoring (checking pulse), internalizing worries and avoiding sharing with family to prevent alarming them, which in turn increases personal anxiety.",
+      "recommendation_intent": "Professional medical evaluation to address physical symptoms, strategies for managing health anxiety and catastrophic thinking, and encouragement to communicate with a support system."
+    }
+  },
+  "d254e00b57f9bdf7b6cb6d9d9ed88819": {
+    "summary": "The user experienced an intensely frightening walk home alone late at night after their bus was canceled, feeling followed in the dark and now remains shaken and trembling from the physical effects of fear.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 1.0,
+      "surprise": 0.1,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "fear",
+    "insight": {
+      "core_issue": "A profound sense of vulnerability and fear stemming from an unsafe late-night walk home due to canceled transport and poor lighting, which shattered their perception of safety.",
+      "behavior_pattern": "Reacted with heightened vigilance, increased pace, and defensive posturing (clutching keys); resolved to avoid similar situations by ensuring guaranteed transport in the future.",
+      "recommendation_intent": "Support for managing acute fear/anxiety, practical advice for enhancing personal safety during late-night travel, and exploring reliable transportation alternatives."
+    }
+  },
+  "13f51e6af9e80957fdb76a2b395307fe": {
+    "summary": "The user is experiencing extreme anxiety and imposter syndrome ahead of a crucial final technical interview for an AI role, fearing failure and the disappointment of their parents, which is impacting their sleep, appetite, and mental clarity.",
+    "emotions": {
+      "happy": 0.0,
+      "sad": 0.7,
+      "anger": 0.0,
+      "fear": 1.0,
+      "surprise": 0.0,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "fear",
+    "insight": {
+      "core_issue": "Intense performance anxiety and imposter syndrome stemming from the high-stakes nature of a crucial job interview, leading to self-doubt and physical manifestations of stress.",
+      "behavior_pattern": "Experiencing mental blocks during practice, difficulty with basic self-care (sleep, eating), and engaging in catastrophic thinking about potential failure and external judgment.",
+      "recommendation_intent": "Support for managing acute anxiety and imposter syndrome, practical strategies for interview performance under pressure, and techniques to reframe self-worth beyond a single outcome."
+    }
+  },
+  "f4ab3802864f3ebe05d04b2d59bcd1b9": {
+    "summary": "The user is ecstatic after receiving an official job offer from TCS Digital for an AI Developer role with a higher-than-expected salary. They feel immense pride and joy, celebrating with family, and are highly motivated for this new chapter in their career.",
+    "emotions": {
+      "happy": 1.0,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 0.0,
+      "surprise": 0.7,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "happy",
+    "insight": {
+      "core_issue": "Achieving a significant career milestone and feeling validated after a period of hard work and anxiety.",
+      "behavior_pattern": "None explicitly described as recurring; the entry focuses on a singular, celebratory event and future aspirations.",
+      "recommendation_intent": "Encouragement to savor the moment, advice on preparing for the new role, or strategies for maintaining motivation and work-life balance in a demanding career."
+    }
+  },
+  "86a4b277d86a25873e61f6fa7b00bf3a": {
+    "summary": "The author had a wonderful day reuniting with old school friends, spending hours talking, laughing, and catching up, which provided a much-needed break from stressful project work. They feel refreshed, grateful, and happy, appreciating the enduring bond and the importance of these friendships.",
+    "emotions": {
+      "happy": 1.0,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 0.0,
+      "surprise": 0.1,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "happy",
+    "insight": {
+      "core_issue": "The profound positive impact of strong social connections and taking intentional breaks from daily stressors on one's mental and emotional well-being.",
+      "behavior_pattern": "None described, as the entry focuses on a single positive event rather than a recurring behavior.",
+      "recommendation_intent": "To encourage the user to continue prioritizing and nurturing these valuable friendships and to integrate more such refreshing breaks into their routine to manage stress."
+    }
+  },
+  "710a295bee72ad06fc9389059d4e1cca": {
+    "summary": "The user successfully fixed a major bug in their recommendation engine after three weeks of effort, feeling immense relief, pride, and excitement. They celebrated their achievement and are now looking forward to demonstrating their completed project.",
+    "emotions": {
+      "happy": 1.0,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 0.0,
+      "surprise": 0.4,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "happy",
+    "insight": {
+      "core_issue": "The user was experiencing prolonged frustration and a sense of burden due to a persistent and complex bug in their recommendation engine, which was the final major hurdle for project completion.",
+      "behavior_pattern": "Demonstrates persistence and resilience in problem-solving, not giving up despite frustration. Also, a pattern of celebrating achievements and recognizing the value of 'little victories' after long periods of hard work.",
+      "recommendation_intent": "Encouragement and validation for their hard work and skill, suggestions for maintaining work-life balance, and potentially resources or ideas for planning their next project."
+    }
+  },
+  "f0df11eabbae69f6120e8c0fa88814fa": {
+    "summary": "The author recounts the successful surprise birthday party for their sister, highlighting the joy, connection, and delight experienced by the entire family. They express deep satisfaction and gratitude for creating such a meaningful and cherished memory.",
+    "emotions": {
+      "happy": 1.0,
+      "sad": 0.0,
+      "anger": 0.0,
+      "fear": 0.0,
+      "surprise": 0.1,
+      "disgust": 0.0,
+      "neutral": 0.0
+    },
+    "primary_emotion": "happy",
+    "insight": {
+      "core_issue": "The profound satisfaction and joy derived from fostering strong family connections and creating meaningful, shared experiences for loved ones.",
+      "behavior_pattern": "None explicitly described as recurring, but the author demonstrates a behavior of investing significant effort into planning special occasions for loved ones.",
+      "recommendation_intent": "To encourage continued efforts in nurturing family bonds and creating joyful, memorable experiences."
+    }
+  }
+}

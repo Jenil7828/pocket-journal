@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional
 from firebase_admin import firestore
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.interaction_service")
+logger = logging.getLogger()
 
 def _get_config():
     """Get config on-demand to ensure latest values."""
@@ -119,9 +119,7 @@ class InteractionService:
         is_valid, error_msg = self.validate_interaction(media_type, item_id, signal, context)
         if not is_valid:
             logger.warning(
-                "pocket_journal.interaction: validation_failed uid=%s error=%s",
-                uid,
-                error_msg,
+                f"[SRV][interaction] validation_failed error={error_msg}"
             )
             raise ValueError(error_msg)
 
@@ -149,12 +147,7 @@ class InteractionService:
             event_id = doc_ref.id
 
             logger.info(
-                "pocket_journal.interaction: event_stored uid=%s event_id=%s media_type=%s signal=%s weight=%.2f",
-                uid,
-                event_id,
-                media_type,
-                signal,
-                weight,
+                f"[SRV][interaction] event_stored event_id={event_id} media_type={media_type} signal={signal} weight={weight:.2f}"
             )
 
             return {
@@ -169,10 +162,7 @@ class InteractionService:
 
         except Exception as e:
             logger.error(
-                "pocket_journal.interaction: store_failed uid=%s media_type=%s error=%s",
-                uid,
-                media_type,
-                str(e),
+                f"[ERR][interaction] store_failed media_type={media_type} error={str(e)}"
             )
             raise
 
@@ -221,24 +211,15 @@ class InteractionService:
                     count += 1
 
             logger.debug(
-                "pocket_journal.interaction: count_in_period uid=%s media_type=%s hours=%d count=%d",
-                uid,
-                media_type,
-                hours,
-                count,
+                f"[SRV][interaction] count_in_period media_type={media_type} hours={hours} count={count}"
             )
 
             return count
 
         except Exception as e:
             logger.error(
-                "pocket_journal.interaction: count_failed uid=%s media_type=%s error=%s",
-                uid,
-                media_type,
-                str(e),
+                f"[ERR][interaction] count_failed media_type={media_type} error={str(e)}"
             )
             return 0
-
-
 
 

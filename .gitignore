@@ -4,7 +4,8 @@ venv/
 .venv/
 env/
 .env/
-
+eval_env/
+Backend/ml/training/mood_detection/roberta/training_venv/
 # --- Python Cache & Compiled Files ---
 # Ignore compiled Python files and cache folders
 __pycache__/
@@ -57,7 +58,7 @@ Backend/ml/mood_detection/models/
 Backend/ml/insight_generation/models/
 song_history.json
 Backend/ml/mood_detection/models.zip
-
+Backend/ml/evaluation/
 build/
 .dart_tool/
 .idea/

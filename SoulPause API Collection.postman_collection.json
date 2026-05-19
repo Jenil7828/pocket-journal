@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "289393c4-44a6-4a88-b239-8e20fc60c29f",
-    "name": "SoulPause API Collection",
-    "description": "Complete SoulPause (Pocket Journal) API collection with all 50+ endpoints. Includes: Journal CRUD, Insights, Media recommendations, Statistics (with weekly/monthly), Streaks, User management, Jobs, Export, Authentication (with Create User), and System endpoints. All endpoints are production-ready with timezone-aware datetime handling and optimized Firestore queries.",
+    "name": "B.E. API Collection",
+    "description": "Complete SoulPause (Pocket Journal) API collection with 61+ endpoints. Includes: Journal CRUD (12), Insights (4), Media recommendations (15), Statistics (4), Streak (1), Interactions (1), User & Account Management (9), Dashboard (3), Jobs (8), Export (2), Authentication (3), System/Health (5). All endpoints are production-ready with timezone-aware datetime handling, optimized Firestore queries, dual-format preference support, and granular notification control.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "49178362",
     "_collection_link": "https://go.postman.co/collection/49178362-289393c4-44a6-4a88-b239-8e20fc60c29f?source=collection_link"
@@ -138,7 +138,9 @@
                   "    console.log('✅ Entry ID saved');",
                   "}"
                 ],
-                "type": "text/javascript"
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
               }
             }
           ],
@@ -156,7 +158,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"entry_text\": \"Today was a productive day...\",\n  \"title\": \"Productive Day (optional)\"\n}"
+              "raw": "{\n  \"title\": \"Trip to Virar\",\n  \"entry_text\": \"Slept Late after working on project and woke up at 9 a.m. got ready and had lunch. later today at 4p.m. will travel to virar\"\n}"
             },
             "url": {
               "raw": "{{baseURL}}/api/v1/journal",
@@ -183,7 +185,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/journal?limit=20&offset=0",
+              "raw": "{{baseURL}}/api/v1/journal?limit=20&start_date=2026-03-29&end_date=2026-04-01",
               "host": [
                 "{{baseURL}}"
               ],
@@ -199,21 +201,20 @@
                 },
                 {
                   "key": "offset",
-                  "value": "0"
+                  "value": "10",
+                  "disabled": true
                 },
                 {
                   "key": "start_date",
-                  "value": "2026-01-01",
-                  "disabled": true
+                  "value": "2026-03-29"
                 },
                 {
                   "key": "end_date",
-                  "value": "2026-03-31",
-                  "disabled": true
+                  "value": "2026-04-01"
                 },
                 {
                   "key": "mood",
-                  "value": "happy",
+                  "value": "neutral",
                   "disabled": true
                 }
               ]
@@ -257,7 +258,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/journal/search?query=stressed&limit=20",
+              "raw": "{{baseURL}}/api/v1/journal/search?query=virar&limit=20",
               "host": [
                 "{{baseURL}}"
               ],
@@ -270,7 +271,7 @@
               "query": [
                 {
                   "key": "query",
-                  "value": "stressed"
+                  "value": "virar"
                 },
                 {
                   "key": "limit",
@@ -283,7 +284,7 @@
                 },
                 {
                   "key": "end_date",
-                  "value": "2026-03-31",
+                  "value": "2026-04-30",
                   "disabled": true
                 }
               ]
@@ -678,7 +679,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/movies/recommend?limit=20",
+              "raw": "{{baseURL}}/api/v1/movies/recommend?limit=30&genre=Science Fiction&sort=rating",
               "host": [
                 "{{baseURL}}"
               ],
@@ -691,7 +692,15 @@
               "query": [
                 {
                   "key": "limit",
-                  "value": "20"
+                  "value": "30"
+                },
+                {
+                  "key": "genre",
+                  "value": "Science Fiction"
+                },
+                {
+                  "key": "sort",
+                  "value": "rating"
                 }
               ]
             }
@@ -709,7 +718,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/movies/search?query=action&limit=20",
+              "raw": "{{baseURL}}/api/v1/movies/search?query=munnabhai mbbs&limit=20",
               "host": [
                 "{{baseURL}}"
               ],
@@ -722,12 +731,38 @@
               "query": [
                 {
                   "key": "query",
-                  "value": "action"
+                  "value": "munnabhai mbbs"
                 },
                 {
                   "key": "limit",
                   "value": "20"
                 }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/movies/get/{{movie_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "movies",
+                "get",
+                "{{movie_id}}"
               ]
             }
           },
@@ -781,7 +816,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/songs/search?query=jazz&limit=20",
+              "raw": "{{baseURL}}/api/v1/songs/search?query=Jeena Jeena&limit=20",
               "host": [
                 "{{baseURL}}"
               ],
@@ -794,12 +829,38 @@
               "query": [
                 {
                   "key": "query",
-                  "value": "jazz"
+                  "value": "Jeena Jeena"
                 },
                 {
                   "key": "limit",
                   "value": "20"
                 }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/songs/get/{{song_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "songs",
+                "get",
+                "{{song_id}}"
               ]
             }
           },
@@ -822,7 +883,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/books/recommend?limit=20",
+              "raw": "{{baseURL}}/api/v1/books/recommend?limit=200&sort=trending",
               "host": [
                 "{{baseURL}}"
               ],
@@ -835,7 +896,23 @@
               "query": [
                 {
                   "key": "limit",
-                  "value": "20"
+                  "value": "200"
+                },
+                {
+                  "key": "sort",
+                  "value": "trending"
+                },
+                {
+                  "key": "genre",
+                  "value": "Fiction",
+                  "type": "text",
+                  "disabled": true
+                },
+                {
+                  "key": "offset",
+                  "value": "10",
+                  "type": "text",
+                  "disabled": true
                 }
               ]
             }
@@ -853,7 +930,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseURL}}/api/v1/books/search?query=fiction&limit=20",
+              "raw": "{{baseURL}}/api/v1/books/search?query=Twisted Hate&limit=20",
               "host": [
                 "{{baseURL}}"
               ],
@@ -866,12 +943,38 @@
               "query": [
                 {
                   "key": "query",
-                  "value": "fiction"
+                  "value": "Twisted Hate"
                 },
                 {
                   "key": "limit",
                   "value": "20"
                 }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/books/get/{{book_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "books",
+                "get",
+                "{{book_id}}"
               ]
             }
           },
@@ -948,6 +1051,32 @@
             }
           },
           "response": []
+        },
+        {
+          "name": "Get Item by ID",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseURL}}/api/v1/songs/get/{{podcast_id}}",
+              "host": [
+                "{{baseURL}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "songs",
+                "get",
+                "{{podcast_id}}"
+              ]
+            }
+          },
+          "response": []
         }
       ],
       "description": "Podcast recommendations and search"
@@ -971,7 +1100,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"media_type\": \"songs\",\n  \"item_id\": \"song_123\",\n  \"signal\": \"click\",\n  \"context\": \"recommendation\"\n}"
+              "raw": "{\n  \"media_type\": \"movies\",\n  \"item_id\": \"19625\",\n  \"signal\": \"click\",\n  \"context\": \"search\"\n}"
             },
             "url": {
               "raw": "{{baseURL}}/api/v1/media/interaction",
@@ -991,92 +1120,276 @@
       ],
       "description": "Track user media interactions"
     },
-    {
-      "name": "👤 User",
-      "item": [
-        {
-          "name": "Get Profile",
-          "request": {
-            "method": "GET",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseURL}}/api/v1/me",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "me"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Profile",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_id}}"
-              },
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"John Doe\",\n  \"preferences\": {\n    \"theme\": \"dark\",\n    \"notifications\": true\n  }\n}"
-            },
-            "url": {
-              "raw": "{{baseURL}}/api/v1/user",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "user"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Account",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              {
-                "key": "Authorization",
-                "value": "Bearer {{token_id}}"
-              }
-            ],
-            "url": {
-              "raw": "{{baseURL}}/api/v1/user",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "user"
-              ]
-            }
-          },
-          "response": []
-        }
-      ],
-      "description": "User profile management"
-    },
+     {
+       "name": "👤 User & Account",
+       "item": [
+         {
+           "name": "Get Complete Profile",
+           "request": {
+             "method": "GET",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               }
+             ],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Update Profile (Name/Email)",
+           "request": {
+             "method": "PUT",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               },
+               {
+                 "key": "Content-Type",
+                 "value": "application/json"
+               }
+             ],
+             "body": {
+               "mode": "raw",
+               "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\"\n}"
+             },
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/profile",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "profile"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Get Preferences",
+           "request": {
+             "method": "GET",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               }
+             ],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/preferences",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "preferences"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Update Preferences (New Format)",
+           "request": {
+             "method": "PUT",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               },
+               {
+                 "key": "Content-Type",
+                 "value": "application/json"
+               }
+             ],
+             "body": {
+               "mode": "raw",
+               "raw": "{\n  \"preferred_media_types\": [\"movies\", \"music\", \"books\"],\n  \"genres\": {\n    \"movies\": [\"Drama\", \"Thriller\"],\n    \"music\": [\"Jazz\", \"Blues\"],\n    \"books\": [\"Fiction\", \"Mystery\"],\n    \"podcasts\": []\n  },\n  \"filters\": {\n    \"languages\": [\"english\", \"spanish\"],\n    \"content_intensity\": \"moderate\"\n  }\n}"
+             },
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/preferences",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "preferences"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Update Preferences (Legacy Format)",
+           "request": {
+             "method": "PUT",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               },
+               {
+                 "key": "Content-Type",
+                 "value": "application/json"
+               }
+             ],
+             "body": {
+               "mode": "raw",
+               "raw": "{\n  \"music\": [\"Jazz\", \"Blues\"],\n  \"movies\": [\"Drama\", \"Thriller\"],\n  \"books\": [\"Fiction\"],\n  \"languages\": [\"english\"]\n}"
+             },
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/preferences",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "preferences"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Get Settings",
+           "request": {
+             "method": "GET",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               }
+             ],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/settings",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "settings"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Update Settings",
+           "request": {
+             "method": "PUT",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               },
+               {
+                 "key": "Content-Type",
+                 "value": "application/json"
+               }
+             ],
+             "body": {
+               "mode": "raw",
+               "raw": "{\n  \"mood_tracking_enabled\": true,\n  \"weekly_insights_enabled\": true\n}"
+             },
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/settings",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "settings"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Get Notifications",
+           "request": {
+             "method": "GET",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               }
+             ],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/notifications",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "notifications"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "Update Notifications",
+           "request": {
+             "method": "PUT",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               },
+               {
+                 "key": "Content-Type",
+                 "value": "application/json"
+               }
+             ],
+             "body": {
+               "mode": "raw",
+               "raw": "{\n  \"email_notifications\": true,\n  \"push_notifications\": true,\n  \"daily_reminder\": true,\n  \"reminder_time\": \"09:00\",\n  \"weekly_insights\": true,\n  \"media_recommendations\": true\n}"
+             },
+             "url": {
+               "raw": "{{baseURL}}/api/v1/me/notifications",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "me",
+                 "notifications"
+               ]
+             }
+           },
+           "response": []
+         }
+       ],
+       "description": "User profile, preferences, settings, and notifications (9 endpoints)"
+     },
     {
       "name": "📊 Statistics",
       "item": [
@@ -1184,11 +1497,41 @@
           },
           "response": []
         }
-      ],
-      "description": "Analytics and statistics (4 endpoints with timezone-aware datetime)"
-    },
-    {
-      "name": "💾 Export",
+       ],
+       "description": "Analytics and statistics (4 endpoints with timezone-aware datetime)"
+     },
+     {
+       "name": "🏠 Dashboard",
+       "item": [
+         {
+           "name": "Get Home Dashboard",
+           "request": {
+             "method": "GET",
+             "header": [
+               {
+                 "key": "Authorization",
+                 "value": "Bearer {{token_id}}"
+               }
+             ],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/dashboard",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "dashboard"
+               ]
+             }
+           },
+           "response": []
+         }
+       ],
+       "description": "Backend-for-Frontend (BFF) home screen aggregation (1 endpoint that fetches stats, streaks, recent entries, mood trends, recommendations, and insights in parallel)"
+     },
+     {
+       "name": "💾 Export",
       "item": [
         {
           "name": "Export Entries",
@@ -1493,26 +1836,46 @@
           },
           "response": []
         },
-        {
-          "name": "App Terms",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseURL}}/api/v1/app/terms",
-              "host": [
-                "{{baseURL}}"
-              ],
-              "path": [
-                "api",
-                "v1",
-                "app",
-                "terms"
-              ]
-            }
-          },
-          "response": []
-        },
+         {
+           "name": "App Terms",
+           "request": {
+             "method": "GET",
+             "header": [],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/app/terms",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "app",
+                 "terms"
+               ]
+             }
+           },
+           "response": []
+         },
+         {
+           "name": "App Privacy Policy",
+           "request": {
+             "method": "GET",
+             "header": [],
+             "url": {
+               "raw": "{{baseURL}}/api/v1/app/privacy",
+               "host": [
+                 "{{baseURL}}"
+               ],
+               "path": [
+                 "api",
+                 "v1",
+                 "app",
+                 "privacy"
+               ]
+             }
+           },
+           "response": []
+         },
         {
           "name": "Home",
           "request": {
@@ -1528,45 +1891,79 @@
           "response": []
         }
       ],
-      "description": "Health checks and system information"
+       "description": "Health checks and system information (5 endpoints)"
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
     }
   ],
   "variable": [
     {
       "key": "baseURL",
       "value": "http://localhost:5000",
-      "type": "string",
       "description": "Base URL for SoulPause API"
     },
     {
       "key": "token_id",
       "value": "",
-      "type": "string",
       "description": "Firebase authentication token (set after login)"
     },
     {
       "key": "entry_id",
       "value": "",
-      "type": "string",
       "description": "Last created journal entry ID"
     },
     {
       "key": "insight_id",
       "value": "",
-      "type": "string",
       "description": "Last created insight ID"
     },
     {
       "key": "export_id",
       "value": "",
-      "type": "string",
       "description": "Last export ID"
     },
     {
       "key": "job_id",
       "value": "",
-      "type": "string",
       "description": "Last job ID"
+    },
+    {
+      "key": "movie_id",
+      "value": ""
+    },
+    {
+      "key": "song_id",
+      "value": ""
+    },
+    {
+      "key": "book_id",
+      "value": ""
+    },
+    {
+      "key": "podcast_id",
+      "value": ""
     }
   ]
 }

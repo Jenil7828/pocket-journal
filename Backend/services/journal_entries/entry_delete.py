@@ -1,6 +1,6 @@
 import logging
 
-logger = logging.getLogger("pocket_journal.journal_entries")
+logger = logging.getLogger()
 
 
 def delete_entry(entry_id, uid, db):

@@ -16,7 +16,7 @@ import numpy as np
 
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.ranking.advanced")
+logger = logging.getLogger()
 
 _CFG = get_config()
 
@@ -77,10 +77,7 @@ def compute_temporal_decay(
         decay_multiplier = float(np.exp(-decay_rate * time_diff))
         
         logger.debug(
-            "pocket_journal.ranking.temporal_decay: timestamp=%s time_diff_days=%.2f decay_multiplier=%.4f",
-            interaction_timestamp,
-            time_diff,
-            decay_multiplier,
+            f"[SRV][ranking] temporal_decay time_diff_days={time_diff:.2f} decay_multiplier={decay_multiplier:.4f}"
         )
         
         return decay_multiplier
@@ -183,10 +180,7 @@ def get_mood_context_boosting(
     for keyword in keywords:
         if keyword.lower() in genre_str:
             logger.debug(
-                "pocket_journal.ranking.mood_boost: mood=%s keyword=%s boost=%.2f",
-                mood,
-                keyword,
-                boost,
+                f"[SRV][ranking] mood_boost mood={mood} keyword={keyword} boost={boost:.2f}"
             )
             return boost
     
@@ -320,9 +314,7 @@ def apply_mmr_diversification(
         result = [candidates[idx] for idx in selected_indices]
         
         logger.info(
-            "pocket_journal.ranking.mmr: selected=%d lambda=%.2f diversity_applied=True",
-            len(result),
-            lambda_param,
+            f"[SRV][ranking] mmr_selected count={len(result)} lambda={lambda_param:.2f}"
         )
         
         return result

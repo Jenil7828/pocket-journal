@@ -9,7 +9,7 @@ from firebase_admin import firestore
 from config_loader import get_config
 from services.embeddings import get_embedding_service
 
-logger = logging.getLogger("pocket_journal.media.intent")
+logger = logging.getLogger()
 
 _CFG = get_config()
 _COLS = _CFG["firestore"]["collections"]

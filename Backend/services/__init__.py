@@ -6,6 +6,12 @@ from . import export_service as export_service
 from . import insights_service as insights_service
 from . import stats_service as stats_service
 
+# New user profile management services
+from . import preferences_service as preferences_service
+from . import settings_service as settings_service
+from . import notification_service as notification_service
+from . import user_service as user_service
+
 # Phase 4: Personalization & Advanced Features (reorganized)
 from .media_recommender import cold_start_handler as cold_start_handler
 from .media_recommender import search_service as search_service
@@ -41,6 +47,11 @@ __all__ = [
     "export_data",
     "insights_service",
     "stats_service",
+    # New services
+    "preferences_service",
+    "settings_service",
+    "notification_service",
+    "user_service",
     # Phase 4: Personalization (reorganized)
     "cold_start_handler",
     "search_service",

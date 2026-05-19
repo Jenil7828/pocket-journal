@@ -9,7 +9,7 @@ from flask import jsonify, request
 
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.routes.jobs")
+logger = logging.getLogger()
 
 
 def _utc_now_iso() -> str:
@@ -46,14 +46,14 @@ def register(app, deps: dict):
         start_time = time.time()
         force = _request_force_flag()
 
-        logger.info("Job started: job=%s triggered_at=%s force=%s", job, triggered_at, force)
+        logger.info(f"[REQ][jobs] started job={job} triggered_at={triggered_at} force={force}")
 
         try:
             from scripts.cache_media import refresh_all
             refresh_all(force=force)
 
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.info("Job completed: job=%s duration_ms=%d", job, duration_ms)
+            logger.info(f"[RES][jobs] completed job={job} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -69,7 +69,7 @@ def register(app, deps: dict):
             )
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.error("Job failed: job=%s error=%s duration_ms=%d", job, str(e), duration_ms)
+            logger.error(f"[ERR][jobs] failed job={job} error={str(e)} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -94,14 +94,14 @@ def register(app, deps: dict):
         start_time = time.time()
         force = _request_force_flag()
 
-        logger.info("Job started: job=%s triggered_at=%s force=%s", job, triggered_at, force)
+        logger.info(f"[REQ][jobs] started job={job} media_type={mt} triggered_at={triggered_at} force={force}")
 
         try:
             from scripts.cache_media import refresh_cache
             refresh_cache(mt, force=force)
 
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.info("Job completed: job=%s duration_ms=%d", job, duration_ms)
+            logger.info(f"[RES][jobs] completed job={job} media_type={mt} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -118,7 +118,7 @@ def register(app, deps: dict):
             )
         except Exception as e:
             duration_ms = int((time.time() - start_time) * 1000)
-            logger.error("Job failed: job=%s error=%s duration_ms=%d", job, str(e), duration_ms)
+            logger.error(f"[ERR][jobs] failed job={job} media_type={mt} error={str(e)} duration_ms={duration_ms}")
 
             return (
                 jsonify(
@@ -151,4 +151,61 @@ def register(app, deps: dict):
         data = cache_store.get_cache_stats(mt) if cache_store is not None else {}
         return jsonify(data), 200
 
+    @app.route("/job/v1/dashboard/cache/generate", methods=["POST"])
+    def dashboard_cache_generate():
+        """Generate AI cache for all eligible users."""
+        triggered_at = _utc_now_iso()
+        job = "dashboard_cache_generate"
+        start_time = time.time()
+        
+        # Get optional limit from query params
+        limit = 500
+        try:
+            limit_param = request.args.get("limit") or (request.get_json(silent=True) or {}).get("limit")
+            if limit_param:
+                limit = int(limit_param)
+                if limit < 1 or limit > 2000:
+                    limit = 500
+        except (ValueError, TypeError):
+            pass
+        
+        logger.info(f"[REQ][jobs] started job={job} limit={limit} triggered_at={triggered_at}")
+        
+        try:
+            from services.dashboard_cache_job import generate_ai_cache_for_all_users
+            
+            _db = deps.get("get_db")()
+            stats = generate_ai_cache_for_all_users(_db, limit=limit)
+            
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.info(f"[RES][jobs] completed job={job} duration_ms={duration_ms} stats={stats}")
+            
+            return (
+                jsonify(
+                    {
+                        "status": "completed",
+                        "job": "dashboard_cache_generate",
+                        "message": "Dashboard AI cache generated",
+                        "limit": limit,
+                        "processed": stats.get("processed", 0),
+                        "failed": stats.get("failed", 0),
+                        "completed_at": _utc_now_iso(),
+                    }
+                ),
+                200,
+            )
+        except Exception as e:
+            duration_ms = int((time.time() - start_time) * 1000)
+            logger.error(f"[ERR][jobs] failed job={job} error={str(e)} duration_ms={duration_ms}")
+            
+            return (
+                jsonify(
+                    {
+                        "status": "failed",
+                        "job": "dashboard_cache_generate",
+                        "error": str(e),
+                    }
+                ),
+                500,
+            )
 

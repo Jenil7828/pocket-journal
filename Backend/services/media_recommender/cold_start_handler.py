@@ -14,7 +14,8 @@ import numpy as np
 
 from services.media_recommender.cache_store import MediaCacheStore
 
-logger = logging.getLogger("pocket_journal.cold_start_handler")
+# Clean root logger - no module prefix
+logger = logging.getLogger()
 
 
 class ColdStartHandler:
@@ -58,7 +59,7 @@ class ColdStartHandler:
 
             if not items:
                 logger.warning(
-                    "pocket_journal.cold_start: no_cache_items media_type=%s language=%s",
+                    "[SRV][cold_start] no_cache_items media_type=%s language=%s",
                     media_type,
                     language,
                 )
@@ -84,9 +85,8 @@ class ColdStartHandler:
             result = sorted_items[:top_k]
 
             logger.info(
-                "pocket_journal.cold_start: candidates_generated media_type=%s language=%s top_k=%d returned=%d",
+                "[SRV][cold_start] candidates_generated media_type=%s top_k=%d returned=%d",
                 media_type,
-                language,
                 top_k,
                 len(result),
             )
@@ -95,9 +95,8 @@ class ColdStartHandler:
 
         except Exception as e:
             logger.error(
-                "pocket_journal.cold_start: failed_to_generate_candidates media_type=%s language=%s error=%s",
+                "[ERR][cold_start] failed_to_generate media_type=%s error=%s",
                 media_type,
-                language,
                 str(e),
             )
             return []
@@ -121,12 +120,6 @@ class ColdStartHandler:
 
         should_cold_start = not has_taste_vector and not has_journal_embedding
 
-        if should_cold_start:
-            logger.debug(
-                "pocket_journal.cold_start: using_cold_start has_taste=%s has_journal=%s",
-                has_taste_vector,
-                has_journal_embedding,
-            )
 
         return should_cold_start
 

@@ -19,7 +19,7 @@ import sys
 import logging
 from typing import Optional
 
-logger = logging.getLogger("pocket_journal.suppression")
+logger = logging.getLogger()
 
 
 class suppress_hf:

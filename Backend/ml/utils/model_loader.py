@@ -19,7 +19,7 @@ from typing import Optional
 
 from config_loader import get_config
 
-logger = logging.getLogger("pocket_journal.model_loader")
+logger = logging.getLogger()
 
 _CFG = get_config()
 _STORE = _CFG["ml"]["model_store"]
