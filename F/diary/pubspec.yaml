@@ -13,13 +13,14 @@ dependencies:
   cloud_firestore: ^6.0.3
   firebase_auth: ^6.1.1
   google_fonts: ^6.3.2
-  shared_preferences: ^2.5.3
+  shared_preferences: ^2.5.5
   intl: ^0.20.2
   dio: ^5.9.0
   curved_labeled_navigation_bar: ^2.0.6
   smooth_page_indicator: ^2.0.1
   speech_to_text: ^7.3.0
   image_picker: ^1.2.1
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:diary/Dashboard/journalEntry.dart';
+import 'package:diary/DesignConstraints/profile_service.dart';
+
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -10,6 +13,10 @@ class DashboardPage extends StatefulWidget {
 }
 
 class _DashboardPageState extends State<DashboardPage> {
+  final Color primaryColor = const Color.fromARGB(255, 250, 250, 249);
+  final Color accentColor = const Color(0xFF1E2D4C);
+  final Color textGrey = const Color(0xFF858585);
+
   final List<String> messages = [
     "You're doing an amazing job showing up for yourself. Even a few words each day can bring clarity and peace.",
     "Your thoughts deserve a safe space to exist and be understood.",
@@ -19,6 +26,8 @@ class _DashboardPageState extends State<DashboardPage> {
 
   int currentMessageIndex = 0;
   Timer? timer;
+
+  String userName = "User";
 
   final List<Map<String, String>> recentEntries = [
     {
@@ -55,11 +64,38 @@ class _DashboardPageState extends State<DashboardPage> {
   void initState() {
     super.initState();
 
+    loadUserProfile();
+
     timer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      setState(() {
-        currentMessageIndex = (currentMessageIndex + 1) % messages.length;
-      });
+      if (mounted) {
+        setState(() {
+          currentMessageIndex = (currentMessageIndex + 1) % messages.length;
+        });
+      }
     });
+  }
+
+  /// ✅ LOAD USER PROFILE FROM API + CACHE
+  Future<void> loadUserProfile() async {
+    try {
+      // Load cached name instantly
+      userName = await ProfileService.getCachedUserName();
+
+      if (mounted) {
+        setState(() {});
+      }
+
+      // Fetch latest profile from API
+      final profile = await ProfileService.fetchUserProfile();
+
+      if (profile != null && mounted) {
+        setState(() {
+          userName = profile["name"] ?? userName;
+        });
+      }
+    } catch (e) {
+      debugPrint("Dashboard Profile Load Error: $e");
+    }
   }
 
   @override
@@ -71,18 +107,34 @@ class _DashboardPageState extends State<DashboardPage> {
   String getShortTitle(String text) {
     final words = text.split(' ');
     if (words.length <= 5) return text;
-    return words.take(5).join(' ') + '...';
+    return '${words.take(5).join(' ')}...';
   }
 
   String getShortDescription(String text) {
     if (text.length <= 25) return text;
-    return text.substring(0, 25) + "...";
+    return '${text.substring(0, 25)}...';
+  }
+
+  String getCurrentDate() {
+    return DateFormat('EEEE, MMMM d').format(DateTime.now()).toUpperCase();
+  }
+
+  String getGreeting() {
+    final hour = DateTime.now().hour;
+
+    if (hour < 12) {
+      return "Good morning";
+    } else if (hour < 17) {
+      return "Good afternoon";
+    } else {
+      return "Good evening";
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F1FF),
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         child: Column(
           children: [
@@ -90,9 +142,9 @@ class _DashboardPageState extends State<DashboardPage> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.fromLTRB(20, 50, 20, 25),
-              decoration: const BoxDecoration(
-                color: Color(0xFF6E6E9E),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: accentColor,
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(60),
                   bottomRight: Radius.circular(60),
                 ),
@@ -103,9 +155,9 @@ class _DashboardPageState extends State<DashboardPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'SUNDAY, APRIL 5',
-                        style: TextStyle(
+                      Text(
+                        getCurrentDate(),
+                        style: const TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                           color: Color.fromARGB(179, 245, 132, 39),
@@ -117,24 +169,29 @@ class _DashboardPageState extends State<DashboardPage> {
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
-                          image: const DecorationImage(
-                            image: AssetImage('assets/home/profile.jpg'),
-                            fit: BoxFit.cover,
-                          ),
+                        ),
+                        child: const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 22,
                         ),
                       ),
                     ],
                   ),
+
                   const SizedBox(height: 15),
-                  const Text(
-                    'Good afternoon, Salo',
-                    style: TextStyle(
+
+                  Text(
+                    '${getGreeting()}, $userName',
+                    style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
                   ),
+
                   const SizedBox(height: 10),
+
                   Row(
                     children: [
                       const Icon(
@@ -170,72 +227,77 @@ class _DashboardPageState extends State<DashboardPage> {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(
+                Card(
+                  elevation: 6,
                   margin: const EdgeInsets.symmetric(horizontal: 16),
-                  padding: const EdgeInsets.all(16),
-                  height: 140,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFFF5E6D3), Color(0xFFD2A679)],
-                    ),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Text(
-                              'Start Journaling',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF5C4033),
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Write your thoughts and reflect on your day.',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                            const SizedBox(height: 10),
-                            GestureDetector(
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const Journalentry(),
-                                  ),
-                                );
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: const Text(
-                                  'Start Now',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Color(0xFF6E6E9E),
-                                    fontWeight: FontWeight.bold,
-                                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: primaryColor,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    height: 140,
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                'Start Journaling',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: accentColor,
                                 ),
                               ),
-                            ),
-                          ],
+                              const SizedBox(height: 8),
+                              Text(
+                                'Write your thoughts and reflect on your day.',
+                                style: TextStyle(fontSize: 12, color: textGrey),
+                              ),
+                              const SizedBox(height: 10),
+                              GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const Journalentry(),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: accentColor,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: const Text(
+                                    'Start Now',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 80),
-                    ],
+                        const SizedBox(width: 80),
+                      ],
+                    ),
                   ),
                 ),
+
                 Positioned(
                   right: 10,
                   top: -40,
@@ -244,11 +306,12 @@ class _DashboardPageState extends State<DashboardPage> {
                     width: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
-                      image: const DecorationImage(
-                        image: AssetImage('assets/home/diary.jpeg'),
-                        fit: BoxFit.cover,
-                      ),
+                      border: Border.all(color: Colors.grey, width: 3),
+                    ),
+                    child: Icon(
+                      Icons.menu_book_rounded,
+                      size: 50,
+                      color: accentColor,
                     ),
                   ),
                 ),
@@ -257,7 +320,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SizedBox(height: 30),
 
-            /// RECENT
+            /// RECENT ACTIVITY
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Align(
@@ -271,17 +334,19 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SizedBox(height: 16),
 
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: recentEntries.map((e) => _recentCard(e)).toList(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: recentEntries.map((e) => _recentCard(e)).toList(),
+                ),
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 10),
 
-            /// MEDIA
+            /// MEDIA ACTIVITY
             const Padding(
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Align(
@@ -295,15 +360,17 @@ class _DashboardPageState extends State<DashboardPage> {
 
             const SizedBox(height: 16),
 
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: mediaEntries.map((e) => _mediaCard(e)).toList(),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: mediaEntries.map((e) => _mediaCard(e)).toList(),
+                ),
               ),
             ),
 
-            const SizedBox(height: 30),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -312,68 +379,61 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// RECENT CARD
   Widget _recentCard(Map<String, String> entry) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(16),
-      width: 190,
-      height: 160,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFEEF2FF), Color(0xFFDDE5FF)],
+    return Card(
+      elevation: 6,
+      margin: const EdgeInsets.only(right: 16, bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: Container(
+        width: 190,
+        height: 170,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(Icons.auto_stories, color: accentColor),
+            Text(
+              getShortTitle(entry["title"]!),
+              style: TextStyle(fontWeight: FontWeight.bold, color: accentColor),
+            ),
+            Text(
+              entry["date"]!,
+              style: TextStyle(color: textGrey, fontSize: 12),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          const Icon(Icons.auto_stories, color: Color(0xFF6E6E9E)),
-          Text(
-            getShortTitle(entry["title"]!),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            entry["date"]!,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          ),
-        ],
       ),
     );
   }
 
   /// MEDIA CARD
   Widget _mediaCard(Map<String, String> media) {
-    return Container(
-      margin: const EdgeInsets.only(right: 16),
-      padding: const EdgeInsets.all(16),
-      width: 190,
-      height: 160,
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFFFF1E6), Color(0xFFFFD9B3)],
+    return Card(
+      elevation: 6,
+      margin: const EdgeInsets.only(right: 16, bottom: 8),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: Container(
+        width: 190,
+        height: 170,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(
+              media["type"] == "movie" ? Icons.movie : Icons.music_note,
+              color: accentColor,
+            ),
+            Text(
+              media["title"]!,
+              style: TextStyle(fontWeight: FontWeight.bold, color: accentColor),
+            ),
+            Text(
+              getShortDescription(media["desc"]!),
+              style: TextStyle(color: textGrey, fontSize: 12),
+            ),
+          ],
         ),
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Icon(media["type"] == "movie" ? Icons.movie : Icons.music_note),
-          Text(
-            media["title"]!,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Text(
-            getShortDescription(media["desc"]!),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
-          ),
-        ],
       ),
     );
   }

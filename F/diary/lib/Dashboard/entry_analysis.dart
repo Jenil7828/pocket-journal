@@ -1,8 +1,15 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'dart:math';
 
+import 'package:diary/DesignConstraints/api.dart';
+import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
 class EntryAnalysisPage extends StatefulWidget {
-  const EntryAnalysisPage({super.key});
+  final String entryId;
+
+  const EntryAnalysisPage({super.key, required this.entryId});
 
   @override
   State<EntryAnalysisPage> createState() => _EntryAnalysisPageState();
@@ -10,40 +17,99 @@ class EntryAnalysisPage extends StatefulWidget {
 
 class _EntryAnalysisPageState extends State<EntryAnalysisPage>
     with SingleTickerProviderStateMixin {
-  final Map<String, double> moodData = {
-    "anger": 0.015,
-    "disgust": 0.057,
-    "fear": 0.009,
-    "happy": 0.011,
-    "neutral": 0.396,
-    "sad": 0.321,
-    "surprise": 0.002,
-  };
+  Map<String, double> moodData = {};
+
+  String title = "";
+  String entryText = "";
+  String summary = "";
+
+  bool isLoading = true;
 
   late AnimationController _controller;
+
+  final Color primaryColor = const Color(0xFF6E6E9E);
 
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
     );
-    _controller.forward();
+
+    fetchEntryAnalysis();
+  }
+
+  /// ✅ FETCH ENTRY ANALYSIS API
+  Future<void> fetchEntryAnalysis() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString("token");
+
+      if (token == null) {
+        setState(() => isLoading = false);
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse("${ApiConfig.baseUrl}/journal/${widget.entryId}"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final analysis = data["analysis"] ?? {};
+        final mood = analysis["mood"] ?? {};
+
+        setState(() {
+          /// ✅ FIXED TITLE EXTRACTION
+          title = (data["title"] ?? "").toString().trim();
+          entryText = (data["entry_text"] ?? "").toString().trim();
+          summary = (analysis["summary"] ?? "").toString().trim();
+
+          /// Fallbacks
+          if (title.isEmpty) title = "Untitled";
+          if (entryText.isEmpty) entryText = "No entry content available.";
+          if (summary.isEmpty) {
+            summary = "No AI summary available for this journal entry.";
+          }
+
+          moodData = {
+            "anger": (mood["anger"] ?? 0).toDouble(),
+            "disgust": (mood["disgust"] ?? 0).toDouble(),
+            "fear": (mood["fear"] ?? 0).toDouble(),
+            "happy": (mood["happy"] ?? 0).toDouble(),
+            "neutral": (mood["neutral"] ?? 0).toDouble(),
+            "sad": (mood["sad"] ?? 0).toDouble(),
+            "surprise": (mood["surprise"] ?? 0).toDouble(),
+          };
+
+          isLoading = false;
+        });
+
+        _controller.forward();
+      } else {
+        debugPrint("Failed: ${response.body}");
+        setState(() => isLoading = false);
+      }
+    } catch (e) {
+      debugPrint("Analysis Error: $e");
+      setState(() => isLoading = false);
+    }
   }
 
   @override
   void dispose() {
-    _controller.dispose(); // ✅ IMPORTANT
+    _controller.dispose();
     super.dispose();
   }
 
-  // 🔥 BACK FUNCTION (MAIN FIX)
-  void handleBack() {
-    Navigator.pop(context);
-  }
-
-  // 🎭 Emoji
+  /// 🎭 Emoji
   String getEmoji(String mood) {
     switch (mood) {
       case "happy":
@@ -63,7 +129,7 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
     }
   }
 
-  // 🎨 Color
+  /// 🎨 Mood Color
   Color getMoodColor(String mood) {
     switch (mood) {
       case "happy":
@@ -83,7 +149,7 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
     }
   }
 
-  // 🏷️ Full Name
+  /// 🏷️ Mood Label
   String getFullMoodName(String mood) {
     switch (mood) {
       case "anger":
@@ -107,7 +173,21 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
 
   @override
   Widget build(BuildContext context) {
-    final Color primaryColor = const Color(0xFF6E6E9E);
+    if (isLoading) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F6FA),
+        body: Center(child: CircularProgressIndicator(color: primaryColor)),
+      );
+    }
+
+    if (moodData.isEmpty) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF5F6FA),
+        appBar: AppBar(title: const Text("Entry Analysis")),
+        body: const Center(child: Text("No analysis found")),
+      );
+    }
+
     final highest = moodData.entries.reduce(
       (a, b) => a.value > b.value ? a : b,
     );
@@ -115,7 +195,7 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
     return Scaffold(
       backgroundColor: const Color(0xFFF5F6FA),
 
-      // 🔥 CUSTOM APPBAR WITH BACK BUTTON
+      /// 🔥 APPBAR
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -145,20 +225,24 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            /// 📄 ENTRY TITLE + TEXT
             _card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
+                children: [
                   Text(
-                    "A beautiful morning walk",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                    title,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  SizedBox(height: 10),
-                  Divider(),
-                  SizedBox(height: 10),
+                  const SizedBox(height: 10),
+                  const Divider(),
+                  const SizedBox(height: 10),
                   Text(
-                    "This morning I went for a walk in the park. The fresh air made me feel peaceful...",
-                    style: TextStyle(height: 1.5),
+                    entryText,
+                    style: const TextStyle(height: 1.6, fontSize: 15),
                   ),
                 ],
               ),
@@ -166,17 +250,18 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
 
             const SizedBox(height: 16),
 
+            /// 🧠 SUMMARY CARD
             _card(
               color: const Color(0xFFEDEBFF),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Icon(Icons.psychology, color: Colors.deepPurple),
-                  SizedBox(width: 10),
+                children: [
+                  const Icon(Icons.psychology, color: Colors.deepPurple),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      "This entry shows a positive and reflective mindset. You're appreciating small joys.",
-                      style: TextStyle(height: 1.5),
+                      summary,
+                      style: const TextStyle(height: 1.5, fontSize: 14),
                     ),
                   ),
                 ],
@@ -185,6 +270,7 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
 
             const SizedBox(height: 16),
 
+            /// 🎭 TOP MOOD
             _card(
               child: Row(
                 children: [
@@ -216,6 +302,7 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
 
             const SizedBox(height: 20),
 
+            /// 📊 MOOD CHART
             _card(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -286,6 +373,7 @@ class _EntryAnalysisPageState extends State<EntryAnalysisPage>
     );
   }
 
+  /// 💎 REUSABLE CARD
   Widget _card({required Widget child, Color? color}) {
     return Container(
       width: double.infinity,

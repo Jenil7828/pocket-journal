@@ -1,6 +1,13 @@
 import 'dart:io';
+import 'dart:convert';
+import 'package:diary/DesignConstraints/api.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:diary/DesignConstraints/navbar.dart';
+import 'package:diary/DesignConstraints/snackbar.dart';
+import 'package:diary/Profile/accountsettings.dart';
 import 'package:diary/Profile/profildetails.dart';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -12,24 +19,25 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // 🌿 NEW THEME COLORS
-  final Color primaryColor = const Color(0xFF266533); // Basil
-  final Color bgColor = const Color(0xFFF6F4DC); // Cream
-  final Color cardColor = Colors.white;
+  // 🌿 COLORS
+  Color primaryColor = const Color(0xFFCEC0BB);
+  final Color accentColor = const Color(0xFF1E2D4C);
+  final Color bgColor = const Color(0xFFACBDAA);
+
+  final Color textGrey = const Color(0xFF858585);
 
   bool moodTracking = false;
   bool journalReminder = false;
-  List<String> selectedMedia = [];
 
   bool savedMoodTracking = false;
   bool savedJournalReminder = false;
-  List<String> savedMedia = [];
 
   bool isEditing = true;
 
   File? _image;
   final ImagePicker _picker = ImagePicker();
 
+  // ✅ PICK IMAGE
   Future<void> _pickImage() async {
     final picked = await _picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
@@ -37,20 +45,56 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
-  void _savePreferences() {
-    setState(() {
-      savedMoodTracking = moodTracking;
-      savedJournalReminder = journalReminder;
-      savedMedia = List.from(selectedMedia);
-      isEditing = false;
-    });
+  // ✅ SAVE PREFERENCES (API INTEGRATED)
+  Future<void> _savePreferences() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      if (token == null) {
+        AppSnackbar.show(context, "User not logged in");
+        return;
+      }
+
+      final response = await http.put(
+        Uri.parse("${ApiConfig.baseUrl}/me/settings"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({
+          "mood_tracking_enabled": moodTracking,
+          "daily_journal_reminders": journalReminder,
+        }),
+      );
+
+      print("SETTINGS RESPONSE: ${response.body}");
+
+      if (response.statusCode == 200) {
+        setState(() {
+          savedMoodTracking = moodTracking;
+          savedJournalReminder = journalReminder;
+          isEditing = false;
+        });
+
+        await prefs.setBool("hasPreferences", true);
+
+        AppSnackbar.show(context, "Preferences Saved Successfully");
+      } else {
+        final error = jsonDecode(response.body);
+        AppSnackbar.show(context, error["message"] ?? "Failed to save");
+      }
+    } catch (e) {
+      print("ERROR: $e");
+      AppSnackbar.show(context, "Something went wrong");
+    }
   }
 
+  // ✅ EDIT MODE
   void _editPreferences() {
     setState(() {
       moodTracking = savedMoodTracking;
       journalReminder = savedJournalReminder;
-      selectedMedia = List.from(savedMedia);
       isEditing = true;
     });
   }
@@ -59,10 +103,9 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     final displayMood = isEditing ? moodTracking : savedMoodTracking;
     final displayJournal = isEditing ? journalReminder : savedJournalReminder;
-    final displayMedia = isEditing ? selectedMedia : savedMedia;
 
     return Container(
-      color: bgColor,
+      color: Colors.white,
       child: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -75,7 +118,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     height: 150,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: [primaryColor, primaryColor.withOpacity(0.85)],
+                        colors: [accentColor, accentColor.withOpacity(0.8)],
                       ),
                       borderRadius: const BorderRadius.only(
                         bottomLeft: Radius.circular(60),
@@ -126,21 +169,19 @@ class _ProfilePageState extends State<ProfilePage> {
                             border: Border.all(color: Colors.white, width: 4),
                             boxShadow: [
                               BoxShadow(
-                                color: primaryColor.withOpacity(0.3),
+                                color: accentColor.withOpacity(0.3),
                                 blurRadius: 15,
                               ),
                             ],
                           ),
                           child: CircleAvatar(
                             radius: 50,
+                            backgroundColor: primaryColor,
                             backgroundImage:
                                 _image != null ? FileImage(_image!) : null,
                             child:
                                 _image == null
-                                    ? Icon(
-                                      Icons.camera_alt,
-                                      color: primaryColor,
-                                    )
+                                    ? Icon(Icons.camera_alt, color: accentColor)
                                     : null,
                           ),
                         ),
@@ -167,12 +208,12 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.email, size: 16, color: Colors.grey),
-                        SizedBox(width: 6),
+                      children: [
+                        Icon(Icons.email, size: 16, color: textGrey),
+                        const SizedBox(width: 6),
                         Text(
                           "stefani.wong@example.com",
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: textGrey),
                         ),
                       ],
                     ),
@@ -192,9 +233,9 @@ class _ProfilePageState extends State<ProfilePage> {
                           horizontal: 20,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryColor.withOpacity(0.1),
+                          color: primaryColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(30),
-                          border: Border.all(color: primaryColor),
+                          border: Border.all(color: accentColor),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -202,7 +243,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             Text(
                               "View Full Profile",
                               style: TextStyle(
-                                color: primaryColor,
+                                color: accentColor,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -210,7 +251,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             Icon(
                               Icons.arrow_forward,
                               size: 16,
-                              color: primaryColor,
+                              color: accentColor,
                             ),
                           ],
                         ),
@@ -222,19 +263,18 @@ class _ProfilePageState extends State<ProfilePage> {
 
               const SizedBox(height: 20),
 
-              /// 🌿 SETTINGS CARD
+              /// 🌿 PREFERENCES CARD
               _buildCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       "PREFERENCES",
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
-                        color: Colors.grey,
+                        color: textGrey,
                       ),
                     ),
-
                     const SizedBox(height: 20),
 
                     _buildToggleTile(
@@ -257,62 +297,13 @@ class _ProfilePageState extends State<ProfilePage> {
 
                     const SizedBox(height: 20),
 
-                    const Text(
-                      "Preferred Media Type",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMediaButton(
-                            "Movies",
-                            Icons.movie,
-                            displayMedia,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildMediaButton(
-                            "Songs",
-                            Icons.music_note,
-                            displayMedia,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMediaButton(
-                            "Books",
-                            Icons.menu_book,
-                            displayMedia,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildMediaButton(
-                            "Podcasts",
-                            Icons.mic,
-                            displayMedia,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
                     Row(
                       children: [
                         Expanded(
                           child: ElevatedButton(
                             onPressed: isEditing ? _savePreferences : null,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: primaryColor,
+                              backgroundColor: accentColor,
                               foregroundColor: Colors.white,
                             ),
                             child: const Text("Save"),
@@ -323,8 +314,8 @@ class _ProfilePageState extends State<ProfilePage> {
                           child: OutlinedButton(
                             onPressed: !isEditing ? _editPreferences : null,
                             style: OutlinedButton.styleFrom(
-                              foregroundColor: primaryColor,
-                              side: BorderSide(color: primaryColor),
+                              foregroundColor: accentColor,
+                              side: BorderSide(color: accentColor),
                             ),
                             child: const Text("Edit"),
                           ),
@@ -334,6 +325,13 @@ class _ProfilePageState extends State<ProfilePage> {
                   ],
                 ),
               ),
+
+              const SizedBox(height: 20),
+
+              /// 🌿 ACCOUNT & SETTINGS + LOGOUT
+              _buildAccountSettingsCard(),
+
+              const SizedBox(height: 30),
             ],
           ),
         ),
@@ -341,52 +339,91 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildMediaButton(
-    String title,
-    IconData icon,
-    List<String> displayMedia,
-  ) {
-    final isSelected = displayMedia.contains(title);
+  /// ✅ ACCOUNT SETTINGS CARD
+  Widget _buildAccountSettingsCard() {
+    return Column(
+      children: [
+        _buildCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "ACCOUNT & SETTINGS",
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: textGrey,
+                  letterSpacing: 1,
+                ),
+              ),
+              const SizedBox(height: 20),
 
-    return GestureDetector(
-      onTap:
-          isEditing
-              ? () {
-                setState(() {
-                  if (selectedMedia.contains(title)) {
-                    selectedMedia.remove(title);
-                  } else {
-                    selectedMedia.add(title);
-                  }
-                });
-              }
-              : null,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? primaryColor : const Color(0xFFF1F1F1),
-          borderRadius: BorderRadius.circular(14),
+              _settingsTile(
+                Icons.lock_outline,
+                "Account Settings",
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const AccountSettingsPage(),
+                    ),
+                  );
+                },
+              ),
+
+              _settingsTile(Icons.shield_outlined, "Privacy Policy"),
+              _settingsTile(Icons.description_outlined, "Terms & Conditions"),
+              _settingsTile(Icons.info_outline, "About Pocket Journal"),
+            ],
+          ),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: isSelected ? Colors.white : Colors.black54,
-            ),
-            const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                color: isSelected ? Colors.white : Colors.black54,
-                fontWeight: FontWeight.w600,
+
+        const SizedBox(height: 16),
+
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {},
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              elevation: 2,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
             ),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.logout, color: Colors.red),
+                SizedBox(width: 8),
+                Text(
+                  "Logout",
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+      ],
+    );
+  }
+
+  Widget _settingsTile(IconData icon, String title, {VoidCallback? onTap}) {
+    return Column(
+      children: [
+        ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(icon, color: accentColor),
+          title: Text(title),
+          trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+          onTap: onTap,
+        ),
+        const Divider(),
+      ],
     );
   }
 
@@ -405,14 +442,18 @@ class _ProfilePageState extends State<ProfilePage> {
             children: [
               Text(title, style: const TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 4),
-              Text(subtitle, style: const TextStyle(color: Colors.grey)),
+              Text(subtitle, style: TextStyle(color: textGrey)),
             ],
           ),
         ),
         Switch(
           value: value,
-          onChanged: enabled ? onChanged : null,
-          activeColor: primaryColor,
+          onChanged: (val) {
+            if (enabled) onChanged(val);
+          },
+          activeColor: accentColor,
+          inactiveTrackColor: accentColor.withOpacity(0.3),
+          inactiveThumbColor: accentColor,
         ),
       ],
     );
@@ -437,10 +478,15 @@ class _ProfilePageState extends State<ProfilePage> {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: accentColor.withOpacity(0.2), width: 1.2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       child: child,

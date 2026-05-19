@@ -1,7 +1,13 @@
+import 'dart:convert';
+import 'dart:developer';
+import 'package:diary/DesignConstraints/api.dart';
 import 'package:diary/DesignConstraints/navbar.dart';
 import 'package:diary/DesignConstraints/snackbar.dart';
+import 'package:diary/Login/moviePreference.dart';
 import 'package:diary/Login/signup.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,6 +21,67 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController passwordController = TextEditingController();
 
   bool obscurePassword = true;
+  bool isLoading = false; // ✅ loader
+
+  // ✅ LOGIN API FUNCTION
+  Future<void> loginUser() async {
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    setState(() => isLoading = true);
+
+    try {
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/auth/login"),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      );
+
+      log("RESPONSE: ${response.body}");
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        String token = data["id_token"];
+        String refreshToken = data["refresh_token"];
+
+        // ✅ STORE TOKEN
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("token", token);
+        await prefs.setString("refresh_token", refreshToken);
+        bool hasPreferences = prefs.getBool("hasPreferences") ?? false;
+        log("TOKEN SAVED");
+
+        AppSnackbar.show(context, "Login Successful");
+
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (hasPreferences) {
+            // ✅ OLD USER → Dashboard
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const CustomBottomNavBar(),
+              ),
+            );
+          } else {
+            // ✅ NEW USER → Preferences
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const PreferencesPage()),
+            );
+          }
+        });
+      } else {
+        final error = jsonDecode(response.body);
+        AppSnackbar.show(context, error["message"] ?? "Login failed");
+      }
+    } catch (e) {
+      print("ERROR: $e");
+      AppSnackbar.show(context, e.toString());
+    }
+
+    setState(() => isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -116,7 +183,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 40),
 
-                // BUTTON WITH SNACKBAR VALIDATION
+                // ✅ BUTTON (UPDATED)
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orange,
@@ -128,48 +195,45 @@ class _LoginPageState extends State<LoginPage> {
                       vertical: 12,
                     ),
                   ),
-                  onPressed: () {
-                    final email = emailController.text.trim();
-                    final password = passwordController.text.trim();
+                  onPressed:
+                      isLoading
+                          ? null
+                          : () {
+                            final email = emailController.text.trim();
+                            final password = passwordController.text.trim();
 
-                    // EMAIL
-                    if (email.isEmpty) {
-                      AppSnackbar.show(context, 'Email is required');
-                      return;
-                    }
+                            // VALIDATIONS (same as yours)
+                            if (email.isEmpty) {
+                              AppSnackbar.show(context, 'Email is required');
+                              return;
+                            }
 
-                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                    if (!emailRegex.hasMatch(email)) {
-                      AppSnackbar.show(context, 'Enter a valid email');
-                      return;
-                    }
+                            final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                            if (!emailRegex.hasMatch(email)) {
+                              AppSnackbar.show(context, 'Enter a valid email');
+                              return;
+                            }
 
-                    // PASSWORD
-                    if (password.isEmpty) {
-                      AppSnackbar.show(context, 'Password is required');
-                      return;
-                    }
+                            if (password.isEmpty) {
+                              AppSnackbar.show(context, 'Password is required');
+                              return;
+                            }
 
-                    if (password.length < 6) {
-                      AppSnackbar.show(
-                        context,
-                        'Password must be at least 6 characters',
-                      );
-                      return;
-                    }
+                            if (password.length < 6) {
+                              AppSnackbar.show(
+                                context,
+                                'Password must be at least 6 characters',
+                              );
+                              return;
+                            }
 
-                    // SUCCESS
-                    AppSnackbar.show(context, 'Login Successful');
-                    Future.delayed(const Duration(milliseconds: 500), () {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CustomBottomNavBar(),
-                        ),
-                      );
-                    });
-                  },
-                  child: const Text('Login'),
+                            // ✅ CALL API
+                            loginUser();
+                          },
+                  child:
+                      isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Login'),
                 ),
 
                 const SizedBox(height: 20),
@@ -193,7 +257,7 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // TEXTFIELD
+  // TEXTFIELD (UNCHANGED)
   Widget buildTextField({
     required TextEditingController controller,
     required IconData icon,

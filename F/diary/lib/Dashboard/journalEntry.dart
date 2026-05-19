@@ -1,4 +1,12 @@
+import 'dart:convert';
+import 'package:diary/DesignConstraints/api.dart';
+import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import 'package:diary/DesignConstraints/navbar.dart';
+import 'package:diary/DesignConstraints/snackbar.dart';
+
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -12,7 +20,9 @@ class Journalentry extends StatefulWidget {
 class _JournalentryState extends State<Journalentry> {
   final TextEditingController titleController = TextEditingController();
   final TextEditingController contentController = TextEditingController();
-  final Color primaryColor = const Color(0xFF6E6E9E);
+
+  final Color primaryColor = const Color(0xFFCEC0BB);
+  final Color accentColor = const Color(0xFF1E2D4C);
 
   late stt.SpeechToText _speech;
   bool isListening = false;
@@ -44,10 +54,62 @@ class _JournalentryState extends State<Journalentry> {
     }
   }
 
+  // ✅ API CALL
+  Future<void> _saveEntry() async {
+    final title = titleController.text.trim();
+    final content = contentController.text.trim();
+
+    if (title.isEmpty || content.isEmpty) {
+      AppSnackbar.show(context, "Please fill all fields");
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      String? token = prefs.getString("token");
+
+      if (token == null) {
+        AppSnackbar.show(context, "User not logged in");
+        return;
+      }
+
+      final response = await http.post(
+        Uri.parse("${ApiConfig.baseUrl}/journal"),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer $token",
+        },
+        body: jsonEncode({"title": title, "entry_text": content}),
+      );
+
+      print("JOURNAL RESPONSE: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        AppSnackbar.show(context, "Entry Saved Successfully");
+
+        // ✅ Clear fields after success
+        titleController.clear();
+        contentController.clear();
+
+        // OPTIONAL: Navigate back
+        // Navigator.pop(context);
+      } else {
+        final error = jsonDecode(response.body);
+        AppSnackbar.show(context, error["message"] ?? "Failed to save entry");
+      }
+    } catch (e) {
+      print("ERROR: $e");
+      AppSnackbar.show(context, "Something went wrong");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final String currentDate = DateFormat(
+      "MMMM dd, yyyy",
+    ).format(DateTime.now());
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 213, 220, 246),
+      backgroundColor: primaryColor.withOpacity(0.98),
 
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -57,19 +119,19 @@ class _JournalentryState extends State<Journalentry> {
           child: Container(
             margin: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: primaryColor.withOpacity(0.1),
+              color: primaryColor.withOpacity(0.4),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.arrow_back, color: primaryColor),
+            child: Icon(Icons.arrow_back, color: accentColor),
           ),
         ),
         centerTitle: true,
-        title: const Text(
+        title: Text(
           "New Entry",
           style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.w600,
-            color: Colors.black,
+            color: accentColor,
           ),
         ),
       ),
@@ -92,13 +154,12 @@ class _JournalentryState extends State<Journalentry> {
                     children: [
                       const SizedBox(height: 10),
 
-                      // HEADER
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            "March 14, 2024",
-                            style: TextStyle(color: Colors.grey),
+                            currentDate,
+                            style: const TextStyle(color: Colors.grey),
                           ),
                           SizedBox(height: 5),
                           Text(
@@ -113,11 +174,10 @@ class _JournalentryState extends State<Journalentry> {
 
                       const SizedBox(height: 20),
 
-                      // 🆕 TITLE FIELD
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: primaryColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: TextField(
@@ -131,12 +191,11 @@ class _JournalentryState extends State<Journalentry> {
 
                       const SizedBox(height: 15),
 
-                      // 📝 TEXT + 🎤 MIC
                       Container(
                         height: 180,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.grey.shade100,
+                          color: primaryColor.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Stack(
@@ -150,7 +209,6 @@ class _JournalentryState extends State<Journalentry> {
                               ),
                             ),
 
-                            // 🎤 MIC BUTTON
                             Positioned(
                               right: 0,
                               bottom: 0,
@@ -159,9 +217,7 @@ class _JournalentryState extends State<Journalentry> {
                                 child: CircleAvatar(
                                   radius: 22,
                                   backgroundColor:
-                                      isListening
-                                          ? Colors.red
-                                          : Colors.deepPurple,
+                                      isListening ? Colors.red : accentColor,
                                   child: Icon(
                                     isListening ? Icons.mic : Icons.mic_none,
                                     color: Colors.white,
@@ -175,15 +231,16 @@ class _JournalentryState extends State<Journalentry> {
 
                       const SizedBox(height: 20),
 
-                      const Row(
+                      Row(
                         children: [
-                          Icon(Icons.flash_on, color: Colors.orange),
-                          SizedBox(width: 8),
+                          Icon(Icons.flash_on, color: accentColor),
+                          const SizedBox(width: 8),
                           Text(
                             "Need a Spark?",
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
+                              color: accentColor,
                             ),
                           ),
                         ],
@@ -201,7 +258,6 @@ class _JournalentryState extends State<Journalentry> {
             ),
           ),
 
-          // SAVE SECTION
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -210,12 +266,9 @@ class _JournalentryState extends State<Journalentry> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: () {
-                      print("Title: ${titleController.text}");
-                      print("Content: ${contentController.text}");
-                    },
+                    onPressed: _saveEntry, // ✅ API CONNECTED HERE
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.deepPurple,
+                      backgroundColor: accentColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(15),
                       ),
@@ -230,7 +283,7 @@ class _JournalentryState extends State<Journalentry> {
                 const SizedBox(height: 10),
 
                 const Text(
-                  "Your mood will be automatically detected when you save 💙",
+                  "Your mood will be automatically detected when you save",
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 13, color: Colors.grey),
                 ),
@@ -242,22 +295,19 @@ class _JournalentryState extends State<Journalentry> {
     );
   }
 
-  static Widget _sparkButton(String text) {
+  Widget _sparkButton(String text) {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
+        color: primaryColor.withOpacity(0.3),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Center(
         child: Text(
           text,
-          style: const TextStyle(
-            color: Colors.orange,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(color: accentColor, fontWeight: FontWeight.w600),
         ),
       ),
     );
