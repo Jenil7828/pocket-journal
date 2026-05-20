@@ -14,6 +14,7 @@ import logging
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 import pytz
+import re
 from firebase_admin import firestore
 
 logger = logging.getLogger()
@@ -86,6 +87,53 @@ def _clean_text(text: str, max_len: int = 160) -> str:
             text = text.rstrip(",.;:") + "..."
     
     return text
+
+
+def _clean_ai_insight(text: str, max_len: int = 120) -> str:
+    """Sanitize AI-generated appreciation/insight text for UI display.
+    Remove timestamps, short date tokens and obvious numeric anchors that bias summaries.
+    Preserve punctuation and sentence boundaries where possible and trim to max_len.
+    """
+    if not text:
+        return ""
+
+    # Start with the generic cleaner but allow a longer working buffer
+    s = _clean_text(str(text), max_len * 2)
+
+    # Remove common time tokens (e.g., 8:30, 08:30:00, 8am, 8 PM)
+    s = re.sub(r"\b\d{1,2}:\d{2}(?::\d{2})?\b", "", s)
+    s = re.sub(r"\b\d{1,2}\s?(am|pm|AM|PM)\b", "", s)
+
+    # Remove simple numeric date patterns (7/5/2024, 07/05)
+    s = re.sub(r"\b\d{1,2}/\d{1,2}/\d{2,4}\b", "", s)
+    s = re.sub(r"\b\d{1,2}/\d{1,2}\b", "", s)
+
+    # Remove ordinal tokens like 7th, 1st etc
+    s = re.sub(r"\b\d{1,2}(st|nd|rd|th)\b", "", s)
+
+    # Remove stray years (1900-2099)
+    s = re.sub(r"\b(19|20)\d{2}\b", "", s)
+
+    # Collapse excessive whitespace introduced by removals
+    s = re.sub(r"\s+", " ", s).strip()
+
+    # Short final trim preserving sentence boundary where possible
+    if len(s) > max_len:
+        truncated = s[:max_len]
+        last_period = truncated.rfind(".")
+        if last_period > max_len // 2:
+            s = truncated[:last_period + 1]
+        else:
+            last_space = truncated.rfind(" ")
+            if last_space > max_len // 2:
+                s = truncated[:last_space]
+            else:
+                s = truncated
+
+        if not s.endswith("."):
+            s = s.rstrip(",.;:") + "..."
+
+    return s
 
 
 def _synthesize_behavioral_pattern(insight: dict) -> str:

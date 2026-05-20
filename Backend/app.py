@@ -21,7 +21,9 @@ warnings.filterwarnings("ignore", category=UserWarning, module="tensorflow")
 from flask import Flask, request, jsonify
 from functools import wraps
 import logging
+import time
 from utils.log_formatter import ColoredFormatter
+from utils.logging_utils import log_request, log_response
 
 # -------------------- Logging --------------------
 LOG_LEVEL = _CFG["logging"]["app_level"].upper()
@@ -217,23 +219,93 @@ ENABLE_INSIGHTS = bool(_CFG["app"]["enable_insights"])
 def login_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
+        start_time = time.time()
+        # Log the incoming request (routes also call log_request(); this keeps
+        # authentication-level timing visible in logs when auth fails early).
+        try:
+            log_request()
+        except Exception:
+            # Logging must never break authentication flow
+            logger.debug("log_request failed in auth decorator")
+
         header = request.headers.get("Authorization")
         if not header or not header.startswith("Bearer "):
-            return jsonify({"error": "Missing or invalid token"}), 401
+            logger.warning("auth_failed reason=missing_authorization_header")
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_token"}), 401
 
         try:
             # Parse Authorization header safely: "Bearer <token>"
             token = header[len("Bearer ") :]
             if not token:
-                return jsonify({"error": "Missing or invalid token"}), 401
-            decoded_token = auth.verify_id_token(token)
+                logger.warning("auth_failed reason=empty_bearer_token")
+                log_response(401, start_time)
+                return jsonify({"error": "invalid_token"}), 401
+
+            # IMPORTANT: Firebase ID tokens are stateless JWTs. Calling
+            # firebase_auth.revoke_refresh_tokens(uid) only revokes the refresh
+            # capability (so refresh tokens can no longer mint new ID tokens).
+            # Existing ID tokens remain valid until they expire unless we tell
+            # the SDK to check revocation state. Setting check_revoked=True
+            # forces the Firebase Admin SDK to verify the token has not been
+            # revoked and enables immediate logout enforcement.
+            decoded_token = auth.verify_id_token(token, check_revoked=True)
+
             # Attach only the allowed user fields to request.user (uid and email)
             request.user = {
                 "uid": decoded_token.get("uid"),
                 "email": decoded_token.get("email"),
             }
+
         except Exception as e:
-            return jsonify({"error": "Invalid token", "details": str(e)}), 401
+            # Try to match specific Firebase exception classes when available so
+            # we can return structured JSON error codes. These classes are
+            # internal to the firebase_admin package; import them if present.
+            try:
+                from firebase_admin._auth_utils import (
+                    RevokedIdTokenError,
+                    ExpiredIdTokenError,
+                    InvalidIdTokenError,
+                )
+            except Exception:
+                RevokedIdTokenError = None
+                ExpiredIdTokenError = None
+                InvalidIdTokenError = None
+
+            # Handle revoked token (user logged out / refresh revoked)
+            if RevokedIdTokenError is not None and isinstance(e, RevokedIdTokenError):
+                logger.info("auth_failed reason=token_revoked")
+                log_response(401, start_time)
+                return jsonify({"error": "token_revoked"}), 401
+
+            # Handle expired ID token
+            if ExpiredIdTokenError is not None and isinstance(e, ExpiredIdTokenError):
+                logger.info("auth_failed reason=token_expired")
+                log_response(401, start_time)
+                return jsonify({"error": "token_expired"}), 401
+
+            # Handle invalid token
+            if InvalidIdTokenError is not None and isinstance(e, InvalidIdTokenError):
+                logger.warning("auth_failed reason=invalid_token detail=%s", str(e))
+                log_response(401, start_time)
+                return jsonify({"error": "invalid_token"}), 401
+
+            # Fallback: if specific classes are not available or didn't match,
+            # examine the exception message for common revocation/expired cues.
+            msg = str(e).lower()
+            if "revoked" in msg:
+                logger.info("auth_failed reason=token_revoked (message)")
+                log_response(401, start_time)
+                return jsonify({"error": "token_revoked"}), 401
+            if "expired" in msg or "expiry" in msg or "token has expired" in msg:
+                logger.info("auth_failed reason=token_expired (message)")
+                log_response(401, start_time)
+                return jsonify({"error": "token_expired"}), 401
+
+            # Generic invalid/auth error
+            logger.error("auth_failed reason=invalid_token exception=%s", str(e))
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_token"}), 401
 
         return f(*args, **kwargs)
 
@@ -244,7 +316,7 @@ def login_required(f):
 # Replace manual route definitions with modular route registration
 from routes import register_all as register_routes
 
-# Prepare dependency bag for routes
+# Prepare a dependency bag for routes
 deps = {
     "login_required": login_required,
     "get_db": get_db,

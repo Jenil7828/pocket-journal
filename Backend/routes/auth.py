@@ -146,6 +146,30 @@ def register(app, deps: dict):
             log_response(500, start_time)
             return jsonify({"error": "login_failed", "details": str(e)}), 500
 
+    @app.route("/api/v1/auth/logout", methods=["POST"])
+    @login_required
+    def logout():
+        start_time = time.time()
+        log_request()
+        user = getattr(request, "user", None) or {}
+        uid = user.get("uid")
+        logger.info(f"[REQ][auth] action=logout uid={uid}")
+
+        if not uid:
+            log_response(401, start_time)
+            return jsonify({"error": "invalid_user"}), 401
+
+        try:
+            # Revoke all refresh tokens for this user so future refresh attempts fail
+            firebase_auth.revoke_refresh_tokens(uid)
+            log_response(200, start_time)
+            logger.info(f"[AUTH][logout] revoked_refresh_tokens uid={uid}")
+            return jsonify({"message": "logout_successful"}), 200
+        except Exception as e:
+            logger.error(f"[ERR][auth] logout_failed uid={uid} error={str(e)}")
+            log_response(500, start_time)
+            return jsonify({"error": "logout_failed", "details": str(e)}), 500
+
     @app.route("/api/v1/auth/change-password", methods=["POST"])
     @login_required
     def change_password():
