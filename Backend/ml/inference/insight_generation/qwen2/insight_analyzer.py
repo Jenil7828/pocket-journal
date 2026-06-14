@@ -1,7 +1,10 @@
-# LOCAL MODEL INSIGHTS ANALYZER
-# Used when insights.use_gemini=false in config.yml (default)
-# Uses Qwen2-1.5B-Instruct via HuggingFace (preferred) or Ollama
-# To switch to Gemini: set insights.use_gemini=true in config.yml
+"""Insight analyzer shim for historical local Qwen2 implementation.
+
+Local Qwen2 support has been deprecated. This module remains to provide a
+clear error message if legacy code attempts to fall back to the removed local
+predictor. Use the Gemini backend (cloud) or an Ollama server for on-premise
+inference instead.
+"""
 
 import os
 import re
@@ -56,8 +59,21 @@ class LocalLLM:
         return resp.json().get("response", "")
 
     def _load_predictor_fallback(self):
-        self.logger.warning("Loading InsightsPredictor in-process as last resort")
-        from ml.inference.insight_generation.qwen2.predictor import InsightsPredictor
+        # Local Qwen2 predictor was removed. Attempting to import the old
+        # predictor will raise a clear error pointing users at supported
+        # alternatives instead of silently trying to load large local weights.
+        self.logger.warning("Attempting to load deprecated InsightsPredictor (expected to fail)")
+        try:
+            from ml.inference.insight_generation.qwen2.predictor import InsightsPredictor
+        except Exception as e:
+            # Provide a helpful error indicating the recommended alternatives.
+            raise RuntimeError(
+                "Local Qwen2 predictor is not available in this build. "
+                "Use the Gemini cloud backend (set ml.insight_generation.use_gemini=true) "
+                "or run an Ollama server and configure ml.insight_generation.backend=ollama. "
+                "See Documentation/Project/CONFIGURATION.md for details."
+            ) from e
+        # If import succeeded unexpectedly, instantiating will still raise.
         self._predictor = InsightsPredictor()
 
     def invoke(self, prompt: str) -> str:

@@ -117,13 +117,13 @@ def _load_config_once() -> Dict[str, Any]:
         (["ml", "model_store", "source"], "MODEL_SOURCE", "str"),
         (["ml", "model_store", "local_path"], "MODEL_STORE_PATH", "str"),
         (["ml", "model_store", "cache_dir"], "MODEL_CACHE_DIR", "str"),
-        (["ml", "model_store", "gcs_bucket"], "MODEL_GCS_BUCKET", "str"),
+        # GCS configuration removed: MODEL_GCS_BUCKET is no longer supported
         (["ml", "model_store", "s3_bucket"], "MODEL_S3_BUCKET", "str"),
         (["ml", "model_store", "s3_region"], "MODEL_S3_REGION", "str"),
         (["ml", "model_store", "download_on_startup"], "MODEL_DOWNLOAD_ON_STARTUP", "bool"),
         (["ml", "model_store", "models", "roberta", "version"], "MODEL_ROBERTA_VERSION", "str"),
         (["ml", "model_store", "models", "bart", "version"], "MODEL_BART_VERSION", "str"),
-        (["ml", "model_store", "models", "qwen2", "version"], "MODEL_QWEN2_VERSION", "str"),
+        # qwen2 model version override removed (insight_generation local model deprecated)
         (["ml", "model_store", "models", "embedding", "version"], "MODEL_EMBEDDING_VERSION", "str"),
 
         # Recommendation

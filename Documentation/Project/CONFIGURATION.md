@@ -282,53 +282,38 @@ Adjust weights to favor recent mood (higher journal weight) or historical taste 
 
 ### Insight Generation
 
-```yaml
+````yaml
 ml:
   insight_generation:
-    use_gemini: false                 # INSIGHTS_USE_GEMINI
-    backend: "huggingface"            # INSIGHTS_BACKEND: huggingface | ollama
-    model_version: "v1"               # INSIGHTS_MODEL_VERSION
-    hf_model_name: "Qwen/Qwen2-1.5B-Instruct"
-    hf_model_dir: "ml/models/insight_generation/qwen2/v1"
-    ollama_model: "qwen2:1.5b"        # INSIGHTS_OLLAMA_MODEL
-    ollama_base_url: "http://localhost:11434"
-    temperature: 0.7                  # INSIGHTS_TEMPERATURE
-    batch_size: 5                     # INSIGHTS_BATCH_SIZE
-    max_new_tokens: 4096              # INSIGHTS_MAX_NEW_TOKENS
-    gemini_model_name: "gemini-2.0-flash"
-    gemini_max_retries: 2             # INSIGHTS_GEMINI_MAX_RETRIES
-```
+    # Local Qwen2 models have been deprecated in this repository.
+    # Insight generation should use a cloud LLM (Gemini) or an Ollama
+    # server if you require an on-prem/offline model.
+    use_gemini: true                    # INSIGHTS_USE_GEMINI — prefer Gemini for cloud-backed insights
+    backend: "gemini"                 # INSIGHTS_BACKEND — "gemini" | "ollama"
+    model_version: "v1"               # INSIGHTS_MODEL_VERSION (informational)
+    temperature: 0.7                    # INSIGHTS_TEMPERATURE
+    batch_size: 5                       # INSIGHTS_BATCH_SIZE
+    max_new_tokens: 4096                # INSIGHTS_MAX_NEW_TOKENS
+    gemini_model_name: "gemini-2.0-flash"  # INSIGHTS_GEMINI_MODEL_NAME
+    gemini_max_retries: 2               # INSIGHTS_GEMINI_MAX_RETRIES
+````
 
 | Setting | Default | Purpose |
 |---------|---------|---------|
-| `use_gemini` | false | true = Gemini API, false = local Qwen2 |
-| `backend` | huggingface | Qwen2 backend: huggingface or ollama |
+| `use_gemini` | true | true = Gemini API (recommended), false = Ollama |
+| `backend` | gemini | Cloud vs local insight generation backend |
 | `temperature` | 0.7 | Higher = more creative, lower = more deterministic |
 | `batch_size` | 5 | Entries per batch (for batch processing) |
 | `max_new_tokens` | 4096 | Max length of generated insight |
 
-**Configuration Scenarios**:
+**Configuration Notes**:
 
-**Scenario 1: Local Inference (GPU-enabled)**
-```yaml
-use_gemini: false
-backend: huggingface
-temperature: 0.7
-```
-
-**Scenario 2: Cloud Inference (Gemini)**
-```yaml
-use_gemini: true
-gemini_model_name: gemini-2.0-flash
-gemini_max_retries: 2
-```
-
-**Scenario 3: Ollama (Offline)**
-```yaml
-backend: ollama
-ollama_base_url: http://localhost:11434
-ollama_model: qwen2:1.5b
-```
+- Local Qwen2 weights and code have been removed from the main runtime to
+  reduce repository size and avoid shipping large model artifacts. If you
+  require an on-premise local model, run an Ollama server and set
+  `backend: "ollama"` with the appropriate `ollama_base_url` and `ollama_model`.
+- For cloud deployments, set `use_gemini: true` and provide the required
+  `GEMINI_API_KEY` via environment variable or your platform's secret manager.
 
 ### Model Store
 
@@ -338,7 +323,7 @@ ml:
     source: "local"                   # MODEL_SOURCE: local | gcs | s3
     local_path: ""                    # MODEL_STORE_PATH
     cache_dir: "/tmp/models"          # MODEL_CACHE_DIR
-    gcs_bucket: ""                    # MODEL_GCS_BUCKET
+    # gcs_bucket removed; GCS is not supported in this build
     s3_bucket: ""                     # MODEL_S3_BUCKET
     s3_region: "us-east-1"            # MODEL_S3_REGION
     download_on_startup: true         # MODEL_DOWNLOAD_ON_STARTUP
@@ -537,9 +522,10 @@ export APP_LOG_LEVEL=INFO
 export WERKZEUG_LOG_LEVEL=ERROR
 export FIREBASE_LOG_LEVEL=WARNING
 
-# Models
-export MODEL_SOURCE=gcs
-export MODEL_GCS_BUCKET=my-prod-bucket
+ # Models
+ export MODEL_SOURCE=s3
+ export MODEL_S3_BUCKET=my-prod-bucket
+ export MODEL_S3_REGION=us-west-2
 
 # ML Settings
 export MOOD_PREDICTION_THRESHOLD=0.35

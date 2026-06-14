@@ -33,7 +33,7 @@ services:
       # Model versions
       - MODEL_ROBERTA_VERSION=v2
       - MODEL_BART_VERSION=v2
-      - MODEL_QWEN2_VERSION=v1
+      # MODEL_QWEN2_VERSION removed — local Qwen2 model deprecated
     # Mount volumes for models, secrets, and cache
     volumes:
 #      - ./Backend:/app:ro
@@ -64,8 +64,8 @@ volumes:
 # To start with LOCAL models:
 #   docker compose up --build -d
 #
-# To start with GCS models:
-#   docker compose -e MODEL_SOURCE=gcs -e MODEL_GCS_BUCKET=your-bucket up --build -d
+# To start with S3 models:
+#   docker compose -e MODEL_SOURCE=s3 -e MODEL_S3_BUCKET=your-bucket -e MODEL_S3_REGION=us-east-1 up --build -d
 #
 # To start with S3 models:
 #   docker compose -e MODEL_SOURCE=s3 -e MODEL_S3_BUCKET=your-bucket -e MODEL_S3_REGION=us-east-1 up --build -d

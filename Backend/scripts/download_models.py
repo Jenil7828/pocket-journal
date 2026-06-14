@@ -35,17 +35,9 @@ _STORE = _CFG["ml"]["model_store"]
 # Always skip embedding because sentence-transformers downloads it at runtime.
 SKIP_GROUPS = {"embedding"}
 
-# If insight generation is configured to use Gemini (cloud) then the local
-# insight_generation model (qwen2) should NOT be downloaded into the
-# container cache. Honor the `use_gemini` flag from configuration.
-try:
-    use_gemini = bool(_CFG.get("ml", {}).get("insight_generation", {}).get("use_gemini", False))
-except Exception:
-    use_gemini = False
-
-if use_gemini:
-    SKIP_GROUPS.add("insight_generation")
-    logger.info("INSIGHTS_USE_GEMINI=true — skipping local insight_generation models at startup")
+# Insight generation local model (qwen2) has been removed. Only mood_detection
+# and summarization are considered for startup downloads; embedding is still
+# skipped because sentence-transformers manages it at runtime.
 
 
 def main():
@@ -62,9 +54,6 @@ def main():
     logger.info("  cache_dir: %s", cache_dir)
     logger.info("  models:    %d", len(specs))
 
-    if source == "gcs" and not _STORE.get("gcs_bucket"):
-        logger.error("MODEL_SOURCE=gcs but MODEL_GCS_BUCKET is not set")
-        sys.exit(1)
 
     if source == "s3" and not _STORE.get("s3_bucket"):
         logger.error("MODEL_SOURCE=s3 but MODEL_S3_BUCKET is not set")

@@ -43,6 +43,7 @@ Thumbs.db
 
 # Environment / secrets
 .env
+.env.aws
 Backend/*.json
 *.json
 

@@ -8,7 +8,7 @@ gunicorn==25.1.0
 # Firebase & Authentication
 firebase-admin==7.1.0
 google-cloud-firestore==2.21.0
-google-cloud-storage==3.4.0
+# google-cloud-storage removed (GCS support deprecated)
 google-auth==2.45.0
 google-api-core==2.25.1
 PyJWT==2.10.1

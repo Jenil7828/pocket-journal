@@ -11,7 +11,7 @@ if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
 from config_loader import get_config
-from ml.utils.model_loader import resolve_model_path
+from ml.utils.model_loader import resolve_model_path, get_model_spec
 from persistence.db_manager import DBManager
 from services.embeddings.embedding_service import get_embedding_service
 
@@ -80,7 +80,8 @@ def main():
     if args.task in ["all", "roberta", "pipeline"]:
         try:
             from ml.inference.mood_detection.roberta.predictor import SentencePredictor
-            path = resolve_model_path("mood_detection", "roberta", roberta_v)
+            spec = get_model_spec("mood_detection")
+            path = resolve_model_path(spec["group"], spec["name"], roberta_v)
             roberta_predictor = SentencePredictor(model_path=path)
         except Exception as e:
             logger.error("Failed to load RoBERTa model: %s", str(e))
@@ -88,7 +89,8 @@ def main():
     if args.task in ["all", "bart", "pipeline"]:
         try:
             from ml.inference.summarization.bart.predictor import SummarizationPredictor
-            path = resolve_model_path("summarization", "bart", bart_v)
+            spec = get_model_spec("summarization")
+            path = resolve_model_path(spec["group"], spec["name"], bart_v)
             bart_predictor = SummarizationPredictor(model_path=path)
             embedding_service = get_embedding_service()
         except Exception as e:

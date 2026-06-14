@@ -22,6 +22,7 @@ __pycache__/
 # CRITICAL: Never commit your secrets!
 .env
 *.env
+.env.aws
 
 # --- Database Files ---
 # Ignore your local SQLite database file

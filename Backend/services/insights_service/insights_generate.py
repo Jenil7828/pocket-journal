@@ -47,23 +47,19 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True, in
         logger.debug("Failed to check user settings for insights: %s", str(e))
 
     try:
-        from config_loader import get_config
-        use_gemini = bool(get_config()["ml"]["insight_generation"].get("use_gemini", False))
-
-        if use_gemini:
-            logger.info("Insights backend: Gemini")
-            from ml.inference.insight_generation.gemini.insight_analyzer import InsightsGenerator, fallback_insight
-            generator = InsightsGenerator(db)
-        else:
-            logger.info("Insights backend: Local model (Qwen2)")
-            from ml.inference.insight_generation.qwen2.insight_analyzer import InsightsGenerator
-            generator = InsightsGenerator(db, insights_predictor=insights_predictor)
+        # Local Qwen2-based insight generation has been deprecated. Always
+        # use the Gemini-backed InsightsGenerator provided in the gemini
+        # inference package.
+        logger.info("Insights backend: Gemini (cloud)")
+        from ml.inference.insight_generation.gemini.insight_analyzer import InsightsGenerator, fallback_insight
+        generator = InsightsGenerator(db)
 
         try:
             insights = generator.generate_insights(uid, start_date, end_date)
         except Exception:
-            logger.warning("AI failed, fallback used")
-            if use_gemini:
+            logger.warning("AI failed — attempting gemini fallback and then static fallback")
+            # Try the gemini fallback helper (may provide a structured default insight)
+            try:
                 fallback_body = fallback_insight(uid, start_date, end_date)
                 insight_item = (fallback_body.get("insights") or [{}])[0] or {}
                 return _clean_insight_response({
@@ -74,7 +70,8 @@ def generate_insights(user, data, db, enable_llm=False, enable_insights=True, in
                     "appreciation": insight_item.get("appreciation", ""),
                     "conflicts": insight_item.get("conflicts", []),
                 }), 200
-            insights = _fallback_clean_insights()
+            except Exception:
+                insights = _fallback_clean_insights()
 
         if isinstance(insights, dict) and "insights" in insights:
             insight_item = (insights.get("insights") or [{}])[0] or {}

@@ -123,7 +123,6 @@ from ml.utils.model_loader import resolve_model_from_config
 
 from ml.inference.mood_detection.roberta.predictor import SentencePredictor
 from ml.inference.summarization.bart.predictor import SummarizationPredictor
-from ml.inference.insight_generation.qwen2.predictor import InsightsPredictor
 
 
 # -------------------- Lazy singletons --------------------
@@ -164,12 +163,9 @@ def get_summarizer():
     return _summarizer
 
 
-def get_insights_predictor():
-    global _insights_predictor
-    if _insights_predictor is None:
-        model_dir = resolve_model_from_config("insight_generation")
-        _insights_predictor = InsightsPredictor(model_path=model_dir)
-    return _insights_predictor
+# Local insight_generation model (Qwen2) has been removed. Insights are
+# provided via the Gemini-backed service. The old get_insights_predictor
+# helper and Qwen predictor import were removed.
 
 # -------------------- Eager model loading at startup --------------------
 try:
@@ -188,20 +184,8 @@ except Exception as e:
     # Do not fail startup if models unavailable; keep server running and degrade gracefully
     logger.warning("Failed to eagerly load models at startup: %s", str(e))
 
-# Only eagerly load insights predictor if NOT using Gemini backend
-# If use_gemini=true, the predictor will be lazily loaded on-demand (if ever needed)
-use_gemini = bool(_CFG["ml"]["insight_generation"].get("use_gemini", False))
-
-_insights_predictor = None
-if not use_gemini:
-    try:
-        _insights_predictor = get_insights_predictor()
-        logger.info("Eagerly loaded insights predictor at startup (Gemini disabled)")
-    except Exception as e:
-        logger.warning("Failed to load insights predictor at startup: %s", str(e))
-        _insights_predictor = None
-else:
-    logger.info("Skipping eager load of insights predictor (Gemini enabled)")
+# Insights predictor is provided by cloud Gemini or service-side generators; no
+# local insight model is eagerly loaded at startup.
 
 # NEW: expose module-level cached references for route handlers to use
 PREDICTOR = _predictor
@@ -335,10 +319,10 @@ deps = {
     # ML Models & Accessors
     "PREDICTOR": PREDICTOR,
     "SUMMARIZER": SUMMARIZER,
-    "INSIGHTS_PREDICTOR": INSIGHTS_PREDICTOR,
+    # INSIGHTS_PREDICTOR removed (local Qwen2 deprecated)
     "get_predictor": get_predictor,
     "get_summarizer": get_summarizer,
-    "get_insights_predictor": get_insights_predictor,
+    # get_insights_predictor removed
     "get_embedding_service": get_embedding_service,
     "ENABLE_LLM": ENABLE_LLM,
     "ENABLE_INSIGHTS": ENABLE_INSIGHTS,

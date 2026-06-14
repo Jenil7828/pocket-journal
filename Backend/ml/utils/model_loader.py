@@ -1,5 +1,5 @@
 """
-Model store loader — resolves model paths from local disk, GCS, or S3.
+Model store loader — resolves model paths from local disk or S3.
 
 Used by all inference predictors instead of hardcoded paths.
 Called at container startup via download_models.py before Flask or
@@ -26,22 +26,27 @@ _STORE = _CFG["ml"]["model_store"]
 
 
 # Validate model specs at import-time to fail fast on misconfiguration
-def _validate_model_store_models():
-    models = _STORE.get("models", {})
-    errors = []
-    for key, spec in models.items():
-        if not isinstance(spec, dict):
-            errors.append(f"model spec for '{key}' must be a mapping/dict")
-            continue
-        for field in ("group", "name", "version"):
-            if field not in spec or not spec[field]:
-                errors.append(f"model '{key}' missing required field: {field}")
-    if errors:
-        raise RuntimeError("Invalid model_store.models configuration:\n  " + "\n  ".join(errors))
+def _validate_authoritative_model_entries():
+    """
+    Validate the authoritative per-group configuration for required models.
+    This repository uses ml.mood_detection and ml.summarization as the source
+    of truth for model_name and model_version. Fail fast if missing.
+    """
+    ml_cfg = _CFG.get("ml", {}) or {}
+    missing = []
+    for group in ("mood_detection", "summarization"):
+        gcfg = ml_cfg.get(group, {}) or {}
+        if not gcfg.get("model_name"):
+            missing.append(f"ml.{group}.model_name")
+        if not gcfg.get("model_version"):
+            missing.append(f"ml.{group}.model_version")
+
+    if missing:
+        raise RuntimeError("Missing required model configuration:\n  " + "\n  ".join(missing))
 
 
-# Run validation immediately so startup fails fast if config malformed
-_validate_model_store_models()
+# Run authoritative validation immediately so startup fails fast on misconfiguration
+_validate_authoritative_model_entries()
 
 
 def _cache_path(group: str, name: str, version: str) -> Path:
@@ -54,21 +59,6 @@ def _is_cached(group: str, name: str, version: str) -> bool:
     """Return True if model exists in local cache and has config.json."""
     path = _cache_path(group, name, version)
     return path.exists() and (path / "config.json").exists()
-
-
-def _download_from_gcs(group: str, name: str, version: str, dst: Path) -> None:
-    # GCS download functionality temporarily disabled in this build.
-    # If you need GCS-based model downloads, restore the implementation below
-    # (original implementation used google.cloud.storage to list and download
-    # objects from the configured GCS bucket into the local cache path).
-    #
-    # Example (restoration hint):
-    # from google.cloud import storage
-    # bucket_name = _STORE["gcs_bucket"]
-    # if not bucket_name:
-    #     raise RuntimeError("MODEL_GCS_BUCKET is not set")
-    # ...
-    raise RuntimeError("GCS model downloads are disabled in this build")
 
 
 def _download_from_s3(group: str, name: str, version: str, dst: Path) -> None:
@@ -149,19 +139,14 @@ def ensure_model(group: str, name: str, version: str) -> str:
         group, name, version, source
     )
 
-    # GCS-based downloads are currently disabled/commented out.
-    # To re-enable GCS as a model source, restore the _download_from_gcs
-    # implementation above and uncomment the call below.
-    # if source == "gcs":
-    #     _download_from_gcs(group, name, version, dst)
-    if source == "gcs":
-        raise RuntimeError("MODEL_SOURCE=gcs is configured but GCS downloads are disabled in this build")
-    elif source == "s3":
+    if source == "s3":
         _download_from_s3(group, name, version, dst)
     elif source == "local":
         _copy_from_local(group, name, version, dst)
     else:
-        raise RuntimeError(f"Invalid MODEL_SOURCE={source}. Must be local | gcs | s3")
+        raise RuntimeError(
+            "Invalid MODEL_SOURCE. Supported values: local, s3"
+        )
 
     if not _is_cached(group, name, version):
         raise RuntimeError(
@@ -181,36 +166,72 @@ def resolve_model_path(group: str, name: str, version: str) -> str:
 
 
 def get_all_model_specs() -> list:
-    """Return all model specs from config as a list of (group, name, version) tuples."""
-    models = _STORE.get("models", {})
-    specs = []
-    for model_key, spec in models.items():
-        specs.append((
-            spec["group"],
-            spec["name"],
-            spec["version"],
-        ))
+    """
+    Return all model specs derived from authoritative per-group config.
+
+    Only include groups that are considered models that the startup downloader
+    should manage. Embedding is intentionally omitted (handled by
+    sentence-transformers at runtime).
+    """
+    specs: list = []
+    # Read model entries from the authoritative model_store configuration.
+    # Each model entry maps an arbitrary key (e.g., 'roberta', 'bart') to a
+    # spec containing group/name/version which determines where artifacts are
+    # stored in the model store (local path or S3).
+    models = _STORE.get("models", {}) or {}
+    for key, spec in models.items():
+        group = spec.get("group")
+        name = spec.get("name")
+        version = spec.get("version")
+        if not group or not name or not version:
+            logger.warning("Skipping invalid model_store entry %s: %s", key, spec)
+            continue
+        logger.info(
+            "Model spec resolved: %s/%s/%s",
+            group,
+            name,
+            version,
+        )
+        specs.append((group, name, version))
     return specs
 
 
 def get_model_spec(model_key: str) -> dict:
     """
-    Read a model specification from configuration and validate required fields.
+    Read a model specification from the model_store configuration and validate fields.
 
+    model_key refers to the key under `ml.model_store.models` (e.g. 'roberta' or 'bart').
     Returns a dict with keys: group, name, version.
     Raises RuntimeError with a descriptive message if the model_key is missing or invalid.
     """
-    models = _STORE.get("models", {})
-    if model_key not in models:
-        raise RuntimeError(f"Model key not found in configuration: '{model_key}'")
-    spec = models[model_key]
-    if not isinstance(spec, dict):
-        raise RuntimeError(f"Model spec for '{model_key}' must be a mapping/dict")
-    for field in ("group", "name", "version"):
-        if field not in spec or not spec[field]:
-            raise RuntimeError(f"Model '{model_key}' missing required field: {field}")
-    # Return a shallow copy to avoid accidental mutation of config
-    return {"group": spec["group"], "name": spec["name"], "version": spec["version"]}
+    models = _STORE.get("models", {}) or {}
+
+    # Backwards-compatible path: allow direct model key lookup (e.g., 'roberta')
+    if model_key in models:
+        spec = models.get(model_key, {}) or {}
+        group = spec.get("group")
+        name = spec.get("name")
+        version = spec.get("version")
+        if not group or not name or not version:
+            raise RuntimeError(f"Invalid model_store entry for '{model_key}': {spec}")
+        return {"group": group, "name": name, "version": version}
+
+    # Primary lookup: find the model whose spec['group'] matches model_key
+    for key, spec in models.items():
+        if not spec:
+            continue
+        if spec.get("group") == model_key:
+            group = spec.get("group")
+            name = spec.get("name")
+            version = spec.get("version")
+            if not group or not name or not version:
+                raise RuntimeError(f"Invalid model_store entry for '{key}': {spec}")
+            return {"group": group, "name": name, "version": version}
+
+    # Nothing matched
+    raise RuntimeError(
+        f"Model key not found in model_store.models (neither as key nor as group): '{model_key}'"
+    )
 
 
 def resolve_model_from_config(model_key: str) -> str:
