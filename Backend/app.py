@@ -2,9 +2,9 @@
 import os
 import warnings
 
-# Load environment variables first
-from dotenv import load_dotenv
-load_dotenv()
+# Load application secrets early (local .env or AWS Secrets Manager)
+from utils.secrets_loader import load_application_secrets
+load_application_secrets()
 
 # Load configuration
 from config_loader import get_config
@@ -119,7 +119,7 @@ stats_service = _services_pkg.stats_service
 from persistence.db_manager import DBManager
 from services.embeddings import get_embedding_service
 from services.media_recommender.cache_store import MediaCacheStore
-from ml.utils.model_loader import resolve_model_path
+from ml.utils.model_loader import resolve_model_from_config
 
 from ml.inference.mood_detection.roberta.predictor import SentencePredictor
 from ml.inference.summarization.bart.predictor import SummarizationPredictor
@@ -148,7 +148,7 @@ cache_store = MediaCacheStore(get_db().db)
 def get_predictor():
     global _predictor
     if _predictor is None:
-        model_dir = resolve_model_path("mood_detection", "roberta", "v2")
+        model_dir = resolve_model_from_config("mood_detection")
         _predictor = SentencePredictor(model_dir)
     return _predictor
 
@@ -157,7 +157,7 @@ def get_summarizer():
     global _summarizer
     if _summarizer is None:
         try:
-            model_dir = resolve_model_path("summarization", "bart", "v2")
+            model_dir = resolve_model_from_config("summarization")
             _summarizer = SummarizationPredictor(model_path=model_dir)
         except Exception:
             _summarizer = None
@@ -167,7 +167,7 @@ def get_summarizer():
 def get_insights_predictor():
     global _insights_predictor
     if _insights_predictor is None:
-        model_dir = resolve_model_path("insight_generation", "qwen2", "v1")
+        model_dir = resolve_model_from_config("insight_generation")
         _insights_predictor = InsightsPredictor(model_path=model_dir)
     return _insights_predictor
 

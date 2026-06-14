@@ -105,7 +105,7 @@ ml:
   # Inference: Backend/ml/inference/mood_detection/roberta/
   # Models:    Via MODEL_STORE_PATH (controlled by resolve_model_path)
   mood_detection:
-    model_version: "v2"                 # MOOD_MODEL_VERSION — v2=fp16+ONNX optimized
+    model_version: "v1"                 # MOOD_MODEL_VERSION — v2=fp16+ONNX optimized
     model_name: "roberta-base"          # MOOD_MODEL_NAME
     max_length: 128                     # MOOD_MAX_LENGTH
     prediction_threshold: 0.35          # MOOD_PREDICTION_THRESHOLD

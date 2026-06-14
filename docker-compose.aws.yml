@@ -1,0 +1,56 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - APP_USER=app
+    container_name: pocket-journal
+    ports:
+      - "8080:8080"
+
+    environment:
+      # Python
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      FORCE_COLOR: "1"
+
+      # Application
+      PORT: "8080"
+      TMPDIR: "/tmp/gunicorn"   # note: was TMDIR (typo) — gunicorn reads TMPDIR
+
+      # Secrets source
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV}  # default to 'local' if not set
+      AWS_SECRET_NAME: ${AWS_SECRET_NAME}  # name of the secret in AWS Secrets Manager
+
+      # AWS identity (boto3 needs these to call Secrets Manager and S3)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+
+      # Models
+      MODEL_SOURCE: ${MODEL_SOURCE}  # 'local' or 's3'
+      MODEL_S3_BUCKET: ${MODEL_S3_BUCKET}  # S3 bucket name for models (if MODEL_SOURCE=s3)
+      MODEL_S3_REGION: ${MODEL_S3_REGION}  # S3 region for models (if MODEL_SOURCE=s3)
+      MODEL_DOWNLOAD_ON_STARTUP: "true"
+      MODEL_CACHE_DIR: ${MODEL_CACHE_DIR}  # path inside container for model cache
+      MODEL_ROBERTA_VERSION: "v1"
+      MODEL_BART_VERSION: "v2"
+
+    volumes:
+      - model-cache:/tmp/models
+
+    tmpfs:
+      - /tmp/gunicorn
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+volumes:
+  model-cache:
+  gunicorn-tmp:

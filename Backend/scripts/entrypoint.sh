@@ -9,7 +9,10 @@ echo "[entrypoint] MODEL_CACHE_DIR=${MODEL_CACHE_DIR}"
 echo "[entrypoint] Downloading models..."
 python3 /app/scripts/download_models.py
 
-# Step 2: Start the application
+# Step 2: Create gunicorn worker temp directory
+mkdir -p /tmp/gunicorn          # ← ADD THIS LINE
+
+# Step 3: Start the application
 echo "[entrypoint] Models ready — starting application"
 exec gunicorn -w 1 --threads 4 -b 0.0.0.0:8080 --worker-tmp-dir /tmp/gunicorn app:app
 

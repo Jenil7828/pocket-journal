@@ -25,6 +25,25 @@ _CFG = get_config()
 _STORE = _CFG["ml"]["model_store"]
 
 
+# Validate model specs at import-time to fail fast on misconfiguration
+def _validate_model_store_models():
+    models = _STORE.get("models", {})
+    errors = []
+    for key, spec in models.items():
+        if not isinstance(spec, dict):
+            errors.append(f"model spec for '{key}' must be a mapping/dict")
+            continue
+        for field in ("group", "name", "version"):
+            if field not in spec or not spec[field]:
+                errors.append(f"model '{key}' missing required field: {field}")
+    if errors:
+        raise RuntimeError("Invalid model_store.models configuration:\n  " + "\n  ".join(errors))
+
+
+# Run validation immediately so startup fails fast if config malformed
+_validate_model_store_models()
+
+
 def _cache_path(group: str, name: str, version: str) -> Path:
     """Return the local cache path for a model regardless of source."""
     cache_root = Path(_STORE["cache_dir"])
@@ -38,35 +57,18 @@ def _is_cached(group: str, name: str, version: str) -> bool:
 
 
 def _download_from_gcs(group: str, name: str, version: str, dst: Path) -> None:
-    """Download model from GCS bucket to local cache path."""
-    from google.cloud import storage
-
-    bucket_name = _STORE["gcs_bucket"]
-    if not bucket_name:
-        raise RuntimeError("MODEL_GCS_BUCKET is not set")
-
-    prefix = f"{group}/{name}/{version}/"
-    dst.mkdir(parents=True, exist_ok=True)
-
-    logger.info("Downloading model from GCS gs://%s/%s", bucket_name, prefix)
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blobs = list(bucket.list_blobs(prefix=prefix))
-
-    if not blobs:
-        raise RuntimeError(f"No files found in GCS at gs://{bucket_name}/{prefix}")
-
-    for blob in blobs:
-        # Strip prefix to get relative filename
-        relative = blob.name[len(prefix):]
-        if not relative:
-            continue
-        dest_file = dst / relative
-        dest_file.parent.mkdir(parents=True, exist_ok=True)
-        logger.info("  Downloading %s → %s", blob.name, dest_file)
-        blob.download_to_filename(str(dest_file))
-
-    logger.info("GCS download complete: %d files → %s", len(blobs), dst)
+    # GCS download functionality temporarily disabled in this build.
+    # If you need GCS-based model downloads, restore the implementation below
+    # (original implementation used google.cloud.storage to list and download
+    # objects from the configured GCS bucket into the local cache path).
+    #
+    # Example (restoration hint):
+    # from google.cloud import storage
+    # bucket_name = _STORE["gcs_bucket"]
+    # if not bucket_name:
+    #     raise RuntimeError("MODEL_GCS_BUCKET is not set")
+    # ...
+    raise RuntimeError("GCS model downloads are disabled in this build")
 
 
 def _download_from_s3(group: str, name: str, version: str, dst: Path) -> None:
@@ -147,8 +149,13 @@ def ensure_model(group: str, name: str, version: str) -> str:
         group, name, version, source
     )
 
+    # GCS-based downloads are currently disabled/commented out.
+    # To re-enable GCS as a model source, restore the _download_from_gcs
+    # implementation above and uncomment the call below.
+    # if source == "gcs":
+    #     _download_from_gcs(group, name, version, dst)
     if source == "gcs":
-        _download_from_gcs(group, name, version, dst)
+        raise RuntimeError("MODEL_SOURCE=gcs is configured but GCS downloads are disabled in this build")
     elif source == "s3":
         _download_from_s3(group, name, version, dst)
     elif source == "local":
@@ -184,3 +191,39 @@ def get_all_model_specs() -> list:
             spec["version"],
         ))
     return specs
+
+
+def get_model_spec(model_key: str) -> dict:
+    """
+    Read a model specification from configuration and validate required fields.
+
+    Returns a dict with keys: group, name, version.
+    Raises RuntimeError with a descriptive message if the model_key is missing or invalid.
+    """
+    models = _STORE.get("models", {})
+    if model_key not in models:
+        raise RuntimeError(f"Model key not found in configuration: '{model_key}'")
+    spec = models[model_key]
+    if not isinstance(spec, dict):
+        raise RuntimeError(f"Model spec for '{model_key}' must be a mapping/dict")
+    for field in ("group", "name", "version"):
+        if field not in spec or not spec[field]:
+            raise RuntimeError(f"Model '{model_key}' missing required field: {field}")
+    # Return a shallow copy to avoid accidental mutation of config
+    return {"group": spec["group"], "name": spec["name"], "version": spec["version"]}
+
+
+def resolve_model_from_config(model_key: str) -> str:
+    """
+    Resolve a model path using the model specification stored in configuration.
+
+    Example:
+        path = resolve_model_from_config("mood_detection")
+
+    This is a convenience wrapper that reads the model spec via get_model_spec()
+    and then delegates to resolve_model_path()/ensure_model().
+    """
+    spec = get_model_spec(model_key)
+    return resolve_model_path(spec["group"], spec["name"], spec["version"])
+
+
