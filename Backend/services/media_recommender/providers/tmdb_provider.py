@@ -1,6 +1,7 @@
 import logging
 import os
 from typing import List, Optional, Dict, Any
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .base_provider import BaseHTTPProvider, STANDARD_MEDIA_ITEM
 from config_loader import get_config
@@ -79,18 +80,19 @@ class TMDbProvider(BaseHTTPProvider):
         endpoint = _API["tmdb"].get("trending_endpoint", "https://api.themoviedb.org/3/trending/movie/week")
         return self._fetch_endpoint(endpoint, pages=pages)
 
-    def _build_candidate(self, m: dict) -> dict:
+    def _build_candidate(self, m: dict, details: Optional[dict] = None) -> dict:
         movie_id = m.get("id")
         runtime = None
         poster_path = m.get("poster_path")
-        if movie_id:
+        # If details were not provided by caller, fetch them (legacy path)
+        if movie_id and details is None:
             details = self._fetch_movie_details(movie_id)
-            if details:
-                try:
-                    runtime = details.get("runtime")
-                except Exception:
-                    runtime = None
-                poster_path = poster_path or details.get("poster_path")
+        if details:
+            try:
+                runtime = details.get("runtime")
+            except Exception:
+                runtime = None
+            poster_path = poster_path or details.get("poster_path")
 
         candidate = {
             "id": str(m.get("id", "")),
@@ -134,16 +136,51 @@ class TMDbProvider(BaseHTTPProvider):
         except Exception:
             pages = 1
 
-        # Use search endpoint if query provided, otherwise fetch popular
+        # If a query is provided, use the search endpoint ONLY and do not fall back to other endpoints.
         if query and query.strip():
             primary_raw = self._search_movies(query=query.strip(), pages=pages)
-        else:
-            primary_raw: List[dict] = []
-            primary_raw.extend(self._fetch_trending(pages=max(1, pages)))
-            primary_raw.extend(self._fetch_now_playing(pages=max(1, pages)))
-            primary_raw.extend(self._fetch_upcoming(pages=max(1, pages)))
-            primary_raw.extend(self._fetch_popular(pages=max(1, pages)))
-        
+
+            # Fetch details for all returned movies in parallel to speed up processing
+            ids = [str(m.get("id")) for m in primary_raw if m.get("id")]
+            unique_ids = list(dict.fromkeys(ids))
+            details_map: Dict[str, Optional[dict]] = {}
+            if unique_ids:
+                max_workers = min(20, max(1, len(unique_ids)))
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    future_to_id = {}
+                    for mid in unique_ids:
+                        try:
+                            future = executor.submit(self._fetch_movie_details, int(mid))
+                            future_to_id[future] = mid
+                        except Exception:
+                            details_map[mid] = None
+
+                    for fut in as_completed(future_to_id):
+                        mid = future_to_id.get(fut)
+                        try:
+                            details_map[mid] = fut.result()
+                        except Exception:
+                            details_map[mid] = None
+
+            primary = [self._build_candidate(m, details=details_map.get(str(m.get("id")))) for m in primary_raw]
+
+            cleaned = self._clean_items(primary)
+            logger.info("TMDbProvider primary cleaned=%d", len(cleaned))
+
+            # When a user provides a search query, do NOT fall back to popular/top-rated/etc.
+            # Return whatever the search endpoint returns (may be empty).
+            if len(cleaned) < 10:
+                logger.info("TMDbProvider search returned small pool: %d", len(cleaned))
+
+            return cleaned[:limit]
+
+        # No query provided: build a neutral candidate pool from multiple endpoints
+        primary_raw: List[dict] = []
+        primary_raw.extend(self._fetch_trending(pages=max(1, pages)))
+        primary_raw.extend(self._fetch_now_playing(pages=max(1, pages)))
+        primary_raw.extend(self._fetch_upcoming(pages=max(1, pages)))
+        primary_raw.extend(self._fetch_popular(pages=max(1, pages)))
+
         primary = [self._build_candidate(m) for m in primary_raw]
 
         cleaned = self._clean_items(primary)

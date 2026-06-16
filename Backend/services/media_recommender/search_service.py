@@ -182,7 +182,8 @@ class SearchService:
         
         try:
             provider = self.providers[media_type]
-            fetch_limit = min(limit * 2, 100)
+            # Increase fetch window to improve provider-side candidate pool (capped)
+            fetch_limit = min(limit * 3, 150)
             filters = {"language": language} if language and media_type in {"songs", "podcasts"} else None
             
             raw_results = provider.fetch_candidates(query=query, filters=filters, limit=fetch_limit)
@@ -192,12 +193,9 @@ class SearchService:
             for item in normalized:
                 score = self._compute_score(item, query, media_type)
                 
-                # Provider priority boost: if title closely matches (>= 75), boost by +20
-                title = item.get("title", "")
-                if title and score >= 75:
-                    score = min(100, score + 20)  # Boost but cap at 100
-                
-                if score >= 50:
+                # Do not apply an additional arbitrary boost; use the computed score.
+                # Lower acceptance threshold because TMDb already ranks by relevance server-side
+                if score >= 20:
                     scored_results.append((score, item))
             
             scored_results.sort(key=lambda x: (-x[0], -self._get_popularity(x[1], media_type)))
@@ -410,13 +408,9 @@ class SearchService:
             reverse=True
         )
 
-        # STEP 1: Enrich results (fill in missing data from providers)
-        enriched_results = [enrich_from_providers(item, media_type) for item in provider_results[:limit]]
-        
-        # STEP 2: Normalize results to canonical schema
-        normalized_results = [normalize_media(item, media_type) for item in enriched_results]
-        
-        # STEP 3: Strip embeddings for API response
+        # Normalize only the data already returned by provider search.
+        # No enrichment/API calls in the request path.
+        normalized_results = [normalize_media(item, media_type) for item in provider_results[:limit]]
         final_results = self._strip_embeddings(normalized_results)
 
         logger.info(

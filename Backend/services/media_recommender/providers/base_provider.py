@@ -123,10 +123,13 @@ class BaseHTTPProvider(MediaProvider):
             try:
                 mid = str(item.get("id") or item.get("guid") or item.get("external_id") or "")
                 title = (item.get("title") or "").strip()
-                description = (item.get("description") or "").strip()
-                # Enforce minimum fields
-                if not mid or not title or not description:
+                # Prefer description fields but allow missing description (fallback to title)
+                description = (item.get("description") or item.get("overview") or item.get("long_description") or "").strip()
+                # Enforce minimum fields: only id and title are mandatory
+                if not mid or not title:
                     continue
+                if not description:
+                    description = title
                 metadata = dict(item)
                 # Remove potentially large text fields we already normalized
                 metadata.pop("overview", None)
