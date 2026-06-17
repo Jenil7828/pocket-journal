@@ -5,6 +5,7 @@ from utils import extract_dominant_mood
 import logging
 
 from config_loader import get_config
+from services.journal_entries.model_runtime import predict_mood, summarize_text, run_summary_and_mood_concurrently
 
 logger = logging.getLogger()
 
@@ -45,14 +46,12 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
     # Run full emotional pipeline (preferred) with graceful fallback
     try:
         from services.journal_entries.emotional_pipeline import process_entry as run_pipeline
-        from services.embeddings import get_embedding_service
-        embedder = get_embedding_service()
-        interpreted, raw_analysis = run_pipeline(None, entry_text, predictor, summarizer, embedder, db=db)
+        interpreted, raw_analysis = run_pipeline(None, entry_text, predictor, summarizer)
         summary = raw_analysis.get("summary") if isinstance(raw_analysis, dict) else ""
         mood_probs = raw_analysis.get("mood") if isinstance(raw_analysis, dict) else {}
     except Exception:
         logger.exception("Emotional pipeline failed during reanalysis; falling back to legacy")
-        summary = summarizer.summarize(entry_text) if summarizer else entry_text[:int(_CFG["app"]["summary_fallback_length"])] + "..."
+        summary = summarize_text(summarizer, entry_text, int(_CFG["app"]["summary_fallback_length"]))
         # Check user's mood tracking setting; default True
         mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
         try:
@@ -65,8 +64,16 @@ def reanalyze_entry(entry_id, uid, db, predictor, summarizer):
             mood_enabled = bool(_CFG["app"]["mood_tracking_enabled_default"])
 
         if mood_enabled:
-            mood_result = predictor.predict(entry_text) if predictor else {}
-            mood_probs = mood_result.get("probabilities") if isinstance(mood_result, dict) and "probabilities" in mood_result else mood_result
+            if predictor and summarizer:
+                # Keep summary and mood independent while still allowing concurrent execution.
+                summary, mood_probs = run_summary_and_mood_concurrently(
+                    predictor=predictor,
+                    summarizer=summarizer,
+                    text=entry_text,
+                    fallback_length=int(_CFG["app"]["summary_fallback_length"]),
+                )
+            else:
+                mood_probs = predict_mood(predictor, entry_text)
         else:
             mood_probs = {}
 

@@ -14,6 +14,6 @@ mkdir -p /tmp/gunicorn          # ← ADD THIS LINE
 
 # Step 3: Start the application
 echo "[entrypoint] Models ready — starting application"
-exec gunicorn -w 1 --threads 4 -b 0.0.0.0:8080 --worker-tmp-dir /tmp/gunicorn app:app
+exec gunicorn -w 1 --threads 4 --preload --timeout 300 -b 0.0.0.0:8080 --worker-tmp-dir /tmp/gunicorn app:app
 
 

@@ -11,6 +11,7 @@ Unified endpoints:
 """
 
 import time
+import logging
 from flask import request, jsonify
 from utils.logging_utils import log_request, log_response
 
@@ -41,8 +42,17 @@ def register(app, deps):
             PREDICTOR or get_predictor(),
             SUMMARIZER or get_summarizer(),
         )
+        serialize_started = time.time()
+        response = (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        serialize_ms = (time.time() - serialize_started) * 1000
+        if isinstance(body, dict) and body.get("entry_id"):
+            logging.getLogger().info(
+                "[PERF][journal] entry_id=%s stage=response_serialization duration_ms=%.1f",
+                body.get("entry_id"),
+                serialize_ms,
+            )
         log_response(status, start_time)
-        return (jsonify(body), status) if isinstance(body, dict) else (body, status)
+        return response
 
     # ==================== READ ====================
 

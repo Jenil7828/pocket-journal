@@ -117,10 +117,12 @@ ml:
   summarization:
     model_version: "v2"                 # SUMMARIZATION_MODEL_VERSION — v2=fp16+ONNX optimized
     model_name: "facebook/bart-large-cnn" # SUMMARIZATION_MODEL_NAME
-    max_input_length: 1024              # SUMMARIZATION_MAX_INPUT_LENGTH
-    max_summary_length: 128             # SUMMARIZATION_MAX_SUMMARY_LENGTH
-    min_summary_length: 20              # SUMMARIZATION_MIN_SUMMARY_LENGTH
-    num_beams: 4                        # SUMMARIZATION_NUM_BEAMS
+    max_input_length: 1024              # SUMMARIZATION_MAX_INPUT_LENGTH (BART positional limit)
+    max_summary_length: 160             # SUMMARIZATION_MAX_SUMMARY_LENGTH — +25% decode budget for multi-event narratives
+    min_summary_length: 35              # SUMMARIZATION_MIN_SUMMARY_LENGTH — reduces overly short beginning-only summaries
+    num_beams: 4                        # SUMMARIZATION_NUM_BEAMS — fallback default
+    num_beams_cpu: 2                    # SUMMARIZATION_NUM_BEAMS_CPU — faster CPU decoding
+    num_beams_gpu: 4                    # SUMMARIZATION_NUM_BEAMS_GPU — higher quality on GPU
 
   # Embedding — sentence-transformers
   embedding:

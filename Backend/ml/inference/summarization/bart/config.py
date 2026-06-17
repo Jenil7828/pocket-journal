@@ -56,6 +56,8 @@ class Config:
     MAX_SUMMARY_LENGTH = int(_CFG["ml"]["summarization"]["max_summary_length"])
     MIN_SUMMARY_LENGTH = int(_CFG["ml"]["summarization"]["min_summary_length"])
     NUM_BEAMS = int(_CFG["ml"]["summarization"]["num_beams"])
+    NUM_BEAMS_CPU = int(_CFG["ml"]["summarization"].get("num_beams_cpu", NUM_BEAMS))
+    NUM_BEAMS_GPU = int(_CFG["ml"]["summarization"].get("num_beams_gpu", NUM_BEAMS))
 
     # Device policy (hard-safe for prod)
     DEVICE = "cuda" if torch.cuda.is_available() else "cpu"

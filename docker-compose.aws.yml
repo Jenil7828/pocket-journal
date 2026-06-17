@@ -1,11 +1,7 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        - APP_USER=app
-    container_name: pocket-journal
+    image: ghcr.io/jenil7828/pocket-journal:${IMAGE_TAG}
+    container_name: pocket-journal-git
     ports:
       - "8080:8080"
     gpus: all

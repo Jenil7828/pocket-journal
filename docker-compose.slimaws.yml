@@ -1,0 +1,57 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.slim
+
+    image: pocket-journal-slim:latest
+
+    container_name: pocket-journal-slim
+
+    ports:
+      - "8080:8080"
+
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
+      FORCE_COLOR: "1"
+
+      PORT: "8080"
+      TMPDIR: "/tmp/gunicorn"
+
+      DEPLOYMENT_ENV: ${DEPLOYMENT_ENV}
+      AWS_SECRET_NAME: ${AWS_SECRET_NAME}
+
+      # AWS credentials (for local testing only - rely on IAM in production)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION}
+
+      # Model store configuration
+      MODEL_SOURCE: ${MODEL_SOURCE}
+      MODEL_S3_BUCKET: ${MODEL_S3_BUCKET}
+      MODEL_S3_REGION: ${MODEL_S3_REGION}
+      MODEL_DOWNLOAD_ON_STARTUP: "true"
+      MODEL_CACHE_DIR: /tmp/models
+
+      MODEL_ROBERTA_VERSION: "v1"
+      MODEL_BART_VERSION: "v2"
+
+    volumes:
+      - model-cache:/tmp/models
+      - ./Backend:/app
+
+    tmpfs:
+      - /tmp/gunicorn
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+volumes:
+  model-cache:

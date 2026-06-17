@@ -51,7 +51,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile
+          file: Dockerfile.slim
           push: true
           tags: ghcr.io/${{ steps.owner.outputs.owner_lc }}/${{ steps.meta.outputs.repo_lc }}:${{ steps.meta.outputs.short_sha }}
           cache-from: type=gha
