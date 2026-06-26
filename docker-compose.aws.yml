@@ -1,6 +1,10 @@
 services:
   app:
     image: ghcr.io/jenil7828/pocket-journal:${IMAGE_TAG}
+#    build:
+#        context: .
+#        dockerfile: Dockerfile.slim
+#    image: pocket-journal:latest
     container_name: pocket-journal-git
     ports:
       - "8080:8080"
@@ -36,6 +40,7 @@ services:
 
     volumes:
       - model-cache:/tmp/models
+      - ./Backend:/app
 
     tmpfs:
       - /tmp/gunicorn

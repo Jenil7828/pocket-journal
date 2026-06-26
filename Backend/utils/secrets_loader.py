@@ -6,9 +6,8 @@ Usage:
     load_application_secrets()
 
 Behavior:
-- If DEPLOYMENT_ENV=local (default), load_dotenv() is called and behavior is unchanged.
-- If DEPLOYMENT_ENV=aws, fetch secret from AWS Secrets Manager using
-  AWS_SECRET_NAME and inject keys into os.environ.
+- If AWS_SECRET_NAME is set, fetch secret from AWS Secrets Manager and inject keys into os.environ.
+- Otherwise, load local .env for local-only development compatibility.
 
 This module never logs secret values.
 """
@@ -27,6 +26,7 @@ SUPPORTED_SECRETS = [
     "SONG_ID",
     "SONG_SECRET",
     "GEMINI_API_KEY",
+    "CRON_SECRET",
 ]
 
 # Keys that are required for application to run in production
@@ -93,47 +93,34 @@ def _inject_secrets_into_env(secret_obj: Dict[str, str]) -> None:
 
 
 def load_application_secrets() -> None:
-    """Load application secrets according to DEPLOYMENT_ENV.
-
-    - DEPLOYMENT_ENV=local (default): load .env using python-dotenv
-    - DEPLOYMENT_ENV=aws: load secret from AWS Secrets Manager
+    """Load application secrets from AWS (preferred) or local .env fallback.
 
     This function logs which secrets source is used but never logs secret values.
-    It raises RuntimeError on fatal errors when in AWS mode (cannot reach AWS, secret missing, invalid JSON, or missing required keys).
+    It raises RuntimeError on fatal errors when AWS_SECRET_NAME is set and AWS
+    retrieval or secret validation fails.
     """
-    deployment_env = os.environ.get("DEPLOYMENT_ENV", "local").strip().lower()
-
-    if deployment_env in ("local", "dev", "development"):
+    secret_name = (os.environ.get("AWS_SECRET_NAME") or "").strip()
+    if not secret_name:
         _load_from_dotenv()
         return
 
-    if deployment_env in ("aws", "prod", "production"):
-        secret_name = os.environ.get("AWS_SECRET_NAME")
-        if not secret_name:
-            raise RuntimeError("DEPLOYMENT_ENV=aws requires AWS_SECRET_NAME environment variable to be set")
+    logger.info("Secrets source: AWS Secrets Manager (secret=%s)", secret_name)
 
-        logger.info("Secrets source: AWS Secrets Manager (secret=%s)", secret_name)
+    secret_obj = _fetch_secret_from_aws(secret_name)
 
-        secret_obj = _fetch_secret_from_aws(secret_name)
+    # Validate required keys
+    missing_required = [k for k in REQUIRED_KEYS if k not in secret_obj]
+    if missing_required:
+        raise RuntimeError(f"Secrets Manager secret '{secret_name}' is missing required keys: {missing_required}")
 
-        # Validate required keys
-        missing_required = [k for k in REQUIRED_KEYS if k not in secret_obj]
-        if missing_required:
-            raise RuntimeError(f"Secrets Manager secret '{secret_name}' is missing required keys: {missing_required}")
+    # Inject supported secrets into environment
+    _inject_secrets_into_env(secret_obj)
 
-        # Inject supported secrets into environment
-        _inject_secrets_into_env(secret_obj)
+    # Warn about any unknown keys (do not fail) to aid debugging
+    unknown_keys = [k for k in secret_obj.keys() if k not in SUPPORTED_SECRETS]
+    if unknown_keys:
+        logger.debug("Secrets Manager secret contains additional keys (ignored): %s", unknown_keys)
 
-        # Warn about any unknown keys (do not fail) to aid debugging
-        unknown_keys = [k for k in secret_obj.keys() if k not in SUPPORTED_SECRETS]
-        if unknown_keys:
-            logger.debug("Secrets Manager secret contains additional keys (ignored): %s", unknown_keys)
-
-        # Log a succinct success message (no values)
-        logger.info("Secrets source: AWS Secrets Manager")
-        return
-
-    # Unknown deployment env — fall back to local behavior but log a warning
-    logger.warning("Unknown DEPLOYMENT_ENV=%s — falling back to local .env loading", deployment_env)
-    _load_from_dotenv()
+    # Log a succinct success message (no values)
+    logger.info("Secrets source: AWS Secrets Manager")
 

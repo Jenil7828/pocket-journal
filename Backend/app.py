@@ -24,6 +24,7 @@ import logging
 import time
 from utils.log_formatter import ColoredFormatter
 from utils.logging_utils import log_request, log_response
+from utils.aws_runtime import log_aws_startup_context, validate_aws_startup_access
 
 # -------------------- Logging --------------------
 LOG_LEVEL = _CFG["logging"]["app_level"].upper()
@@ -48,6 +49,22 @@ for noisy in ("httpx", "huggingface_hub", "sentence_transformers", "urllib3"):
         _logging.getLogger(noisy).setLevel(_logging.WARNING)
     except Exception:
         pass
+
+# -------------------- AWS Startup Validation --------------------
+_secret_name = (os.environ.get("AWS_SECRET_NAME") or "").strip()
+_model_source = _CFG["ml"]["model_store"]["source"]
+_model_bucket = _CFG["ml"]["model_store"]["s3_bucket"]
+
+if _secret_name or _model_source == "s3":
+    try:
+        log_aws_startup_context()
+        validate_aws_startup_access(
+            required_secret_name=_secret_name or None,
+            required_model_bucket=_model_bucket or None,
+            model_source=_model_source,
+        )
+    except Exception as e:
+        raise RuntimeError(f"AWS startup validation failed: {e}") from e
 
 # -------------------- Firebase --------------------
 import firebase_admin
@@ -194,6 +211,9 @@ INSIGHTS_PREDICTOR = _insights_predictor
 
 # -------------------- Flask App --------------------
 app = Flask(__name__)
+
+from utils.cron_auth import cron_secret_required
+app.before_request(cron_secret_required)
 
 ENABLE_LLM = bool(_CFG["app"]["enable_llm"])
 ENABLE_INSIGHTS = bool(_CFG["app"]["enable_insights"])
